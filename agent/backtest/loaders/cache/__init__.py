@@ -22,6 +22,12 @@ Monitoring:
     monitor = CacheMonitor(cache)
     monitor.collect_metrics()
     report = monitor.get_report()
+
+Data Quality:
+    from agent.backtest.loaders.cache import DataQualityChecker
+
+    checker = DataQualityChecker()
+    report = checker.check(df, symbol='BTC-USDT')
 """
 
 from .cache_key import CacheKey
@@ -29,6 +35,7 @@ from .memory_cache import MemoryCache
 from .disk_cache import DiskCache
 from .data_cache import DataCache
 from .cache_monitor import CacheMonitor
+from .quality_checker import DataQualityChecker, QualityReport, QualityIssue
 
 __all__ = [
     'CacheKey',
@@ -36,4 +43,7 @@ __all__ = [
     'DiskCache',
     'DataCache',
     'CacheMonitor',
+    'DataQualityChecker',
+    'QualityReport',
+    'QualityIssue',
 ]
