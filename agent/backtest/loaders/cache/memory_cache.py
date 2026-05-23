@@ -140,14 +140,23 @@ class MemoryCache:
         """Get cache statistics
 
         Returns:
-            Dictionary with cache stats:
+            Dictionary with comprehensive cache stats:
             - entries: Number of cached entries
             - memory_mb: Current memory usage in MB
             - max_entries: Maximum allowed entries
             - max_memory_mb: Maximum allowed memory in MB
-            - hit_rate: Cache hit rate (if tracked)
+            - total_hits: Total number of cache hits
+            - hit_rate: Calculated hit rate (based on access order)
+            - memory_usage_pct: Memory usage percentage
+            - top_accessed: Top 5 most accessed entries
         """
         total_hits = sum(entry.hit_count for entry in self._cache.values())
+
+        # Calculate hit rate based on access frequency
+        hit_rate = self._calculate_hit_rate()
+
+        # Get top accessed entries
+        top_accessed = self._get_top_accessed(5)
 
         return {
             "entries": len(self._cache),
@@ -155,7 +164,67 @@ class MemoryCache:
             "max_entries": self.max_size,
             "max_memory_mb": self.max_memory_bytes / (1024 * 1024),
             "total_hits": total_hits,
+            "hit_rate": hit_rate,
+            "memory_usage_pct": self._get_memory_usage_pct(),
+            "top_accessed": top_accessed,
         }
+
+    def _calculate_hit_rate(self) -> float:
+        """Calculate cache hit rate based on access patterns
+
+        Returns:
+            Hit rate as a percentage (0.0 to 1.0)
+        """
+        if not self._cache:
+            return 0.0
+
+        # Simple hit rate based on average hits per entry
+        total_hits = sum(entry.hit_count for entry in self._cache.values())
+        entries_with_hits = sum(1 for entry in self._cache.values() if entry.hit_count > 0)
+
+        if entries_with_hits == 0:
+            return 0.0
+
+        # Hit rate = entries with hits / total entries
+        return entries_with_hits / len(self._cache)
+
+    def _get_memory_usage_pct(self) -> float:
+        """Calculate memory usage percentage
+
+        Returns:
+            Memory usage as a percentage (0.0 to 1.0)
+        """
+        if self.max_memory_bytes == 0:
+            return 0.0
+        return self._current_memory / self.max_memory_bytes
+
+    def _get_top_accessed(self, n: int = 5) -> List[dict]:
+        """Get top N most accessed cache entries
+
+        Args:
+            n: Number of top entries to return
+
+        Returns:
+            List of dicts with hash, hit_count, and memory_kb for top entries
+        """
+        # Sort entries by hit count (descending)
+        sorted_entries = sorted(
+            self._cache.items(),
+            key=lambda x: x[1].hit_count,
+            reverse=True
+        )
+
+        # Return top N entries
+        top_entries = []
+        for cache_hash, entry in sorted_entries[:n]:
+            top_entries.append({
+                "hash": cache_hash[:8],  # Short hash for display
+                "hit_count": entry.hit_count,
+                "memory_kb": entry.size_bytes / 1024,
+                "created": entry.created_at.isoformat(),
+            })
+
+        return top_entries
 
     def __len__(self) -> int:
         """Return number of cached entries"""
@@ -164,3 +233,51 @@ class MemoryCache:
     def __contains__(self, cache_hash: str) -> bool:
         """Check if cache hash exists"""
         return cache_hash in self._cache
+
+    def get_least_recently_used(self, n: int = 10) -> List[dict]:
+        """Get least recently used entries (candidates for eviction)
+
+        Args:
+            n: Number of entries to return
+
+        Returns:
+            List of dicts with hash and last access time for LRU entries
+        """
+        # Access order is oldest first (LRU)
+        lru_entries = []
+        for cache_hash in self._access_order[:n]:
+            if cache_hash in self._cache:
+                entry = self._cache[cache_hash]
+                lru_entries.append({
+                    "hash": cache_hash[:8],
+                    "hit_count": entry.hit_count,
+                    "memory_kb": entry.size_bytes / 1024,
+                    "created": entry.created_at.isoformat(),
+                })
+
+        return lru_entries
+
+    def get_eviction_candidates(self, count: int = 5) -> List[str]:
+        """Get cache hashes that are candidates for eviction
+
+        These are the least recently used entries with lowest hit counts.
+
+        Args:
+            count: Number of candidates to return
+
+        Returns:
+            List of cache hashes to evict
+        """
+        # Combine LRU order with hit count
+        candidates = []
+        for cache_hash in self._access_order:
+            if cache_hash in self._cache:
+                entry = self._cache[cache_hash]
+                # Score = position in LRU * (1 / (hit_count + 1))
+                # Lower score = better candidate for eviction
+                candidates.append((cache_hash, entry.hit_count))
+
+        # Sort by hit count (ascending), then by LRU position
+        candidates.sort(key=lambda x: (x[1], self._access_order.index(x[0])))
+
+        return [c[0] for c in candidates[:count]]
