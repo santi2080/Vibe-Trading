@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 
-from agent.backtest.loaders.cache import DataCache
+from backtest.loaders.cache import DataCache
 
 logger = logging.getLogger(__name__)
 
