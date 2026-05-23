@@ -10,6 +10,7 @@ of import order.
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any, Type
 
 from backtest.loaders.base import NoAvailableSourceError
@@ -78,7 +79,7 @@ FALLBACK_CHAINS: dict[str, list[str]] = {
 }
 
 
-def resolve_loader(market: str) -> Any:
+def resolve_loader(market: str, enable_cache: bool = True) -> Any:
     """Return the first *available* loader instance for *market*.
 
     Walks the fallback chain and returns the first loader whose
@@ -86,9 +87,10 @@ def resolve_loader(market: str) -> Any:
 
     Args:
         market: Market type key (e.g. ``"a_share"``, ``"crypto"``).
+        enable_cache: Whether to wrap the loader with caching (default True).
 
     Returns:
-        A loader instance.
+        A loader instance (optionally wrapped with CachedDataLoader).
 
     Raises:
         NoAvailableSourceError: If every candidate is unavailable.
@@ -109,18 +111,19 @@ def resolve_loader(market: str) -> Any:
             logger.debug("loader %s failed to construct: %s", name, exc)
             continue
         if loader.is_available():
-            return loader
+            return _wrap_with_cache(loader, enable_cache)
     raise NoAvailableSourceError(
         f"No available data source for market '{market}'. "
         f"Tried: {tried or chain}. Check network and API token config."
     )
 
 
-def get_loader_cls_with_fallback(source: str) -> Type[Any]:
+def get_loader_cls_with_fallback(source: str, enable_cache: bool = True) -> Type[Any]:
     """Return a loader *class* for *source*, falling back if unavailable.
 
     Args:
         source: Requested data source name.
+        enable_cache: Whether to wrap the loader with caching (default True).
 
     Returns:
         A DataLoader class (not instance).
@@ -144,7 +147,7 @@ def get_loader_cls_with_fallback(source: str) -> Type[Any]:
     # Source unavailable — try same-market fallback
     for market in loader_cls.markets:
         try:
-            fallback = resolve_loader(market)
+            fallback = resolve_loader(market, enable_cache=enable_cache)
             logger.warning(
                 "%s is unavailable, falling back to %s for market %s",
                 source, fallback.name, market,
@@ -156,3 +159,29 @@ def get_loader_cls_with_fallback(source: str) -> Type[Any]:
     raise NoAvailableSourceError(
         f"Data source '{source}' is unavailable and no fallback found."
     )
+
+
+def _wrap_with_cache(loader: Any, enable_cache: bool) -> Any:
+    """Wrap a loader instance with CachedDataLoader if caching is enabled.
+
+    Args:
+        loader: The original loader instance.
+        enable_cache: Whether to enable caching.
+
+    Returns:
+        CachedDataLoader wrapping the original loader, or the original loader if caching is disabled.
+    """
+    if not enable_cache:
+        return loader
+
+    # Check environment variable to allow global cache disable
+    if os.getenv("VIBE_DISABLE_CACHE", "").lower() in ("1", "true", "yes"):
+        return loader
+
+    try:
+        from backtest.loaders.cached_loader import CachedDataLoader
+        cache_dir = os.getenv("VIBE_CACHE_DIR", ".cache/data")
+        return CachedDataLoader(loader, cache_dir=cache_dir, enable_cache=True)
+    except Exception as exc:
+        logger.warning("Failed to wrap loader with cache: %s", exc)
+        return loader
