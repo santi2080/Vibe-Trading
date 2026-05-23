@@ -2,16 +2,17 @@
 
 Persistent disk cache with:
 - Parquet format with Snappy compression
-- Metadata tracking (creation time, hit count, size)
+- Metadata tracking (creation time, hit count, size, expression)
 - Automatic directory management
-- Cache statistics
+- Cache statistics and health monitoring
+- Top accessed entries tracking
 """
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional, Tuple
 
 import pandas as pd
 
@@ -175,11 +176,15 @@ class DiskCache:
         """Get cache statistics
 
         Returns:
-            Dictionary with cache stats:
+            Dictionary with comprehensive cache stats:
             - entries: Number of cached entries
             - total_size_mb: Total disk usage in MB
             - total_hits: Total cache hits
             - cache_dir: Cache directory path
+            - avg_hits_per_entry: Average hits per entry
+            - top_accessed: Top 5 most accessed entries
+            - oldest_entry: Age of oldest entry
+            - newest_entry: Age of newest entry
         """
         total_size = sum(
             info.get("size_bytes", 0) for info in self._metadata.values()
@@ -188,12 +193,148 @@ class DiskCache:
             info.get("hit_count", 0) for info in self._metadata.values()
         )
 
+        # Calculate average hits
+        avg_hits = total_hits / len(self._metadata) if self._metadata else 0
+
+        # Get top accessed entries
+        top_accessed = self._get_top_accessed(5)
+
+        # Calculate entry ages
+        oldest_age, newest_age = self._get_entry_ages()
+
         return {
             "entries": len(self._metadata),
             "total_size_mb": total_size / (1024 * 1024),
             "total_hits": total_hits,
+            "avg_hits_per_entry": avg_hits,
             "cache_dir": str(self.cache_dir),
+            "top_accessed": top_accessed,
+            "oldest_entry_days": oldest_age,
+            "newest_entry_days": newest_age,
         }
+
+    def _get_top_accessed(self, n: int = 5) -> List[dict]:
+        """Get top N most accessed cache entries
+
+        Args:
+            n: Number of top entries to return
+
+        Returns:
+            List of dicts with hash, hit_count, size_kb, and created_at
+        """
+        if not self._metadata:
+            return []
+
+        # Sort by hit count (descending)
+        sorted_entries = sorted(
+            self._metadata.items(),
+            key=lambda x: x[1].get("hit_count", 0),
+            reverse=True
+        )
+
+        # Return top N
+        top = []
+        for cache_hash, info in sorted_entries[:n]:
+            key_info = info.get("key_info") or {}
+            top.append({
+                "hash": cache_hash[:8],  # Short hash for display
+                "hit_count": info.get("hit_count", 0),
+                "size_kb": info.get("size_bytes", 0) / 1024,
+                "created_at": info.get("created_at", ""),
+                "expression": key_info.get("expression"),  # Include expression if present
+            })
+
+        return top
+
+    def _get_entry_ages(self) -> Tuple[Optional[float], Optional[float]]:
+        """Get ages of oldest and newest entries
+
+        Returns:
+            Tuple of (oldest_age_days, newest_age_days) or (None, None) if empty
+        """
+        if not self._metadata:
+            return None, None
+
+        now = datetime.now()
+        oldest_age = None
+        newest_age = None
+
+        for info in self._metadata.values():
+            try:
+                created = datetime.fromisoformat(info.get("created_at", ""))
+                age_days = (now - created).total_seconds() / 86400
+
+                if oldest_age is None or age_days > oldest_age:
+                    oldest_age = age_days
+                if newest_age is None or age_days < newest_age:
+                    newest_age = age_days
+            except Exception:
+                continue
+
+        return oldest_age, newest_age
+
+    def get_least_accessed(self, n: int = 10) -> List[dict]:
+        """Get least accessed entries (candidates for cleanup)
+
+        Args:
+            n: Number of entries to return
+
+        Returns:
+            List of dicts with hash, hit_count, size_kb, and created_at
+        """
+        if not self._metadata:
+            return []
+
+        # Sort by hit count (ascending)
+        sorted_entries = sorted(
+            self._metadata.items(),
+            key=lambda x: x[1].get("hit_count", 0)
+        )
+
+        # Return bottom N
+        bottom = []
+        for cache_hash, info in sorted_entries[:n]:
+            bottom.append({
+                "hash": cache_hash[:8],
+                "hit_count": info.get("hit_count", 0),
+                "size_kb": info.get("size_bytes", 0) / 1024,
+                "created_at": info.get("created_at", ""),
+            })
+
+        return bottom
+
+    def get_entries_by_expression(self, expression: str) -> List[dict]:
+        """Get all cache entries for a specific expression
+
+        Args:
+            expression: Expression to search for
+
+        Returns:
+            List of matching entries
+        """
+        matches = []
+        for cache_hash, info in self._metadata.items():
+            key_info = info.get("key_info") or {}
+            if key_info.get("expression") == expression:
+                matches.append({
+                    "hash": cache_hash[:8],
+                    "hit_count": info.get("hit_count", 0),
+                    "size_kb": info.get("size_bytes", 0) / 1024,
+                    "created_at": info.get("created_at", ""),
+                })
+
+        return matches
+
+    def get_top_accessed(self, n: int = 5) -> List[dict]:
+        """Get top N most accessed entries
+
+        Args:
+            n: Number of entries to return
+
+        Returns:
+            List of top accessed entries
+        """
+        return self._get_top_accessed(n)
 
     def cleanup_old_entries(self, days: int = 30) -> int:
         """Clean up cache entries older than specified days
