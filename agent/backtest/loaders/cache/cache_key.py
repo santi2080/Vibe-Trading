@@ -5,6 +5,12 @@ Generates unique hash keys for caching data requests based on:
 - Timeframe (e.g., '1h', '1d', '1w')
 - Time range (start_date, end_date)
 - Optional fields (e.g., ['open', 'high', 'low', 'close', 'volume'])
+- Optional expression (e.g., 'ts_mean(close, 20)', 'EMA(close, 50)')
+
+Expression Cache Support:
+    When expression is provided, the cache key represents a computed result
+    rather than raw data. This enables caching of indicator calculations,
+    feature engineering results, and other derived data.
 """
 
 import hashlib
@@ -24,6 +30,7 @@ class CacheKey:
         start_time: Start datetime
         end_time: End datetime
         fields: Optional list of fields (e.g., ['open', 'high', 'low', 'close', 'volume'])
+        expression: Optional expression for computed results (e.g., 'ts_mean(close, 20)')
     """
 
     symbol: str
@@ -31,6 +38,7 @@ class CacheKey:
     start_time: datetime
     end_time: datetime
     fields: List[str] = field(default_factory=list)
+    expression: Optional[str] = None
 
     def to_hash(self) -> str:
         """Generate SHA256 hash for this cache key
@@ -45,6 +53,7 @@ class CacheKey:
             "start_time": self.start_time.isoformat(),
             "end_time": self.end_time.isoformat(),
             "fields": sorted(self.fields) if self.fields else [],
+            "expression": self.expression or "",  # Include expression in hash
         }
 
         # Generate hash
@@ -63,6 +72,7 @@ class CacheKey:
             "start_time": self.start_time.isoformat(),
             "end_time": self.end_time.isoformat(),
             "fields": self.fields,
+            "expression": self.expression,  # Include expression in metadata
         }
 
     @classmethod
@@ -81,6 +91,7 @@ class CacheKey:
             start_time=datetime.fromisoformat(data["start_time"]),
             end_time=datetime.fromisoformat(data["end_time"]),
             fields=data.get("fields", []),
+            expression=data.get("expression"),  # Support expression field
         )
 
     def __str__(self) -> str:
