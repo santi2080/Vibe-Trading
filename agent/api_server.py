@@ -1992,7 +1992,7 @@ async def cancel_swarm_run(run_id: str):
 # ============================================================================
 
 from src.api.alpha_routes import register_alpha_routes  # noqa: E402
-register_alpha_routes(app)
+register_alpha_routes(app, require_auth=require_auth, require_event_stream_auth=require_event_stream_auth)
 
 
 # ============================================================================
