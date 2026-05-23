@@ -8,6 +8,12 @@ Three-level cache system:
 Query flow: L1 → L2 → L3 → API
 Write flow: L1 + L2 (async)
 
+Enhanced features:
+- Expression cache support for computed results
+- Real-time monitoring via CacheMonitor
+- Health checks and alerting
+- Performance metrics collection
+
 Usage:
     from agent.backtest.loaders.cache import DataCache
 
@@ -31,6 +37,10 @@ Usage:
             end_time=datetime(2024, 12, 31),
             data=df
         )
+
+    # Monitor cache performance
+    monitor = cache.get_monitor()
+    report = monitor.get_report()
 """
 
 import logging
@@ -42,6 +52,7 @@ import pandas as pd
 from .cache_key import CacheKey
 from .disk_cache import DiskCache
 from .memory_cache import MemoryCache
+from .cache_monitor import CacheMonitor
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +90,8 @@ class DataCache:
             "l2_hits": 0,
             "misses": 0,
         }
+        # Initialize monitor
+        self._monitor = CacheMonitor(self)
 
     def get(
         self,
@@ -230,6 +243,30 @@ class DataCache:
                 "hit_rate": hit_rate,
             },
         }
+
+    def get_monitor(self) -> CacheMonitor:
+        """Get the cache monitor instance
+
+        Returns:
+            CacheMonitor instance for monitoring and alerting
+        """
+        return self._monitor
+
+    def get_monitor_report(self) -> str:
+        """Get a human-readable monitoring report
+
+        Returns:
+            String report with cache performance summary
+        """
+        return self._monitor.get_report()
+
+    def check_cache_health(self) -> list:
+        """Check cache health and return any alerts
+
+        Returns:
+            List of HealthAlert objects
+        """
+        return self._monitor.check_health()
 
     def clear(self) -> None:
         """Clear all caches"""
