@@ -15,16 +15,25 @@ Usage:
 
     # Save data to cache
     cache.set(symbol='BTC-USDT', timeframe='1h', start='2024-01-01', end='2024-12-31', data=df)
+
+Monitoring:
+    from agent.backtest.loaders.cache import CacheMonitor
+
+    monitor = CacheMonitor(cache)
+    monitor.collect_metrics()
+    report = monitor.get_report()
 """
 
 from .cache_key import CacheKey
 from .memory_cache import MemoryCache
 from .disk_cache import DiskCache
 from .data_cache import DataCache
+from .cache_monitor import CacheMonitor
 
 __all__ = [
     'CacheKey',
     'MemoryCache',
     'DiskCache',
     'DataCache',
+    'CacheMonitor',
 ]
