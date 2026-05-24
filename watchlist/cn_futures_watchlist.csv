@@ -1,0 +1,5 @@
+symbol,name,market,exchange,sector,timeframes,contract_type,multiplier,max_lots,ATR
+al0,铝主连,CN_FUTURES,SHFE,有色金属,1D-1H,standard,5,2,105.1443
+rb0,螺纹钢主连,CN_FUTURES,SHFE,黑色金属,1D-1H,standard,10,10,12.4902
+ru0,天然橡胶主连,CN_FUTURES,SHFE,化工,1D-1H,standard,10,1,135.4956
+ta0,PTA主连,CN_FUTURES,CZCE,化工,1D-1H,standard,5,1,68.4981
