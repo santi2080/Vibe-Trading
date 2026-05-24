@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import time
 from collections import defaultdict
 from typing import Dict, List, Optional, Union
 
@@ -9,6 +11,7 @@ import pandas as pd
 import yfinance as yf
 
 from agent.backtest.loaders.base import validate_date_range
+from agent.backtest.loaders.proxy_manager import ProxyManager
 from agent.backtest.loaders.registry import register
 
 _OHLCV_COLUMNS = ["open", "high", "low", "close", "volume"]
@@ -69,6 +72,7 @@ def _download_history(
     start_date: str,
     end_date: str,
     interval: str,
+    proxy_manager: Optional[ProxyManager] = None,
 ) -> pd.DataFrame:
     """Download raw historical data via yfinance.
 
@@ -77,18 +81,50 @@ def _download_history(
         start_date: Inclusive start date string.
         end_date: End date string passed directly to yfinance.
         interval: yfinance interval string.
+        proxy_manager: Optional proxy manager for request routing.
 
     Returns:
         Raw dataframe from ``yf.download``.
     """
-    return yf.download(
-        tickers,
-        start=start_date,
-        end=end_date,
-        interval=interval,
-        auto_adjust=False,
-        progress=False,
-    )
+    proxy = proxy_manager.get_proxy() if proxy_manager else None
+    start_time = time.time()
+
+    # yfinance uses environment variables for proxy configuration
+    old_proxy = os.environ.get("HTTPS_PROXY")
+    if proxy:
+        os.environ["HTTPS_PROXY"] = proxy
+
+    try:
+        result = yf.download(
+            tickers,
+            start=start_date,
+            end=end_date,
+            interval=interval,
+            auto_adjust=False,
+            progress=False,
+        )
+
+        # Record success
+        if proxy_manager and proxy:
+            latency = time.time() - start_time
+            proxy_manager.record_request(proxy, success=True, latency=latency)
+
+        return result
+
+    except Exception as exc:
+        # Record failure
+        if proxy_manager and proxy:
+            latency = time.time() - start_time
+            proxy_manager.record_request(proxy, success=False, latency=latency)
+        raise exc
+
+    finally:
+        # Restore original proxy setting
+        if proxy:
+            if old_proxy:
+                os.environ["HTTPS_PROXY"] = old_proxy
+            else:
+                os.environ.pop("HTTPS_PROXY", None)
 
 
 def _flatten_columns(frame: pd.DataFrame, symbol: str) -> pd.DataFrame:
@@ -202,12 +238,15 @@ class DataLoader:
         """Always available (free public data, no auth)."""
         return True
 
-    def __init__(self) -> None:
+    def __init__(self, enable_proxy: bool = True) -> None:
         """Initialize the loader.
+
+        Args:
+            enable_proxy: Whether to enable proxy management (default: True).
 
         yfinance is a free public-data wrapper and does not require credentials.
         """
-        pass
+        self.proxy_manager = ProxyManager() if enable_proxy else None
 
     def fetch(
         self,
@@ -245,7 +284,9 @@ class DataLoader:
         results: Dict[str, pd.DataFrame] = {}
 
         try:
-            bulk_data = _download_history(unique_symbols, start_date, end_date, yf_interval)
+            bulk_data = _download_history(
+                unique_symbols, start_date, end_date, yf_interval, self.proxy_manager
+            )
         except Exception as exc:
             print(f"[WARN] yfinance bulk download failed for {unique_symbols}: {exc}")
             bulk_data = pd.DataFrame()
@@ -254,7 +295,9 @@ class DataLoader:
             try:
                 symbol_frame = _extract_symbol_frame(bulk_data, symbol, len(unique_symbols))
                 if symbol_frame.empty:
-                    symbol_frame = _download_history(symbol, start_date, end_date, yf_interval)
+                    symbol_frame = _download_history(
+                        symbol, start_date, end_date, yf_interval, self.proxy_manager
+                    )
 
                 normalized = _normalize_frame(symbol_frame, requested_interval)
                 if normalized.empty:
