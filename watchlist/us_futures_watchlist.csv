@@ -1,0 +1,9 @@
+symbol,name,market,exchange,sector,timeframes,contract_type,trade_contract_type,multiplier,max_lots,ATR
+GC=F,黄金,US_FUTURES,COMEX,贵金属,1D-4H,standard,1oz,1,4,70.0047
+SI=F,白银,US_FUTURES,COMEX,贵金属,1D-4H,standard,100oz,100,1,2.8134
+HG=F,铜,US_FUTURES,COMEX,有色金属,1D-4H,standard,Micro Copper (2500 lbs),2500,1,0.112
+CL=F,WTI原油,US_FUTURES,NYMEX,能源,1D-4H,standard,Micro WTI (0.1 bbl),100,0,7.3799
+ZC=F,玉米,US_FUTURES,CBOT,农产品,1D-4H,standard,Mini Corn,10,5,9.434
+ZS=F,大豆,US_FUTURES,CBOT,农产品,1D-4H,standard,Mini Soybeans,10,2,16.9023
+ES=F,标普500,US_FUTURES,CME,指数,1D-4H,standard,Micro E-mini S&P 500 ($5),5,1,88.1598
+NQ=F,纳斯达克100,US_FUTURES,CME,指数,1D-4H,standard,Micro E-mini Nasdaq-100 ($2),2,0,470.3862
