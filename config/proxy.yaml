@@ -1,0 +1,23 @@
+# Proxy Configuration
+
+# List of proxy servers (in priority order)
+proxies:
+  - socks5://127.0.0.1:10829
+  # - http://proxy2.example.com:8080
+  # - socks5://proxy3.example.com:1080
+
+# Health check settings
+health_check:
+  interval: 300  # Seconds between health checks (5 minutes)
+  timeout: 10    # Timeout for health check requests (seconds)
+  test_url: https://finance.yahoo.com  # URL to test connectivity
+
+# Rotation settings
+rotation:
+  on_failure: true  # Automatically rotate on request failure
+  max_failures: 3   # Max consecutive failures before marking unavailable
+
+# Performance thresholds
+thresholds:
+  min_success_rate: 0.8  # Minimum success rate (80%)
+  max_latency: 5.0       # Maximum acceptable latency (seconds)

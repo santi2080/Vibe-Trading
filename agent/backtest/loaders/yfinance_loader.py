@@ -35,7 +35,7 @@ def _to_yfinance_symbol(code: str) -> str:
     """Convert project symbols into yfinance symbols.
 
     Args:
-        code: Project symbol, for example ``AAPL.US`` or ``700.HK``.
+        code: Project symbol, for example ``AAPL.US``, ``700.HK``, or ``GC=F``.
 
     Returns:
         yfinance-compatible symbol.
@@ -47,6 +47,7 @@ def _to_yfinance_symbol(code: str) -> str:
         digits = upper[:-3]
         width = max(4, len(digits))
         return f"{digits.zfill(width)}.HK"
+    # US futures symbols (e.g., GC=F, CL=F) pass through unchanged
     return upper
 
 
@@ -191,10 +192,10 @@ def _normalize_frame(frame: pd.DataFrame, requested_interval: str) -> pd.DataFra
 
 @register
 class DataLoader:
-    """Fetch HK/US equity bars from Yahoo Finance via yfinance."""
+    """Fetch HK/US equity and US futures bars from Yahoo Finance via yfinance."""
 
     name = "yfinance"
-    markets = {"us_equity", "hk_equity"}
+    markets = {"us_equity", "hk_equity", "us_futures"}
     requires_auth = False
 
     def is_available(self) -> bool:
@@ -219,7 +220,7 @@ class DataLoader:
         """Fetch OHLCV history keyed by the original project symbols.
 
         Args:
-            codes: Project symbols such as ``AAPL.US`` and ``700.HK``.
+            codes: Project symbols such as ``AAPL.US``, ``700.HK``, or ``GC=F``.
             start_date: Start date in ``YYYY-MM-DD`` format.
             end_date: End date in ``YYYY-MM-DD`` format.
             fields: Ignored for yfinance; included for interface compatibility.

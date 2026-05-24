@@ -75,6 +75,7 @@ FALLBACK_CHAINS: dict[str, list[str]] = {
     "crypto":    ["okx", "ccxt"],
     "futures":   ["tqsdk", "tushare", "akshare"],  # TqSdk for Chinese futures
     "cn_futures": ["tqsdk", "tushare", "akshare"],  # Alias for Chinese futures
+    "us_futures": ["yfinance"],  # yfinance for US futures (1H preferred)
     "fund":      ["tushare", "akshare"],
     "macro":     ["akshare", "tushare"],
     "forex":     ["akshare", "yfinance"],
