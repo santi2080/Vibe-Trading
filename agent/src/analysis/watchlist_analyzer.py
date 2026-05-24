@@ -419,7 +419,11 @@ class WatchlistAnalyzer:
                 risk_reward = reward / risk if risk > 0 else None
 
             # 信号日期
-            signal_date = pd.Timestamp(df.index[-1]).strftime("%Y-%m-%d") if len(df) > 0 else None
+            last_ts = df.index[-1]
+            if pd.notna(last_ts):
+                signal_date = pd.Timestamp(last_ts).strftime("%Y-%m-%d")
+            else:
+                signal_date = None
 
             return AnalysisResult(
                 symbol=symbol,
@@ -490,8 +494,11 @@ class WatchlistAnalyzer:
             "CN_FUTURES": "cn_futures",
             "us_stocks": "us_stocks",
             "US_STOCKS": "us_stocks",
+            "US_STOCK": "us_stocks",
             "etf": "etf",
             "ETF": "etf",
+            "US_ETF": "etf",
+            "HK_STOCK": "hk_stocks",
         }
 
         market_dir = market_dir_map.get(market, "us_futures")
@@ -499,9 +506,12 @@ class WatchlistAnalyzer:
 
         if not data_path.exists():
             # 尝试 trading-assistant 数据目录
-            ta_path = Path(f"/Users/iagent/projects/trading-assistant/data/features/{market_dir}/{symbol}/1d.parquet")
-            if ta_path.exists():
-                data_path = ta_path
+            ta_feature = Path(f"/Users/iagent/projects/trading-assistant/data/features/{market_dir}/{symbol}/1d.parquet")
+            ta_cache = Path(f"/Users/iagent/projects/trading-assistant/data/cache/{symbol}_1d.parquet")
+            if ta_feature.exists():
+                data_path = ta_feature
+            elif ta_cache.exists():
+                data_path = ta_cache
             else:
                 return None
 
