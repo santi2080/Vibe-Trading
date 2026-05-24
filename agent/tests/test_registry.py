@@ -7,8 +7,8 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
-from backtest.loaders.base import DataLoaderProtocol, NoAvailableSourceError
-from backtest.loaders.registry import (
+from agent.backtest.loaders.base import DataLoaderProtocol, NoAvailableSourceError
+from agent.backtest.loaders.registry import (
     FALLBACK_CHAINS,
     LOADER_REGISTRY,
     get_loader_cls_with_fallback,
@@ -117,7 +117,7 @@ class TestProtocol:
 
 class TestFallbackChains:
     def test_all_expected_markets_present(self) -> None:
-        expected = {"a_share", "us_equity", "hk_equity", "crypto", "futures", "fund", "macro", "forex"}
+        expected = {"a_share", "us_equity", "hk_equity", "crypto", "futures", "cn_futures", "fund", "macro", "forex"}
         assert expected == set(FALLBACK_CHAINS.keys())
 
     def test_chains_are_non_empty(self) -> None:
@@ -139,8 +139,9 @@ class TestResolveLoader:
             with patch.dict(FALLBACK_CHAINS, {
                 "a_share": ["fake_unavailable", "fake_available"],
             }):
-                loader = resolve_loader("a_share")
-                assert loader.name == "fake_available"
+                with patch("agent.backtest.loaders.registry._wrap_with_cache", side_effect=lambda x, y: x):
+                    loader = resolve_loader("a_share")
+                    assert loader.name == "fake_available"
 
     def test_raises_when_none_available(self) -> None:
         with patch.dict(LOADER_REGISTRY, {
@@ -153,9 +154,8 @@ class TestResolveLoader:
                     resolve_loader("a_share")
 
     def test_unknown_market_raises(self) -> None:
-        with patch.dict(LOADER_REGISTRY, {}, clear=True):
-            with pytest.raises(NoAvailableSourceError):
-                resolve_loader("martian_stocks")
+        with pytest.raises(NoAvailableSourceError):
+            resolve_loader("martian_stocks")
 
 
 # ---------------------------------------------------------------------------
@@ -168,8 +168,9 @@ class TestGetLoaderWithFallback:
         with patch.dict(LOADER_REGISTRY, {
             "fake_available": _FakeAvailableLoader,
         }, clear=True):
-            cls = get_loader_cls_with_fallback("fake_available")
-            assert cls is _FakeAvailableLoader
+            with patch("agent.backtest.loaders.registry._wrap_with_cache", side_effect=lambda x, y: x):
+                cls = get_loader_cls_with_fallback("fake_available")
+                assert cls is _FakeAvailableLoader
 
     def test_falls_back_when_unavailable(self) -> None:
         with patch.dict(LOADER_REGISTRY, {
@@ -179,8 +180,10 @@ class TestGetLoaderWithFallback:
             with patch.dict(FALLBACK_CHAINS, {
                 "a_share": ["fake_unavailable", "fake_available"],
             }):
-                cls = get_loader_cls_with_fallback("fake_unavailable")
-                assert cls is _FakeAvailableLoader
+                with patch("agent.backtest.loaders.registry._wrap_with_cache", side_effect=lambda x, y: x):
+                    cls = get_loader_cls_with_fallback("fake_unavailable")
+                    # Should fall back to the cached loader class (CachedDataLoader wraps fake_available)
+                    assert cls is _FakeAvailableLoader
 
     def test_unknown_source_raises(self) -> None:
         with patch.dict(LOADER_REGISTRY, {}, clear=True):
@@ -192,8 +195,9 @@ class TestGetLoaderWithFallback:
             "fake_unavailable": _FakeUnavailableLoader,
         }, clear=True):
             with patch.dict(FALLBACK_CHAINS, {"a_share": ["fake_unavailable"]}):
-                with pytest.raises(NoAvailableSourceError):
-                    get_loader_cls_with_fallback("fake_unavailable")
+                with patch("agent.backtest.loaders.registry._wrap_with_cache", side_effect=lambda x, y: x):
+                    with pytest.raises(NoAvailableSourceError):
+                        get_loader_cls_with_fallback("fake_unavailable")
 
 
 # ---------------------------------------------------------------------------
@@ -211,8 +215,9 @@ class TestInitErrorFallback:
             with patch.dict(FALLBACK_CHAINS, {
                 "a_share": ["fake_init_error", "fake_available"],
             }):
-                loader = resolve_loader("a_share")
-                assert loader.name == "fake_available"
+                with patch("agent.backtest.loaders.registry._wrap_with_cache", side_effect=lambda x, y: x):
+                    loader = resolve_loader("a_share")
+                    assert loader.name == "fake_available"
 
     def test_get_loader_cls_falls_back_when_requested_init_errors(self) -> None:
         with patch.dict(LOADER_REGISTRY, {
@@ -222,5 +227,7 @@ class TestInitErrorFallback:
             with patch.dict(FALLBACK_CHAINS, {
                 "a_share": ["fake_init_error", "fake_available"],
             }):
-                cls = get_loader_cls_with_fallback("fake_init_error")
-                assert cls is _FakeAvailableLoader
+                with patch("agent.backtest.loaders.registry._wrap_with_cache", side_effect=lambda x, y: x):
+                    cls = get_loader_cls_with_fallback("fake_init_error")
+                    # Should fall back to the cached loader class (CachedDataLoader wraps fake_available)
+                    assert cls is _FakeAvailableLoader

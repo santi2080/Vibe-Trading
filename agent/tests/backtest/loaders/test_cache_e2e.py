@@ -44,6 +44,7 @@ class TestCacheWithRealLoaders:
         with tempfile.TemporaryDirectory() as tmpdir:
             yield tmpdir
 
+    @pytest.mark.skip(reason="Requires real API tokens (Tushare/AKShare)")
     def test_resolve_loader_with_cache(self, cache_dir):
         """Test resolve_loader returns cached loader by default."""
         os.environ["VIBE_CACHE_DIR"] = cache_dir
