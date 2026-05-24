@@ -758,6 +758,187 @@ def reap_stale_runs() -> str:
 
 
 # ---------------------------------------------------------------------------
+# Watchlist analysis tools
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool
+def list_watchlist(watchlist_path: str = "watchlist/us_futures_watchlist.csv") -> str:
+    """List all securities in a watchlist with their basic attributes.
+
+    Returns a JSON array of {symbol, name, market, exchange, sector, timeframes, atr}.
+
+    Args:
+        watchlist_path: Path to watchlist CSV file.
+            - "watchlist/us_futures_watchlist.csv" (default, 8 US futures)
+            - "watchlist/cn_futures_watchlist.csv" (4 China futures)
+            - "watchlist/etf_watchlist.csv" (35 ETFs)
+    """
+    import json
+    from pathlib import Path
+
+    # 尝试导入 WatchlistReader
+    try:
+        from src.data.watchlist import WatchlistReader
+    except ImportError:
+        return json.dumps({"status": "error", "error": "WatchlistReader not available"})
+
+    path = Path(watchlist_path)
+    if not path.exists():
+        # 尝试相对于 agent 目录
+        agent_dir = Path(__file__).parent
+        path = agent_dir / watchlist_path
+
+    if not path.exists():
+        available = list(Path("watchlist").glob("*.csv")) if Path("watchlist").exists() else []
+        return json.dumps({
+            "status": "error",
+            "error": f"Watchlist not found: {watchlist_path}",
+            "available": [str(p) for p in available],
+        })
+
+    reader = WatchlistReader(str(path))
+    items = reader.load_raw()
+
+    return json.dumps({
+        "status": "ok",
+        "watchlist": str(path),
+        "count": len(items),
+        "securities": items,
+    }, ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+def analyze_security(
+    symbol: str,
+    market: str = "us_futures",
+    primary_tf: str = "1D",
+    watchlist_path: str = "watchlist/us_futures_watchlist.csv",
+) -> str:
+    """Analyze a single security's trend, pullback, and trading signals.
+
+    Uses EMA+ADX for trend analysis and RSI for pullback detection.
+    Returns signal direction (LONG/SHORT/NEUTRAL), entry price, stop loss, and ATR.
+
+    Args:
+        symbol: Security symbol (e.g., "GC=F", "SI=F", "CL=F").
+        market: Market type ("us_futures", "cn_futures", "us_stock", etc.).
+        primary_tf: Primary timeframe for analysis (default "1D").
+        watchlist_path: Path to watchlist CSV for ATR configuration.
+    """
+    import json
+    from pathlib import Path
+
+    try:
+        from src.analysis.watchlist_analyzer import WatchlistAnalyzer
+
+        # 解析路径
+        path = Path(watchlist_path)
+        if not path.exists():
+            agent_dir = Path(__file__).parent
+            path = agent_dir / watchlist_path
+
+        analyzer = WatchlistAnalyzer(watchlist_path=str(path))
+        result = analyzer.analyze_single(
+            symbol=symbol,
+            market=market,
+            primary_tf=primary_tf,
+        )
+
+        return json.dumps({
+            "status": "ok" if not result.error else "error",
+            "result": result.__dict__,
+        }, ensure_ascii=False, indent=2)
+
+    except ImportError as e:
+        return json.dumps({"status": "error", "error": f"Import error: {e}"})
+    except Exception as e:
+        return json.dumps({"status": "error", "error": str(e)})
+
+
+@mcp.tool
+def analyze_watchlist(
+    watchlist_path: str = "watchlist/us_futures_watchlist.csv",
+    market_filter: str = "",
+    format: str = "summary",
+) -> str:
+    """Analyze all securities in a watchlist and return trend/signal analysis.
+
+    Batch analysis with summary statistics and detailed results.
+    Best for "give me all uptrend signals" type queries.
+
+    Args:
+        watchlist_path: Path to watchlist CSV file.
+        market_filter: Optional market filter (e.g., "US_FUTURES").
+        format: Output format - "summary" (default) or "full" (includes all details).
+    """
+    import json
+    from pathlib import Path
+
+    try:
+        from src.analysis.watchlist_analyzer import WatchlistAnalyzer
+        from src.analysis.report_generator import ReportGenerator
+
+        # 解析路径
+        path = Path(watchlist_path)
+        if not path.exists():
+            agent_dir = Path(__file__).parent
+            path = agent_dir / watchlist_path
+
+        if not path.exists():
+            return json.dumps({
+                "status": "error",
+                "error": f"Watchlist not found: {watchlist_path}",
+            })
+
+        analyzer = WatchlistAnalyzer(watchlist_path=str(path))
+        results = analyzer.analyze_all(watchlist_path=str(path), market_filter=market_filter or None)
+
+        if format == "full":
+            # 返回完整结果
+            return json.dumps({
+                "status": "ok",
+                "watchlist": str(path),
+                "count": len(results),
+                "results": [r.__dict__ for r in results],
+            }, ensure_ascii=False, indent=2)
+        else:
+            # 返回汇总
+            report_gen = ReportGenerator()
+            summary = report_gen.generate_summary(results)
+
+            # 只返回有效信号
+            valid_signals = []
+            for r in results:
+                if not r.error and r.signal_direction in ("LONG", "SHORT"):
+                    valid_signals.append({
+                        "symbol": r.symbol,
+                        "name": r.name,
+                        "direction": r.signal_direction,
+                        "trend": r.trend,
+                        "price": r.signal_price,
+                        "stop_loss": r.stop_loss,
+                        "atr": r.atr_1n,
+                        "confidence": r.confidence,
+                    })
+
+            return json.dumps({
+                "status": "ok",
+                "watchlist": str(path),
+                "total": summary["total"],
+                "success": summary["success"],
+                "trends": summary["trends"],
+                "signals": summary["signals"],
+                "valid_signals": valid_signals,
+            }, ensure_ascii=False, indent=2)
+
+    except ImportError as e:
+        return json.dumps({"status": "error", "error": f"Import error: {e}"})
+    except Exception as e:
+        return json.dumps({"status": "error", "error": str(e)})
+
+
+# ---------------------------------------------------------------------------
 # Trade journal tool
 # ---------------------------------------------------------------------------
 
