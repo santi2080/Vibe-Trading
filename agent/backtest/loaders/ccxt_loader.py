@@ -14,12 +14,12 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 
-from backtest.loaders.base import (
+from agent.backtest.loaders.base import (
     check_budget,
     retry_with_budget,
     validate_date_range,
 )
-from backtest.loaders.registry import register
+from agent.backtest.loaders.registry import register
 
 logger = logging.getLogger(__name__)
 

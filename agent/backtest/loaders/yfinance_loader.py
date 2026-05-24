@@ -8,8 +8,8 @@ from typing import Dict, List, Optional, Union
 import pandas as pd
 import yfinance as yf
 
-from backtest.loaders.base import validate_date_range
-from backtest.loaders.registry import register
+from agent.backtest.loaders.base import validate_date_range
+from agent.backtest.loaders.registry import register
 
 _OHLCV_COLUMNS = ["open", "high", "low", "close", "volume"]
 _COLUMN_RENAMES = {

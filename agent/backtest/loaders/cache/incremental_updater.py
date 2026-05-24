@@ -4,7 +4,7 @@ This module provides incremental update functionality that only fetches new data
 since the last update, avoiding redundant API calls.
 
 Usage:
-    from backtest.loaders.cache.incremental_updater import IncrementalUpdater
+    from agent.backtest.loaders.cache.incremental_updater import IncrementalUpdater
 
     updater = IncrementalUpdater()
     updated_df = updater.update(cached_df, loader, symbol, timeframe)

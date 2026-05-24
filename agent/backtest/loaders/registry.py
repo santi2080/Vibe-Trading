@@ -13,7 +13,7 @@ import logging
 import os
 from typing import Any, Type
 
-from backtest.loaders.base import NoAvailableSourceError
+from agent.backtest.loaders.base import NoAvailableSourceError
 
 logger = logging.getLogger(__name__)
 
@@ -48,12 +48,13 @@ def _ensure_registered() -> None:
     _registered = True
 
     _loader_modules = [
-        "backtest.loaders.tushare",
-        "backtest.loaders.okx",
-        "backtest.loaders.yfinance_loader",
-        "backtest.loaders.akshare_loader",
-        "backtest.loaders.ccxt_loader",
-        "backtest.loaders.futu",
+        "agent.backtest.loaders.tushare",
+        "agent.backtest.loaders.tqsdk_loader",
+        "agent.backtest.loaders.okx",
+        "agent.backtest.loaders.yfinance_loader",
+        "agent.backtest.loaders.akshare_loader",
+        "agent.backtest.loaders.ccxt_loader",
+        "agent.backtest.loaders.futu",
     ]
     import importlib
     for mod in _loader_modules:
@@ -70,9 +71,10 @@ def _ensure_registered() -> None:
 FALLBACK_CHAINS: dict[str, list[str]] = {
     "a_share":   ["tushare", "akshare"],
     "us_equity": ["yfinance", "akshare"],
-    "hk_equity": ["yfinance", "futu", "akshare"],
+    "hk_equity": ["futu", "yfinance", "akshare"],
     "crypto":    ["okx", "ccxt"],
-    "futures":   ["tushare", "akshare"],
+    "futures":   ["tqsdk", "tushare", "akshare"],  # TqSdk for Chinese futures
+    "cn_futures": ["tqsdk", "tushare", "akshare"],  # Alias for Chinese futures
     "fund":      ["tushare", "akshare"],
     "macro":     ["akshare", "tushare"],
     "forex":     ["akshare", "yfinance"],
@@ -179,7 +181,7 @@ def _wrap_with_cache(loader: Any, enable_cache: bool) -> Any:
         return loader
 
     try:
-        from backtest.loaders.cached_loader import CachedDataLoader
+        from agent.backtest.loaders.cached_loader import CachedDataLoader
         cache_dir = os.getenv("VIBE_CACHE_DIR", ".cache/data")
         return CachedDataLoader(loader, cache_dir=cache_dir, enable_cache=True)
     except Exception as exc:
