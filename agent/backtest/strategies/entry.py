@@ -3,17 +3,32 @@
 Entry strategies combine trend and pullback signals to generate
 precise entry signals with proper risk management.
 
-Supported indicators:
-- Breakout confirmation
-- Volume spike
-- VWAP confirmation
-- Signal confluence
-
-Usage:
-    from agent.backtest.strategies.entry import BreakoutEntryStrategy
-
-    strategy = BreakoutEntryStrategy()
-    result = strategy.generate(df)
+---
+# SKILL Metadata
+name: breakout_entry
+category: entry
+tags: [entry, breakout, volume, atr]
+timeframes: [1h, 4h]
+markets: [cn_futures, us_futures, a_stock, us_stock, crypto]
+parameters:
+  breakout_period:
+    type: int
+    default: 20
+    description: Lookback period for breakout detection
+  volume_multiplier:
+    type: float
+    default: 1.5
+    description: Minimum volume spike multiplier
+  atr_period:
+    type: int
+    default: 14
+    description: ATR calculation period
+  atr_multiplier:
+    type: float
+    default: 2.0
+    description: ATR multiplier for stop loss
+version: "1.0.0"
+---
 """
 
 from __future__ import annotations

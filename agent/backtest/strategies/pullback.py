@@ -3,17 +3,28 @@
 Pullback strategies identify temporary corrections or retracements
 against the primary trend, providing better entry prices.
 
-Supported indicators:
-- RSI (Relative Strength Index)
-- Bollinger Bands
-- Fibonacci Retracement
-- Stochastic Oscillator
-
-Usage:
-    from agent.backtest.strategies.pullback import PullbackRsiStrategy
-
-    strategy = PullbackRsiStrategy()
-    result = strategy.generate(df)
+---
+# SKILL Metadata
+name: pullback_rsi
+category: pullback
+tags: [pullback, rsi, mean_reversion]
+timeframes: [1d, 4h]
+markets: [cn_futures, us_futures, a_stock, us_stock, crypto]
+parameters:
+  rsi_period:
+    type: int
+    default: 14
+    description: RSI calculation period
+  rsi_oversold:
+    type: float
+    default: 30.0
+    description: RSI oversold threshold for long entries
+  rsi_overbought:
+    type: float
+    default: 70.0
+    description: RSI overbought threshold for short entries
+version: "1.0.0"
+---
 """
 
 from __future__ import annotations

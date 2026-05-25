@@ -1,0 +1,44 @@
+name: skill-template
+description: 策略技能标准模板
+category: trend  # trend | entry | pullback | exit | risk
+
+# 标签（用于分类和搜索）
+tags:
+  - trend              # 功能标签（必须）
+  - cn_futures        # 市场标签
+  - simple            # 复杂度: simple | medium | advanced
+
+# 推荐时间周期
+timeframes:
+  - 1d
+  - 4h
+  # - 1h
+
+# 适用市场
+markets:
+  - cn_futures
+  # - us_futures
+  # - a_stock
+  # - us_stock
+  # - crypto
+
+# 策略参数
+parameters:
+  period:
+    type: int
+    default: 14
+    description: 指标计算周期
+  threshold:
+    type: float
+    default: 0.5
+    description: 阈值参数
+
+# 依赖指标（可选）
+requires:
+  - pandas
+  - numpy
+
+# 版本信息
+version: "1.0.0"
+author: ""
+created: "2026-05-25"
