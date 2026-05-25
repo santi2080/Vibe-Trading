@@ -79,3 +79,9 @@ AGENTS.md
 # Alpha Zoo wiki artifacts (generated, not source)
 wiki/alpha-library/manifest.json
 wiki/alpha-library/content/
+
+# Data cache
+data/cache/
+
+# US Futures data
+data/us_futures/
