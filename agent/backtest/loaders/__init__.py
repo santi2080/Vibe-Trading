@@ -24,12 +24,19 @@ Usage:
 
     client = DataClient(market="us_equity")
     df = client.load("AAPL.US", "1D")
+
+    # Using HybridDataFetcher (recommended)
+    from agent.backtest.loaders import HybridDataFetcher
+
+    fetcher = HybridDataFetcher()
+    result = fetcher.fetch(["600519.SH", "AAPL.US"], "2024-01-01", "2024-12-31")
 """
 
 from .base import DataLoaderProtocol, NoAvailableSourceError
 from .cached_loader import CachedDataLoader
 from .client import DataClient, get_client, reset_client
 from .enhanced_loader import EnhancedCachedLoader
+from .hybrid_fetcher import HybridDataFetcher, get_fetcher
 from .registry import (
     register,
     resolve_loader,
@@ -84,6 +91,9 @@ __all__ = [
     "DataClient",
     "get_client",
     "reset_client",
+    # Hybrid Data Fetcher
+    "HybridDataFetcher",
+    "get_fetcher",
     # Registry utilities
     "register",
     "resolve_loader",

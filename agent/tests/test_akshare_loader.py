@@ -103,12 +103,15 @@ def _stub_forex_response() -> pd.DataFrame:
 
 def _stub_a_share_response() -> pd.DataFrame:
     return pd.DataFrame({
-        "日期": pd.to_datetime(["2024-01-02"]),
-        "开盘": [1700.0],
-        "最高": [1720.0],
-        "最低": [1690.0],
-        "收盘": [1710.0],
-        "成交量": [100000],
+        "date": pd.to_datetime(["2024-01-02", "2024-01-03"]),
+        "open": [1700.0, 1710.0],
+        "high": [1720.0, 1730.0],
+        "low": [1690.0, 1700.0],
+        "close": [1710.0, 1720.0],
+        "volume": [100000, 110000],
+        "amount": [1000000, 1100000],
+        "outstanding_share": [1000000, 1000000],
+        "turnover": [0.01, 0.011],
     })
 
 
@@ -118,7 +121,7 @@ def fake_akshare(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     fake = SimpleNamespace(
         fund_etf_hist_sina=MagicMock(return_value=_stub_etf_response()),
         forex_hist_em=MagicMock(return_value=_stub_forex_response()),
-        stock_zh_a_hist=MagicMock(return_value=_stub_a_share_response()),
+        stock_zh_a_daily=MagicMock(return_value=_stub_a_share_response()),
         stock_us_hist=MagicMock(return_value=pd.DataFrame()),
         stock_hk_hist=MagicMock(return_value=pd.DataFrame()),
     )
@@ -132,7 +135,7 @@ class TestRouting:
         df = loader._fetch_one("518880.SH", "2024-01-01", "2024-12-31", "1D")
 
         fake_akshare.fund_etf_hist_sina.assert_called_once_with(symbol="sh518880")
-        fake_akshare.stock_zh_a_hist.assert_not_called()
+        fake_akshare.stock_zh_a_daily.assert_not_called()
         assert df is not None
         assert list(df.columns) == ["open", "high", "low", "close", "volume"]
         assert len(df) == 2
@@ -148,7 +151,7 @@ class TestRouting:
         df = loader._fetch_one("EURUSD", "2024-01-01", "2024-12-31", "1D")
 
         fake_akshare.forex_hist_em.assert_called_once_with(symbol="EURUSD")
-        fake_akshare.stock_zh_a_hist.assert_not_called()
+        fake_akshare.stock_zh_a_daily.assert_not_called()
         assert df is not None
         assert list(df.columns) == ["open", "high", "low", "close", "volume"]
         # forex has no volume — should be zero-filled
@@ -161,12 +164,23 @@ class TestRouting:
         loader._fetch_one("EURUSD.FX", "2024-01-01", "2024-12-31", "1D")
         fake_akshare.forex_hist_em.assert_called_once_with(symbol="EURUSD")
 
-    def test_a_share_still_routes_to_stock_zh_a_hist(
+    def test_a_share_routes_to_stock_zh_a_daily(
         self, fake_akshare: SimpleNamespace
     ) -> None:
         loader = DataLoader()
-        loader._fetch_one("600519.SH", "2024-01-01", "2024-12-31", "1D")
+        loader._fetch_one("600519.SH", "2024-01-01", "2024-01-10", "1D")
 
-        fake_akshare.stock_zh_a_hist.assert_called_once()
+        # Sina format: sh600519
+        fake_akshare.stock_zh_a_daily.assert_called_once()
+        call_args = fake_akshare.stock_zh_a_daily.call_args
+        assert call_args.kwargs["symbol"] == "sh600519"
         fake_akshare.fund_etf_hist_sina.assert_not_called()
         fake_akshare.forex_hist_em.assert_not_called()
+
+    def test_a_share_sz_uses_sz_prefix(self, fake_akshare: SimpleNamespace) -> None:
+        loader = DataLoader()
+        loader._fetch_one("000001.SZ", "2024-01-01", "2024-01-10", "1D")
+
+        # Sina format: sz000001
+        call_args = fake_akshare.stock_zh_a_daily.call_args
+        assert call_args.kwargs["symbol"] == "sz000001"

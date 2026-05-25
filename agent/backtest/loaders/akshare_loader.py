@@ -1,4 +1,4 @@
-"""AKShare loader: free, no-auth data for A-shares, US, HK, futures, forex, macro.
+"""AKShare loader: free, no-auth data for A-shares, US, US futures, HK, futures, forex, macro.
 
 AKShare (https://github.com/akfamily/akshare) is a completely free financial
 data aggregator covering Chinese and global markets.  No API token required.
@@ -46,6 +46,45 @@ def _is_crypto(code: str) -> bool:
 _ETF_PREFIXES = frozenset({"15", "16", "50", "51", "52", "56", "58"})
 
 
+# CN Futures symbol mapping: al0 -> AL0
+# AKShare uses uppercase codes like 'RB0', 'AL0' instead of 'rb0', 'al0'
+_CN_FUTURES_MAP = {
+    "al0": "AL0",   # 铝
+    "rb0": "RB0",   # 螺纹钢
+    "ru0": "RU0",   # 天然橡胶
+    "ta0": "TA0",   # PTA
+    "hc0": "HC0",   # 热卷
+    "cu0": "CU0",   # 铜
+    "zn0": "ZN0",   # 锌
+    "pb0": "PB0",   # 铅
+    "ni0": "NI0",   # 镍
+    "sn0": "SN0",   # 锡
+    "ag0": "AG0",   # 白银
+    "au0": "AU0",   # 黄金
+    "bu0": "BU0",   # 沥青
+    "fu0": "FU0",   # 燃油
+    "ma0": "MA0",   # 甲醇
+    "pp0": "PP0",   # 聚丙烯
+    "l0": "L0",     # 塑料
+    "v0": "V0",     # PVC
+    "p0": "P0",     # 棕榈油
+    "y0": "Y0",     # 豆油
+    "m0": "M0",     # 豆粕
+    "jm0": "JM0",   # 焦煤
+    "j0": "J0",     # 焦炭
+    "zc0": "ZC0",   # 动力煤
+    "cs0": "CS0",   # 玉米淀粉
+    "cf0": "CF0",   # 棉花
+    "sr0": "SR0",   # 白糖
+    "sc0": "SC0",   # 原油
+}
+
+
+def _is_cn_futures(code: str) -> bool:
+    """Detect CN futures symbols (al0, rb0, ru0, etc.)"""
+    return code.lower() in _CN_FUTURES_MAP or code.lower().rstrip("0") in _CN_FUTURES_MAP
+
+
 def _is_etf_listed(code: str) -> bool:
     """Detect exchange-listed ETF / LOF symbols (e.g. 518880.SH, 159915.SZ)."""
     upper = code.upper()
@@ -71,12 +110,26 @@ def _is_forex(code: str) -> bool:
     return upper in symbol_market_map
 
 
+# US Futures symbols (akshare format: GC, SI, CL, HG, ES, NQ)
+_US_FUTURES_SYMBOLS = frozenset({"GC", "SI", "CL", "HG", "ES", "NQ", "NG", "ZC", "ZS", "ZW", "ZS"})
+
+
+def _is_us_futures(code: str) -> bool:
+    """Detect US futures symbols (e.g. GC=F, SI=F, CL=F).
+
+    AKShare uses simple symbols like 'GC' for gold, 'SI' for silver.
+    """
+    # Remove common suffixes like =F, =P
+    base = code.upper().replace("=F", "").replace("=P", "").replace("=U", "")
+    return base in _US_FUTURES_SYMBOLS
+
+
 @register
 class DataLoader:
     """AKShare universal OHLCV loader (free, no auth)."""
 
     name = "akshare"
-    markets = {"a_share", "us_equity", "hk_equity", "futures", "fund", "macro", "forex"}
+    markets = {"a_share", "us_equity", "hk_equity", "us_futures", "cn_futures", "futures", "fund", "macro", "forex"}
     requires_auth = False
 
     def is_available(self) -> bool:
@@ -129,6 +182,12 @@ class DataLoader:
         """Fetch a single symbol."""
         import akshare as ak
 
+        # Check for CN futures first (before US futures)
+        if _is_cn_futures(code):
+            return self._fetch_cn_futures(ak, code, start_date, end_date, interval)
+        # Check for US futures
+        if _is_us_futures(code):
+            return self._fetch_us_futures(ak, code, start_date, end_date, interval)
         # ETF check must precede A-share — 518880.SH ends with .SH but is an ETF.
         if _is_etf_listed(code):
             return self._fetch_etf(ak, code, start_date, end_date)
@@ -146,21 +205,33 @@ class DataLoader:
     def _fetch_a_share(
         self, ak, code: str, start_date: str, end_date: str, interval: str,
     ) -> Optional[pd.DataFrame]:
-        """Fetch A-share via stock_zh_a_hist."""
-        symbol = code.split(".")[0]
-        period = _INTERVAL_MAP_DAILY.get(interval, "daily")
-        sd = start_date.replace("-", "")
-        ed = end_date.replace("-", "")
-        df = ak.stock_zh_a_hist(
+        """Fetch A-share via stock_zh_a_daily (Sina, more reliable than Eastmoney).
+
+        Sina format is 'sh600519' or 'sz000001'.
+        Note: '大量抓取容易封 IP' - rate limiting may apply for bulk requests.
+        """
+        parts = code.upper().split(".")
+        symbol_raw = parts[0]
+        suffix = parts[1] if len(parts) > 1 else ""
+
+        # Convert to Sina format: 600519.SH -> sh600519, 000001.SZ -> sz000001
+        if suffix == "SH":
+            symbol = f"sh{symbol_raw}"
+        elif suffix == "SZ":
+            symbol = f"sz{symbol_raw}"
+        else:
+            # Fallback: assume Shanghai
+            symbol = f"sh{symbol_raw}"
+
+        df = ak.stock_zh_a_daily(
             symbol=symbol,
-            period=period,
-            start_date=sd,
-            end_date=ed,
-            adjust="qfq",
+            start_date=start_date.replace("-", ""),
+            end_date=end_date.replace("-", ""),
+            adjust="qfq",  # forward-adjusted prices
         )
         if df is None or df.empty:
             return None
-        return self._normalize(df, date_col="日期")
+        return self._normalize(df, date_col="date")
 
     def _fetch_us(self, ak, code: str, start_date: str, end_date: str) -> Optional[pd.DataFrame]:
         """Fetch US stock via stock_us_hist."""
@@ -238,6 +309,103 @@ class DataLoader:
         if df is None or df.empty:
             return None
         return self._normalize(df, date_col="日期")
+
+    def _fetch_us_futures(
+        self, ak, code: str, start_date: str, end_date: str, interval: str,
+    ) -> Optional[pd.DataFrame]:
+        """Fetch US futures via futures_foreign_hist.
+
+        AKShare uses simple symbols like 'GC' for gold, 'SI' for silver, 'CL' for crude oil.
+        Converts from formats like GC=F to GC.
+
+        Returns daily data only (akshare doesn't support intraday for foreign futures).
+        """
+        # Convert GC=F to GC
+        symbol = code.upper().replace("=F", "").replace("=P", "")
+
+        try:
+            df = ak.futures_foreign_hist(symbol=symbol)
+            if df is None or df.empty:
+                return None
+
+            # Normalize columns
+            if "date" in df.columns:
+                df = df.rename(columns={"date": "trade_date"})
+            if "s" in df.columns:
+                df = df.drop(columns=["s"], errors="ignore")
+            if "settlement" in df.columns:
+                df = df.drop(columns=["settlement"], errors="ignore")
+
+            df["trade_date"] = pd.to_datetime(df["trade_date"])
+            df = df.set_index("trade_date").sort_index()
+
+            # Filter to date range
+            df = df.loc[start_date:end_date]
+
+            # Ensure volume is numeric (akshare may return 0 for non-trading hours)
+            df["volume"] = pd.to_numeric(df["volume"], errors="coerce").fillna(0)
+
+            return df[["open", "high", "low", "close", "volume"]]
+
+        except Exception as e:
+            logger.warning("US futures fetch failed for %s: %s", code, e)
+            return None
+
+    def _fetch_cn_futures(
+        self, ak, code: str, start_date: str, end_date: str, interval: str,
+    ) -> Optional[pd.DataFrame]:
+        """Fetch CN futures via futures_zh_daily_sina.
+
+        AKShare uses uppercase codes like 'RB0', 'AL0' instead of 'rb0', 'al0'.
+        Maps from simple codes (al0, rb0) to AKShare format (AL0, RB0).
+
+        Returns daily data only.
+        """
+        # Convert al0 -> AL0, rb0 -> RB0
+        code_lower = code.lower()
+        if code_lower in _CN_FUTURES_MAP:
+            symbol = _CN_FUTURES_MAP[code_lower]
+        else:
+            # Try uppercase without 0
+            symbol = code.upper().rstrip("0")
+            if not symbol:
+                symbol = code.upper()
+
+        try:
+            df = ak.futures_zh_daily_sina(symbol=symbol)
+            if df is None or df.empty:
+                return None
+
+            # Normalize columns (akshare returns: date, open, high, low, close, volume, hold, settle)
+            col_map = {
+                "date": "trade_date",
+                "open": "open",
+                "high": "high",
+                "low": "low",
+                "close": "close",
+                "volume": "volume",
+            }
+
+            # Rename available columns
+            for old, new in col_map.items():
+                if old in df.columns and new not in df.columns:
+                    df = df.rename(columns={old: new})
+
+            df["trade_date"] = pd.to_datetime(df["trade_date"])
+            df = df.set_index("trade_date").sort_index()
+
+            # Filter to date range
+            df = df.loc[start_date:end_date]
+
+            # Ensure volume is numeric
+            if "volume" in df.columns:
+                df["volume"] = pd.to_numeric(df["volume"], errors="coerce").fillna(0)
+
+            return df[["open", "high", "low", "close", "volume"]]
+
+        except Exception as e:
+            logger.warning("CN futures fetch failed for %s: %s", code, e)
+            return None
 
     @staticmethod
     def _normalize(df: pd.DataFrame, date_col: str = "日期") -> pd.DataFrame:
