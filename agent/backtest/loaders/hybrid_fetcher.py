@@ -36,6 +36,7 @@ from agent.backtest.loaders.registry import (
 )
 from agent.src.data.quality import DataQualityMonitor, QualityReport
 from agent.src.data.freshness import DataFreshnessChecker
+from agent.src.data.symbol_translator import SymbolTranslator, DataVendor as SrcDataVendor
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,7 @@ class DataSource(Enum):
     CCXT = "ccxt"
     TQSDK = "tqsdk"
     FUTU = "futu"
+    DATABENTO = "databento"
 
 
 def _interval_to_timeframe(interval: str):
@@ -168,6 +170,16 @@ class SymbolRouter:
         MarketType.MACRO: [DataSource.AKSHARE, DataSource.TUSHARE],
     }
 
+    # Mapping from hybrid_fetcher DataSource to symbol_translator DataVendor
+    # Used for symbol format translation
+    SOURCE_TO_VENDOR = {
+        DataSource.AKSHARE: SrcDataVendor.AKSHARE,
+        DataSource.YFINANCE: SrcDataVendor.YAHOO_FINANCE,
+        DataSource.TUSHARE: SrcDataVendor.TUSHARE,
+        DataSource.TQSDK: SrcDataVendor.TQSDK,
+        DataSource.DATABENTO: SrcDataVendor.DATABENTO,
+    }
+
     def __init__(self):
         self._available_sources: Optional[Dict[DataSource, bool]] = None
 
@@ -228,6 +240,46 @@ class SymbolRouter:
         market = self.detect_market(symbol)
         source = self.get_best_source(market)
         return market, source
+
+    def translate_symbol(
+        self,
+        symbol: str,
+        market: MarketType,
+        source: DataSource,
+    ) -> str:
+        """Translate symbol to the vendor-specific format.
+
+        Args:
+            symbol: Original symbol
+            market: Detected market type
+            source: Target data source
+
+        Returns:
+            Symbol in vendor-specific format
+        """
+        from agent.src.data.market import Market
+
+        # Map MarketType to Market enum
+        market_map = {
+            MarketType.A_SHARE: Market.CN_STOCK,
+            MarketType.US_EQUITY: Market.US_STOCK,
+            MarketType.HK_EQUITY: Market.HK_STOCK,
+            MarketType.CN_FUTURES: Market.CN_FUTURES,
+            MarketType.US_FUTURES: Market.US_FUTURES,
+            MarketType.CRYPTO: Market.US_STOCK,  # Crypto uses equity market
+            MarketType.FUND: Market.CN_ETF,
+            MarketType.FOREX: Market.US_STOCK,  # Forex uses equity market
+            MarketType.MACRO: Market.US_STOCK,
+        }
+
+        mapped_market = market_map.get(market, Market.US_STOCK)
+
+        # Get vendor enum
+        vendor = self.SOURCE_TO_VENDOR.get(source)
+        if vendor is None:
+            return symbol
+
+        return SymbolTranslator.to_vendor_format(symbol, vendor, mapped_market)
 
 
 # ============================================================================

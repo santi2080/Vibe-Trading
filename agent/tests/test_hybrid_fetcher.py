@@ -445,3 +445,56 @@ class TestFreshnessCheckerIntegration:
         reports = fetcher.get_freshness_reports()
         reports["NEW"] = True
         assert "NEW" not in fetcher._last_freshness_reports
+
+
+class TestSymbolTranslatorIntegration:
+    """Tests for SymbolTranslator integration in HybridDataFetcher."""
+
+    @pytest.fixture
+    def router(self):
+        with patch("agent.backtest.loaders.hybrid_fetcher._ensure_registered"):
+            return SymbolRouter()
+
+    def test_source_to_vendor_mapping(self, router):
+        """Test that SOURCE_TO_VENDOR maps DataSource to DataVendor."""
+        from agent.src.data.symbol_translator import DataVendor as SrcVendor
+
+        assert router.SOURCE_TO_VENDOR.get(DataSource.YFINANCE) == SrcVendor.YAHOO_FINANCE
+        assert router.SOURCE_TO_VENDOR.get(DataSource.AKSHARE) == SrcVendor.AKSHARE
+        assert router.SOURCE_TO_VENDOR.get(DataSource.TUSHARE) == SrcVendor.TUSHARE
+        assert router.SOURCE_TO_VENDOR.get(DataSource.TQSDK) == SrcVendor.TQSDK
+
+    def test_translate_symbol_for_yahoo_finance(self, router):
+        """Test symbol translation for Yahoo Finance."""
+        # GC=F -> GC=F (US Futures format)
+        market = MarketType.US_FUTURES
+        translated = router.translate_symbol("GC=F", market, DataSource.YFINANCE)
+        assert translated == "GC=F"
+
+    def test_translate_symbol_for_akshare_a_share(self, router):
+        """Test symbol translation for A-share to Akshare."""
+        market = MarketType.A_SHARE
+        translated = router.translate_symbol("600519.SH", market, DataSource.AKSHARE)
+        # Akshare uses pure numeric format
+        assert "600519" in translated
+
+    def test_translate_symbol_for_yahoo_hk(self, router):
+        """Test symbol translation for HK stock to Yahoo."""
+        market = MarketType.HK_EQUITY
+        translated = router.translate_symbol("00700", market, DataSource.YFINANCE)
+        assert translated == "00700.HK"
+
+    def test_translate_symbol_unsupported_source(self, router):
+        """Test symbol translation when vendor is not mapped."""
+        market = MarketType.US_FUTURES
+        # DATABENTO is not in SOURCE_TO_VENDOR
+        translated = router.translate_symbol("GC=F", market, DataSource.OKX)
+        assert translated == "GC=F"  # Returns original symbol
+
+    def test_translate_symbol_cn_futures(self, router):
+        """Test symbol translation for CN futures."""
+        market = MarketType.CN_FUTURES
+        # Test Tushare format (should remain unchanged)
+        translated = router.translate_symbol("rb2405", market, DataSource.TUSHARE)
+        # Tushare format for CN futures is similar to standard
+        assert translated is not None
