@@ -44,6 +44,8 @@ class StrategyMetadata:
     parameters: Dict[str, Any] = field(default_factory=dict)
     market: str = "all"  # crypto, equity, futures, all
     tags: List[str] = field(default_factory=list)
+    timeframes: List[str] = field(default_factory=list)
+    supported_markets: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -183,6 +185,9 @@ class BaseStrategy(ABC):
             type=self.strategy_type,
             description=self.__doc__ or "",
             parameters=self.parameters,
+            tags=getattr(self, 'tags', []),
+            timeframes=getattr(self, 'timeframes', []),
+            supported_markets=getattr(self, 'supported_markets', []),
         )
 
 
@@ -249,3 +254,119 @@ class StrategyRegistry:
             for name, s in cls._strategies.items()
             if s.parameters.get("market", "all") in (market, "all")
         ]
+
+    @classmethod
+    def list_by_tags(cls, tags: List[str], match_all: bool = False) -> List[str]:
+        """List strategies matching specified tags.
+
+        Args:
+            tags: List of tags to filter by
+            match_all: If True, strategy must have ALL tags. If False, ANY tag.
+
+        Returns:
+            List of strategy names matching the tags
+        """
+        results = []
+        for name, s in cls._strategies.items():
+            strategy_tags = getattr(s, 'tags', [])
+            if match_all:
+                if all(tag in strategy_tags for tag in tags):
+                    results.append(name)
+            else:
+                if any(tag in strategy_tags for tag in tags):
+                    results.append(name)
+        return results
+
+    @classmethod
+    def list_by_timeframe(cls, timeframe: str) -> List[str]:
+        """List strategies supporting a specific timeframe.
+
+        Args:
+            timeframe: Timeframe string (e.g., '1d', '4h', '1h')
+
+        Returns:
+            List of strategy names supporting the timeframe
+        """
+        return [
+            name
+            for name, s in cls._strategies.items()
+            if timeframe in getattr(s, 'timeframes', [])
+        ]
+
+    @classmethod
+    def filter(
+        cls,
+        strategy_type: Optional[StrategyType] = None,
+        tags: Optional[List[str]] = None,
+        timeframe: Optional[str] = None,
+        market: Optional[str] = None,
+    ) -> List[str]:
+        """Filter strategies by multiple criteria.
+
+        Args:
+            strategy_type: Filter by type
+            tags: Filter by tags (must match ALL tags)
+            timeframe: Filter by timeframe
+            market: Filter by market
+
+        Returns:
+            List of strategy names matching all criteria
+        """
+        results = list(cls._strategies.keys())
+
+        # Filter by type
+        if strategy_type is not None:
+            results = [n for n in results if cls._strategies[n].strategy_type == strategy_type]
+
+        # Filter by tags
+        if tags:
+            results = [
+                n for n in results
+                if all(tag in getattr(cls._strategies[n], 'tags', []) for tag in tags)
+            ]
+
+        # Filter by timeframe
+        if timeframe:
+            results = [
+                n for n in results
+                if timeframe in getattr(cls._strategies[n], 'timeframes', [])
+            ]
+
+        # Filter by market
+        if market:
+            markets = getattr(cls._strategies[n], 'supported_markets', [])
+            results = [
+                n for n in results
+                if market in markets or 'all' in markets
+            ]
+
+        return results
+
+    @classmethod
+    def get_metadata(cls, name: str) -> Optional[StrategyMetadata]:
+        """Get metadata for a strategy.
+
+        Args:
+            name: Strategy name
+
+        Returns:
+            StrategyMetadata or None
+        """
+        strategy = cls._strategies.get(name)
+        if strategy:
+            return strategy.get_metadata()
+        return None
+
+    @classmethod
+    def get_all_metadata(cls) -> Dict[str, StrategyMetadata]:
+        """Get metadata for all strategies.
+
+        Returns:
+            Dictionary of name -> StrategyMetadata
+        """
+        return {name: s.get_metadata() for name, s in cls._strategies.items()}
+
+
+# Import composer for convenience
+from .composer import StrategyComposer, ComposerState, CompositeSignal
+from .mtf import MTFAligner, MTFComposer, MTFConfig, Timeframe, AlignmentResult

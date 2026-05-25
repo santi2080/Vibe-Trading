@@ -80,6 +80,9 @@ class BreakoutEntryStrategy(BaseStrategy):
             },
         )
         self.params = params
+        self.tags = ["entry", "breakout", "volume", "atr"]
+        self.timeframes = ["1h", "4h"]
+        self.supported_markets = ["cn_futures", "us_futures", "a_stock", "us_stock", "crypto"]
 
     def _calculate(self, df: pd.DataFrame) -> Dict[str, pd.Series]:
         """Calculate breakout indicators."""
