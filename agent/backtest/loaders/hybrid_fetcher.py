@@ -34,6 +34,7 @@ from agent.backtest.loaders.registry import (
     FALLBACK_CHAINS,
     _ensure_registered,
 )
+from agent.src.data.quality import DataQualityMonitor, QualityReport
 
 logger = logging.getLogger(__name__)
 
@@ -432,19 +433,23 @@ class HybridDataFetcher:
         enable_caching: bool = True,
         enable_validation: bool = True,
         max_sources_per_symbol: int = 2,
+        min_quality_score: float = 0.8,
     ):
         """
         Args:
             enable_caching: Enable disk/memory caching
             enable_validation: Enable data quality validation
             max_sources_per_symbol: Max sources to try per symbol
+            min_quality_score: Minimum quality score (0.0-1.0) for data to be accepted
         """
         self.router = SymbolRouter()
         self.pool = SourcePool()
         self.fusion = DataFusion()
+        self.quality_monitor = DataQualityMonitor(min_score=min_quality_score)
         self.enable_caching = enable_caching
         self.enable_validation = enable_validation
         self.max_sources_per_symbol = max_sources_per_symbol
+        self._last_quality_reports: Dict[str, QualityReport] = {}
 
     def fetch(
         self,
@@ -560,12 +565,34 @@ class HybridDataFetcher:
         return [s for s in priority if available.get(s, False)]
 
     def _validate_results(self, results: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
-        """Validate and filter results."""
+        """Validate and filter results using DataQualityMonitor."""
         validated = {}
         for symbol, df in results.items():
+            if df is None or df.empty:
+                continue
+
             is_valid, issues = self.fusion.validate(df, symbol)
             if not is_valid:
                 logger.debug("Symbol %s validation issues: %s", symbol, issues)
+
+            # Run enhanced quality check with DataQualityMonitor
+            if self.enable_validation:
+                quality_report = self.quality_monitor.check(df, symbol, "1d")
+                self._last_quality_reports[symbol] = quality_report
+
+                if not quality_report.passed:
+                    logger.warning(
+                        "Symbol %s quality check failed: score=%.1f%%, issues=%d",
+                        symbol, quality_report.score * 100, len(quality_report.issues)
+                    )
+                    # Log individual issues
+                    for issue in quality_report.issues:
+                        if issue.severity == "error":
+                            logger.debug(
+                                "  [%s] %s: %s",
+                                issue.dimension, issue.severity, issue.description
+                            )
+
             validated[symbol] = df
         return validated
 
@@ -583,6 +610,36 @@ class HybridDataFetcher:
         return {
             market.value: self.router.get_best_source(market) is not None
             for market in MarketType
+        }
+
+    def get_quality_reports(self) -> Dict[str, QualityReport]:
+        """Get quality reports from the last fetch operation.
+
+        Returns:
+            {symbol: QualityReport} for symbols that were quality-checked
+        """
+        return self._last_quality_reports.copy()
+
+    def get_quality_summary(self) -> dict:
+        """Get a summary of quality reports from the last fetch.
+
+        Returns:
+            dict with aggregate quality statistics
+        """
+        reports = self._last_quality_reports
+        if not reports:
+            return {"count": 0, "passed": 0, "failed": 0, "avg_score": 0.0}
+
+        passed = sum(1 for r in reports.values() if r.passed)
+        failed = len(reports) - passed
+        avg_score = sum(r.score for r in reports.values()) / len(reports)
+
+        return {
+            "count": len(reports),
+            "passed": passed,
+            "failed": failed,
+            "avg_score": avg_score,
+            "pass_rate": passed / len(reports) if reports else 0.0,
         }
 
 

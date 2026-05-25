@@ -259,3 +259,85 @@ class TestSourcePool:
             health = pool.get_health(DataSource.AKSHARE)
             assert health.get("consecutive_failures") == 1
             assert health.get("last_error") == "Connection timeout"
+
+
+class TestQualityMonitorIntegration:
+    """Tests for DataQualityMonitor integration in HybridDataFetcher."""
+
+    @pytest.fixture
+    def fetcher(self):
+        with patch("agent.backtest.loaders.hybrid_fetcher._ensure_registered"):
+            return HybridDataFetcher(enable_validation=True, min_quality_score=0.8)
+
+    def test_quality_monitor_initialized(self, fetcher):
+        """Test that quality_monitor is properly initialized."""
+        assert fetcher.quality_monitor is not None
+        assert fetcher.quality_monitor.min_score == 0.8
+        assert fetcher._last_quality_reports == {}
+
+    def test_quality_reports_initially_empty(self, fetcher):
+        """Test that quality reports are empty before fetch."""
+        reports = fetcher.get_quality_reports()
+        assert reports == {}
+
+    def test_quality_summary_initially_empty(self, fetcher):
+        """Test that quality summary is empty before fetch."""
+        summary = fetcher.get_quality_summary()
+        assert summary["count"] == 0
+        assert summary["passed"] == 0
+        assert summary["failed"] == 0
+
+    def test_quality_reports_populated_after_fetch(self, fetcher):
+        """Test that quality reports are populated after fetch."""
+        # Mock the fetch to return valid data
+        mock_df = pd.DataFrame({
+            "open": [100.0, 101.0],
+            "high": [105.0, 106.0],
+            "low": [98.0, 99.0],
+            "close": [103.0, 104.0],
+            "volume": [1000.0, 1100.0],
+        }, index=pd.date_range("2024-01-01", periods=2))
+
+        with patch.object(fetcher.router, "route_symbol") as mock_route, \
+             patch.object(fetcher.router, "check_available_sources") as mock_avail, \
+             patch.object(fetcher.pool, "fetch") as mock_fetch:
+
+            mock_route.return_value = (MarketType.A_SHARE, DataSource.AKSHARE)
+            mock_avail.return_value = {DataSource.AKSHARE: True}
+            mock_fetch.return_value = {"600519.SH": mock_df}
+
+            results = fetcher.fetch(["600519.SH"], "2024-01-01", "2024-01-10")
+
+            reports = fetcher.get_quality_reports()
+            assert "600519.SH" in reports
+            assert reports["600519.SH"].symbol == "600519.SH"
+
+    def test_quality_summary_after_fetch(self, fetcher):
+        """Test quality summary reflects fetched data."""
+        mock_df = pd.DataFrame({
+            "open": [100.0],
+            "high": [105.0],
+            "low": [98.0],
+            "close": [103.0],
+            "volume": [1000.0],
+        }, index=[pd.Timestamp("2024-01-01")])
+
+        with patch.object(fetcher.router, "route_symbol") as mock_route, \
+             patch.object(fetcher.router, "check_available_sources") as mock_avail, \
+             patch.object(fetcher.pool, "fetch") as mock_fetch:
+
+            mock_route.return_value = (MarketType.A_SHARE, DataSource.AKSHARE)
+            mock_avail.return_value = {DataSource.AKSHARE: True}
+            mock_fetch.return_value = {"600519.SH": mock_df}
+
+            fetcher.fetch(["600519.SH"], "2024-01-01", "2024-01-10")
+
+            summary = fetcher.get_quality_summary()
+            assert summary["count"] == 1
+
+    def test_quality_reports_copy(self, fetcher):
+        """Test that get_quality_reports returns a copy."""
+        fetcher._last_quality_reports = {"TEST": None}
+        reports = fetcher.get_quality_reports()
+        reports["NEW"] = True
+        assert "NEW" not in fetcher._last_quality_reports
