@@ -78,6 +78,9 @@ class PullbackRsiStrategy(BaseStrategy):
             },
         )
         self.params = params
+        self.tags = ["pullback", "rsi", "mean_reversion"]
+        self.timeframes = ["1d", "4h"]
+        self.supported_markets = ["cn_futures", "us_futures", "a_stock", "us_stock", "crypto"]
 
     def _calculate(self, df: pd.DataFrame) -> Dict[str, pd.Series]:
         """Calculate RSI indicator."""

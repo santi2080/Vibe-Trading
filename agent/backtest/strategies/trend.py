@@ -91,6 +91,9 @@ class TrendEmaAdxStrategy(BaseStrategy):
             },
         )
         self.params = params
+        self.tags = ["trend", "ema", "adx", "multi_timeframe"]
+        self.timeframes = ["1d", "4h", "1h"]
+        self.supported_markets = ["cn_futures", "us_futures", "a_stock", "us_stock", "crypto"]
 
     def _calculate(self, df: pd.DataFrame) -> Dict[str, pd.Series]:
         """Calculate EMA and ADX indicators."""

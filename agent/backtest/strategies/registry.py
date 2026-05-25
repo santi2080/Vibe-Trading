@@ -21,8 +21,10 @@ from .entry import (
     SignalConfluenceStrategy,
 )
 
-# Import base classes
+# Import base classes and composer
 from . import BaseStrategy, StrategyType, StrategyRegistry
+from .composer import StrategyComposer, ComposerState, CompositeSignal
+from .mtf import MTFAligner, MTFComposer, MTFConfig, Timeframe, AlignmentResult
 
 # Auto-register all strategies
 def _register_strategies():
@@ -51,16 +53,32 @@ def _register_strategies():
 _register_strategies()
 
 __all__ = [
+    # Base classes
     "BaseStrategy",
     "StrategyType",
     "StrategyRegistry",
+    "StrategySignal",
+    "StrategyMetadata",
+    # Composer
+    "StrategyComposer",
+    "ComposerState",
+    "CompositeSignal",
+    # MTF Alignment
+    "MTFAligner",
+    "MTFComposer",
+    "MTFConfig",
+    "Timeframe",
+    "AlignmentResult",
+    # Trend strategies
     "TrendEmaAdxStrategy",
     "TrendMacdStrategy",
     "TrendDualEmaStrategy",
+    # Pullback strategies
     "PullbackRsiStrategy",
     "PullbackBollingerBandsStrategy",
     "PullbackStochasticStrategy",
     "PullbackFibonacciStrategy",
+    # Entry strategies
     "BreakoutEntryStrategy",
     "VolumeSpikeEntryStrategy",
     "VwapEntryStrategy",
