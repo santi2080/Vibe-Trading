@@ -6,7 +6,25 @@
 - **Stars**: 8,200+
 - **技术栈**: FastAPI + React 19 + LLM Multi-Agent + MCP
 - **虚拟环境**: `.venv`
-- **当前分支**: `main` (已合并 feature/strategy-taxonomy-optimization)
+- **当前分支**: `main`
+
+## 数据源配置
+
+| 数据源 | 状态 | Token | 用途 |
+|--------|------|-------|------|
+| **Tushare** | ✅ 已配置 | `a5b...` | A 股数据 |
+| Yahoo Finance | ✅ 内置 | 无需配置 | 美股/期货 |
+| AKShare | ✅ 内置 | 无需配置 | 备用数据源 |
+
+### 测试结果
+- Tushare: 14 条数据获取成功 (600519.SH)
+- 相关测试: 141 passed
+
+## 仓库设置（个人使用）
+
+- **远程仓库**: `santi2080/Vibe-Trading` (个人 fork)
+- **不再关联**: ~~HKUDS/Vibe-Trading~~ (上游仓库)
+- **使用方式**: 作为个人独立项目使用
 
 ## 策略层架构（已完成）
 
