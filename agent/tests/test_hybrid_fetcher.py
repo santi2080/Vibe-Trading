@@ -341,3 +341,107 @@ class TestQualityMonitorIntegration:
         reports = fetcher.get_quality_reports()
         reports["NEW"] = True
         assert "NEW" not in fetcher._last_quality_reports
+
+
+class TestFreshnessCheckerIntegration:
+    """Tests for DataFreshnessChecker integration in HybridDataFetcher."""
+
+    @pytest.fixture
+    def fetcher(self):
+        with patch("agent.backtest.loaders.hybrid_fetcher._ensure_registered"):
+            return HybridDataFetcher(enable_freshness_check=True)
+
+    def test_freshness_checker_initialized(self, fetcher):
+        """Test that freshness_checker is properly initialized."""
+        assert fetcher.freshness_checker is not None
+        assert fetcher._last_freshness_reports == {}
+
+    def test_freshness_reports_initially_empty(self, fetcher):
+        """Test that freshness reports are empty before fetch."""
+        reports = fetcher.get_freshness_reports()
+        assert reports == {}
+
+    def test_freshness_summary_initially_empty(self, fetcher):
+        """Test that freshness summary is empty before fetch."""
+        summary = fetcher.get_freshness_summary()
+        assert summary["count"] == 0
+        assert summary["fresh"] == 0
+
+    def test_freshness_reports_populated_after_fetch(self, fetcher):
+        """Test that freshness reports are populated after fetch."""
+        mock_df = pd.DataFrame({
+            "open": [100.0, 101.0],
+            "high": [105.0, 106.0],
+            "low": [98.0, 99.0],
+            "close": [103.0, 104.0],
+            "volume": [1000.0, 1100.0],
+        }, index=pd.date_range("2024-01-01", periods=2))
+
+        with patch.object(fetcher.router, "route_symbol") as mock_route, \
+             patch.object(fetcher.router, "check_available_sources") as mock_avail, \
+             patch.object(fetcher.pool, "fetch") as mock_fetch:
+
+            mock_route.return_value = (MarketType.A_SHARE, DataSource.AKSHARE)
+            mock_avail.return_value = {DataSource.AKSHARE: True}
+            mock_fetch.return_value = {"600519.SH": mock_df}
+
+            results = fetcher.fetch(["600519.SH"], "2024-01-01", "2024-01-10", interval="1d")
+
+            reports = fetcher.get_freshness_reports()
+            assert "600519.SH" in reports
+            assert "status" in reports["600519.SH"]
+            assert "age_hours" in reports["600519.SH"]
+
+    def test_freshness_summary_after_fetch(self, fetcher):
+        """Test freshness summary reflects fetched data."""
+        mock_df = pd.DataFrame({
+            "open": [100.0],
+            "high": [105.0],
+            "low": [98.0],
+            "close": [103.0],
+            "volume": [1000.0],
+        }, index=[pd.Timestamp("2024-01-01")])
+
+        with patch.object(fetcher.router, "route_symbol") as mock_route, \
+             patch.object(fetcher.router, "check_available_sources") as mock_avail, \
+             patch.object(fetcher.pool, "fetch") as mock_fetch:
+
+            mock_route.return_value = (MarketType.A_SHARE, DataSource.AKSHARE)
+            mock_avail.return_value = {DataSource.AKSHARE: True}
+            mock_fetch.return_value = {"600519.SH": mock_df}
+
+            fetcher.fetch(["600519.SH"], "2024-01-01", "2024-01-10", interval="1d")
+
+            summary = fetcher.get_freshness_summary()
+            assert summary["count"] == 1
+
+    def test_interval_stored_for_freshness(self, fetcher):
+        """Test that interval is stored for freshness checking."""
+        mock_df = pd.DataFrame({
+            "open": [100.0],
+            "high": [105.0],
+            "low": [98.0],
+            "close": [103.0],
+            "volume": [1000.0],
+        }, index=[pd.Timestamp("2024-01-01")])
+
+        with patch.object(fetcher.router, "route_symbol") as mock_route, \
+             patch.object(fetcher.router, "check_available_sources") as mock_avail, \
+             patch.object(fetcher.pool, "fetch") as mock_fetch:
+
+            mock_route.return_value = (MarketType.A_SHARE, DataSource.AKSHARE)
+            mock_avail.return_value = {DataSource.AKSHARE: True}
+            mock_fetch.return_value = {"600519.SH": mock_df}
+
+            fetcher.fetch(["600519.SH"], "2024-01-01", "2024-01-10", interval="1h")
+
+            assert fetcher._last_interval == "1h"
+            reports = fetcher.get_freshness_reports()
+            assert reports["600519.SH"]["timeframe"] == "1h"
+
+    def test_freshness_reports_copy(self, fetcher):
+        """Test that get_freshness_reports returns a copy."""
+        fetcher._last_freshness_reports = {"TEST": {"status": "fresh"}}
+        reports = fetcher.get_freshness_reports()
+        reports["NEW"] = True
+        assert "NEW" not in fetcher._last_freshness_reports

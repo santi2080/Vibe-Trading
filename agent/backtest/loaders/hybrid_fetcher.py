@@ -35,6 +35,7 @@ from agent.backtest.loaders.registry import (
     _ensure_registered,
 )
 from agent.src.data.quality import DataQualityMonitor, QualityReport
+from agent.src.data.freshness import DataFreshnessChecker
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,30 @@ class DataSource(Enum):
     CCXT = "ccxt"
     TQSDK = "tqsdk"
     FUTU = "futu"
+
+
+def _interval_to_timeframe(interval: str):
+    """Convert interval string to Timeframe enum.
+
+    Args:
+        interval: Interval string like "1D", "1H", "4h", "1w"
+
+    Returns:
+        Timeframe enum or None if not recognized
+    """
+    from agent.src.data.market import Timeframe
+
+    mapping = {
+        "1d": Timeframe.D1,
+        "1D": Timeframe.D1,
+        "1w": Timeframe.W1,
+        "1W": Timeframe.W1,
+        "4h": Timeframe.H4,
+        "4H": Timeframe.H4,
+        "1h": Timeframe.H1,
+        "1H": Timeframe.H1,
+    }
+    return mapping.get(interval.upper())
 
 
 @dataclass
@@ -432,6 +457,7 @@ class HybridDataFetcher:
         self,
         enable_caching: bool = True,
         enable_validation: bool = True,
+        enable_freshness_check: bool = True,
         max_sources_per_symbol: int = 2,
         min_quality_score: float = 0.8,
     ):
@@ -439,6 +465,7 @@ class HybridDataFetcher:
         Args:
             enable_caching: Enable disk/memory caching
             enable_validation: Enable data quality validation
+            enable_freshness_check: Enable data freshness check
             max_sources_per_symbol: Max sources to try per symbol
             min_quality_score: Minimum quality score (0.0-1.0) for data to be accepted
         """
@@ -446,10 +473,14 @@ class HybridDataFetcher:
         self.pool = SourcePool()
         self.fusion = DataFusion()
         self.quality_monitor = DataQualityMonitor(min_score=min_quality_score)
+        self.freshness_checker = DataFreshnessChecker()
         self.enable_caching = enable_caching
         self.enable_validation = enable_validation
+        self.enable_freshness_check = enable_freshness_check
         self.max_sources_per_symbol = max_sources_per_symbol
         self._last_quality_reports: Dict[str, QualityReport] = {}
+        self._last_freshness_reports: Dict[str, dict] = {}
+        self._last_interval: str = "1D"
 
     def fetch(
         self,
@@ -473,6 +504,9 @@ class HybridDataFetcher:
         """
         import time
         start_time = time.time()
+
+        # Store interval for freshness checking
+        self._last_interval = interval
 
         # Group symbols by market
         by_market: Dict[MarketType, List[str]] = {}
@@ -523,9 +557,9 @@ class HybridDataFetcher:
         # Merge results from multiple sources
         merged = self.fusion.merge(all_results)
 
-        # Validate if enabled
-        if self.enable_validation:
-            merged = self._validate_results(merged)
+        # Validate if enabled (quality + freshness checks)
+        if self.enable_validation or self.enable_freshness_check:
+            merged = self._validate_results(merged, interval)
 
         stats.total_latency_ms = (time.time() - start_time) * 1000
         logger.info(
@@ -564,9 +598,15 @@ class HybridDataFetcher:
 
         return [s for s in priority if available.get(s, False)]
 
-    def _validate_results(self, results: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
-        """Validate and filter results using DataQualityMonitor."""
+    def _validate_results(
+        self,
+        results: Dict[str, pd.DataFrame],
+        interval: str = "1D",
+    ) -> Dict[str, pd.DataFrame]:
+        """Validate and filter results using DataQualityMonitor and freshness check."""
         validated = {}
+        timeframe = _interval_to_timeframe(interval)
+
         for symbol, df in results.items():
             if df is None or df.empty:
                 continue
@@ -577,7 +617,7 @@ class HybridDataFetcher:
 
             # Run enhanced quality check with DataQualityMonitor
             if self.enable_validation:
-                quality_report = self.quality_monitor.check(df, symbol, "1d")
+                quality_report = self.quality_monitor.check(df, symbol, interval)
                 self._last_quality_reports[symbol] = quality_report
 
                 if not quality_report.passed:
@@ -592,6 +632,31 @@ class HybridDataFetcher:
                                 "  [%s] %s: %s",
                                 issue.dimension, issue.severity, issue.description
                             )
+
+            # Run freshness check with DataFreshnessChecker
+            if self.enable_freshness_check and timeframe is not None:
+                try:
+                    if len(df) > 0:
+                        latest_dt = pd.Timestamp(df.index.max()).to_pydatetime()
+                        is_fresh = self.freshness_checker.is_fresh(latest_dt, timeframe)
+                        status = self.freshness_checker.get_freshness_status(latest_dt, timeframe)
+                        age_hours = self.freshness_checker.get_age_hours(latest_dt)
+
+                        freshness_report = {
+                            "is_fresh": is_fresh,
+                            "status": status,
+                            "age_hours": age_hours,
+                            "timeframe": timeframe.value,
+                        }
+                        self._last_freshness_reports[symbol] = freshness_report
+
+                        if status in ("stale", "very_stale"):
+                            logger.info(
+                                "Symbol %s data is %s: %.1f hours old",
+                                symbol, status, age_hours
+                            )
+                except Exception as e:
+                    logger.debug("Freshness check failed for %s: %s", symbol, e)
 
             validated[symbol] = df
         return validated
@@ -640,6 +705,36 @@ class HybridDataFetcher:
             "failed": failed,
             "avg_score": avg_score,
             "pass_rate": passed / len(reports) if reports else 0.0,
+        }
+
+    def get_freshness_reports(self) -> Dict[str, dict]:
+        """Get freshness reports from the last fetch operation.
+
+        Returns:
+            {symbol: freshness_report} for symbols that were freshness-checked
+        """
+        return self._last_freshness_reports.copy()
+
+    def get_freshness_summary(self) -> dict:
+        """Get a summary of freshness reports from the last fetch.
+
+        Returns:
+            dict with aggregate freshness statistics
+        """
+        reports = self._last_freshness_reports
+        if not reports:
+            return {"count": 0, "fresh": 0, "stale": 0, "very_stale": 0}
+
+        fresh = sum(1 for r in reports.values() if r.get("status") == "fresh")
+        stale = sum(1 for r in reports.values() if r.get("status") == "stale")
+        very_stale = sum(1 for r in reports.values() if r.get("status") == "very_stale")
+
+        return {
+            "count": len(reports),
+            "fresh": fresh,
+            "stale": stale,
+            "very_stale": very_stale,
+            "fresh_rate": fresh / len(reports) if reports else 0.0,
         }
 
 
