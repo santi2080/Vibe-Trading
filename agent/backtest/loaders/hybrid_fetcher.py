@@ -248,7 +248,7 @@ class SourcePool:
         try:
             return loader.fetch(symbols, start_date, end_date, interval=interval)
         except Exception as e:
-            logger.error("Fetch failed from %s: %s", source.value, e)
+            logger.debug("Fetch failed from %s: %s", source.value, e)
             self._health[source] = {"last_error": str(e), "last_attempt": datetime.now()}
             return {}
 
@@ -564,12 +564,9 @@ class HybridDataFetcher:
         validated = {}
         for symbol, df in results.items():
             is_valid, issues = self.fusion.validate(df, symbol)
-            if is_valid:
-                validated[symbol] = df
-            else:
-                logger.warning("Symbol %s validation failed: %s", symbol, issues)
-                # Still include but log warning
-                validated[symbol] = df
+            if not is_valid:
+                logger.debug("Symbol %s validation issues: %s", symbol, issues)
+            validated[symbol] = df
         return validated
 
     def get_stats(self) -> dict:

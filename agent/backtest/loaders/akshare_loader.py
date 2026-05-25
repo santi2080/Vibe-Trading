@@ -173,7 +173,7 @@ class DataLoader:
                 if df is not None and not df.empty:
                     result[code] = df
             except Exception as exc:
-                logger.warning("akshare failed for %s: %s", code, exc)
+                logger.debug("akshare failed for %s: %s", code, exc)
         return result
 
     def _fetch_one(

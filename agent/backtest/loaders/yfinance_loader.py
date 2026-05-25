@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from collections import defaultdict
@@ -13,6 +14,8 @@ import yfinance as yf
 from agent.backtest.loaders.base import validate_date_range
 from agent.backtest.loaders.proxy_manager import ProxyManager
 from agent.backtest.loaders.registry import register
+
+logger = logging.getLogger(__name__)
 
 _OHLCV_COLUMNS = ["open", "high", "low", "close", "volume"]
 _COLUMN_RENAMES = {
@@ -295,10 +298,10 @@ class DataLoader:
             # RuntimeError from proxy check - this is fatal, re-raise
             if "No available proxies" in str(exc):
                 raise
-            print(f"[WARN] yfinance bulk download failed for {unique_symbols}: {exc}")
+            logger.debug("yfinance bulk download failed: %s", exc)
             bulk_data = pd.DataFrame()
         except Exception as exc:
-            print(f"[WARN] yfinance bulk download failed for {unique_symbols}: {exc}")
+            logger.debug("yfinance bulk download failed: %s", exc)
             bulk_data = pd.DataFrame()
 
         for symbol in unique_symbols:
@@ -311,7 +314,7 @@ class DataLoader:
 
                 normalized = _normalize_frame(symbol_frame, requested_interval)
                 if normalized.empty:
-                    print(f"[WARN] yfinance returned no usable data for {symbol}")
+                    logger.debug("yfinance returned no usable data for %s", symbol)
                     continue
 
                 for original_code in symbol_groups[symbol]:
@@ -320,10 +323,10 @@ class DataLoader:
                 # RuntimeError from proxy check - this is fatal, re-raise
                 if "No available proxies" in str(exc):
                     raise
-                print(f"[WARN] Failed to fetch data for {symbol}: {exc}")
+                logger.debug("Failed to fetch %s: %s", symbol, exc)
                 continue
             except Exception as exc:
-                print(f"[WARN] Failed to fetch data for {symbol}: {exc}")
+                logger.debug("Failed to fetch %s: %s", symbol, exc)
                 continue
 
         return results

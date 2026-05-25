@@ -137,9 +137,12 @@ class ProxyManager:
         if not self.proxies:
             return None
 
+        quiet = os.getenv("VIBE_QUIET_PROXY", "").lower() in ("1", "true", "yes")
+
         # Force health check if requested
         if force_check:
-            logger.info("Forcing proxy health check before download")
+            if not quiet:
+                logger.info("Forcing proxy health check before download")
             for proxy in self.proxies:
                 self._check_proxy_health(proxy)
         else:
@@ -154,29 +157,25 @@ class ProxyManager:
         ]
 
         if not available_proxies:
-            # ❌ No available proxies - MUST NOT proceed
-            proxy_status = "\n".join([
-                f"  - {proxy}: {'✅ available' if health.is_available else '❌ unavailable'}"
-                for proxy, health in self.health.items()
-            ])
-            error_msg = (
-                f"No available proxies! All {len(self.proxies)} proxies are unavailable.\n"
-                f"Proxy status:\n{proxy_status}\n\n"
-                f"⚠️  Please ensure your proxy is running before downloading data.\n"
-                f"   Without a working proxy, yfinance will be rate-limited.\n\n"
-                f"To start proxy:\n"
-                f"  - Check if proxy service is running (e.g., Clash, V2Ray)\n"
-                f"  - Verify proxy URL: {self.proxies[0]}\n"
-                f"  - Test manually: curl --proxy {self.proxies[0]} https://finance.yahoo.com"
-            )
-            logger.error(error_msg)
-            raise RuntimeError(error_msg)
+            if not quiet:
+                proxy_status = "\n".join([
+                    f"  - {proxy}: {'✅' if health.is_available else '❌'}"
+                    for proxy, health in self.health.items()
+                ])
+                error_msg = (
+                    f"Proxy unavailable. All {len(self.proxies)} proxies failed.\n"
+                    f"Status:\n{proxy_status}"
+                )
+                logger.info(error_msg)
+            raise RuntimeError("No available proxies")
 
         # Sort by health score (descending)
         available_proxies.sort(key=lambda x: x[1], reverse=True)
         best_proxy = available_proxies[0][0]
 
-        logger.info(f"✅ Selected proxy: {best_proxy} (health score: {available_proxies[0][1]:.1f})")
+        # Only log if not in quiet mode
+        if os.getenv("VIBE_QUIET_PROXY", "").lower() not in ("1", "true", "yes"):
+            logger.info(f"Selected proxy: {best_proxy} (score: {available_proxies[0][1]:.1f})")
         return best_proxy
 
     def record_request(self, proxy: str, success: bool, latency: float):
@@ -270,11 +269,11 @@ class ProxyManager:
                 logger.debug(f"Proxy {proxy} health check passed (latency: {latency:.2f}s)")
             else:
                 health.is_available = False
-                logger.warning(f"Proxy {proxy} health check failed: HTTP {response.status_code}")
+                logger.debug(f"Proxy {proxy} health check failed: HTTP {response.status_code}")
 
         except Exception as exc:
             health.is_available = False
-            logger.warning(f"Proxy {proxy} health check failed: {exc}")
+            logger.debug(f"Proxy {proxy} health check failed: {exc}")
 
         health.last_check = datetime.now()
 

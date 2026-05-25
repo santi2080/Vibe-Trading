@@ -33,6 +33,8 @@ class DataLoader:
         import tushare as ts
 
         token = os.getenv("TUSHARE_TOKEN", "")
+        if not token or token.strip() in TUSHARE_TOKEN_PLACEHOLDERS:
+            raise ValueError("TUSHARE_TOKEN not configured")
         self.api = ts.pro_api(token)
 
     def fetch(
