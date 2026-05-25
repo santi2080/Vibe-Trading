@@ -75,7 +75,16 @@ FALLBACK_CHAINS: dict[str, list[str]] = {
     "crypto":    ["okx", "ccxt"],
     "futures":   ["tqsdk", "tushare", "akshare"],  # TqSdk for Chinese futures
     "cn_futures": ["tqsdk", "tushare", "akshare"],  # Alias for Chinese futures
-    "us_futures": ["yfinance"],  # yfinance for US futures (1H preferred)
+
+    # US Futures - 按时间周期分离
+    # 日线 (1D/W1): akshare 主（直连，不需要代理）
+    # 日内 (1H/1m): yfinance 主（需要代理）
+    "us_futures_daily": ["akshare", "yfinance"],  # 1D/W1 - akshare 主
+    "us_futures_intraday": ["yfinance", "akshare"],  # 1H/1m - yfinance 主
+
+    # 保留兼容性（默认使用日内配置）
+    "us_futures": ["yfinance", "akshare"],  # yfinance 主，akshare 备选
+
     "fund":      ["tushare", "akshare"],
     "macro":     ["akshare", "tushare"],
     "forex":     ["akshare", "yfinance"],
