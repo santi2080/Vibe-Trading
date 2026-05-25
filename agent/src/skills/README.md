@@ -23,8 +23,8 @@ skills/
 
 | 技能 | 说明 | 推荐周期 |
 |------|------|---------|
-| `ema-trend` | EMA 趋势判断 | 1d, 4h |
-| `adx-trend` | ADX 趋势强度 | 1d, 4h |
+| `ema_trend` | EMA 双均线趋势判断 | 1d, 4h |
+| `adx_trend` | ADX 趋势强度 | 1d, 4h |
 
 ### entry/ - 入场信号
 
@@ -32,8 +32,7 @@ skills/
 
 | 技能 | 说明 | 推荐周期 |
 |------|------|---------|
-| `breakout` | 突破入场 | 1h, 4h |
-| `range-filter` | 区间过滤入场 | 1h, 4h |
+| `range_filter` | 区间过滤入场 | 1h, 4h |
 
 ### pullback/ - 回调入场
 
