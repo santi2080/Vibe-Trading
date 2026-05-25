@@ -122,17 +122,29 @@ class ProxyManager:
 
         return proxies
 
-    def get_proxy(self) -> Optional[str]:
+    def get_proxy(self, force_check: bool = False) -> Optional[str]:
         """Get the current best proxy.
 
+        Args:
+            force_check: If True, force health check before returning proxy.
+
         Returns:
-            Proxy URL or None if no proxies available.
+            Proxy URL or None if no proxies configured.
+
+        Raises:
+            RuntimeError: If proxies are configured but none are available.
         """
         if not self.proxies:
             return None
 
-        # Check if health check is needed
-        self._check_health_if_needed()
+        # Force health check if requested
+        if force_check:
+            logger.info("Forcing proxy health check before download")
+            for proxy in self.proxies:
+                self._check_proxy_health(proxy)
+        else:
+            # Check if health check is needed (periodic)
+            self._check_health_if_needed()
 
         # Find best available proxy
         available_proxies = [
@@ -142,14 +154,29 @@ class ProxyManager:
         ]
 
         if not available_proxies:
-            logger.warning("No available proxies, using first proxy anyway")
-            return self.proxies[0]
+            # ❌ No available proxies - MUST NOT proceed
+            proxy_status = "\n".join([
+                f"  - {proxy}: {'✅ available' if health.is_available else '❌ unavailable'}"
+                for proxy, health in self.health.items()
+            ])
+            error_msg = (
+                f"No available proxies! All {len(self.proxies)} proxies are unavailable.\n"
+                f"Proxy status:\n{proxy_status}\n\n"
+                f"⚠️  Please ensure your proxy is running before downloading data.\n"
+                f"   Without a working proxy, yfinance will be rate-limited.\n\n"
+                f"To start proxy:\n"
+                f"  - Check if proxy service is running (e.g., Clash, V2Ray)\n"
+                f"  - Verify proxy URL: {self.proxies[0]}\n"
+                f"  - Test manually: curl --proxy {self.proxies[0]} https://finance.yahoo.com"
+            )
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
 
         # Sort by health score (descending)
         available_proxies.sort(key=lambda x: x[1], reverse=True)
         best_proxy = available_proxies[0][0]
 
-        logger.debug(f"Selected proxy: {best_proxy} (score: {available_proxies[0][1]:.1f})")
+        logger.info(f"✅ Selected proxy: {best_proxy} (health score: {available_proxies[0][1]:.1f})")
         return best_proxy
 
     def record_request(self, proxy: str, success: bool, latency: float):
