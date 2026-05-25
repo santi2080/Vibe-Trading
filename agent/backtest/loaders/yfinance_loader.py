@@ -85,8 +85,12 @@ def _download_history(
 
     Returns:
         Raw dataframe from ``yf.download``.
+
+    Raises:
+        RuntimeError: If proxy is configured but unavailable.
     """
-    proxy = proxy_manager.get_proxy() if proxy_manager else None
+    # Force proxy health check before download to prevent rate limiting
+    proxy = proxy_manager.get_proxy(force_check=True) if proxy_manager else None
     start_time = time.time()
 
     # yfinance uses environment variables for proxy configuration
@@ -287,6 +291,12 @@ class DataLoader:
             bulk_data = _download_history(
                 unique_symbols, start_date, end_date, yf_interval, self.proxy_manager
             )
+        except RuntimeError as exc:
+            # RuntimeError from proxy check - this is fatal, re-raise
+            if "No available proxies" in str(exc):
+                raise
+            print(f"[WARN] yfinance bulk download failed for {unique_symbols}: {exc}")
+            bulk_data = pd.DataFrame()
         except Exception as exc:
             print(f"[WARN] yfinance bulk download failed for {unique_symbols}: {exc}")
             bulk_data = pd.DataFrame()
@@ -306,6 +316,12 @@ class DataLoader:
 
                 for original_code in symbol_groups[symbol]:
                     results[original_code] = normalized.copy()
+            except RuntimeError as exc:
+                # RuntimeError from proxy check - this is fatal, re-raise
+                if "No available proxies" in str(exc):
+                    raise
+                print(f"[WARN] Failed to fetch data for {symbol}: {exc}")
+                continue
             except Exception as exc:
                 print(f"[WARN] Failed to fetch data for {symbol}: {exc}")
                 continue
