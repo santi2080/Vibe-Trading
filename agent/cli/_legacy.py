@@ -784,6 +784,9 @@ class _RunDashboard:
         return Panel(body, title="Vibe-Trading", border_style="cyan", padding=(1, 1 if compact else 2))
 
 
+from cli.ui.rail import RailRunDashboard as _RunDashboard  # noqa: E402,F811
+
+
 # ---------------------------------------------------------------------------
 # Agent execution core
 # ---------------------------------------------------------------------------
@@ -847,6 +850,7 @@ def _run_agent(
     no_rich: bool = False,
     stream_output: bool = True,
     dashboard: Optional[_RunDashboard] = None,
+    session_id: str = "",
 ) -> dict:
     """Build AgentLoop and execute, return result dict."""
     from src.tools import build_registry
@@ -972,6 +976,7 @@ def _run_agent(
             persistent_memory=pm,
             include_shell_tools=True,
             agent_config=agent_config,
+            session_id=session_id or None,
             warn_callback=_mcp_warn,
         ),
         llm=ChatLLM(),
@@ -982,7 +987,13 @@ def _run_agent(
     if run_dir_override:
         agent.memory.run_dir = run_dir_override
 
-    return _run_with_graceful_cancel(agent, prompt, history, no_rich=no_rich)
+    return _run_with_graceful_cancel(
+        agent,
+        prompt,
+        history,
+        no_rich=no_rich,
+        session_id=session_id,
+    )
 
 
 def _run_with_graceful_cancel(
@@ -991,6 +1002,7 @@ def _run_with_graceful_cancel(
     history: Optional[List[Dict]],
     *,
     no_rich: bool,
+    session_id: str = "",
 ) -> dict:
     """Run an agent loop with first-Ctrl+C = graceful cancel.
 
@@ -1017,7 +1029,7 @@ def _run_with_graceful_cancel(
         original = _signal.getsignal(_signal.SIGINT)
     except (ValueError, AttributeError):
         # Not on a thread that can receive signals — skip the handler swap.
-        return agent.run(user_message=prompt, history=history)
+        return agent.run(user_message=prompt, history=history, session_id=session_id)
 
     def _on_sigint(_signum, _frame) -> None:
         now = time.time()
@@ -1038,10 +1050,10 @@ def _run_with_graceful_cancel(
         _signal.signal(_signal.SIGINT, _on_sigint)
     except (ValueError, OSError):
         # signal.signal only works on the main thread of the main interpreter.
-        return agent.run(user_message=prompt, history=history)
+        return agent.run(user_message=prompt, history=history, session_id=session_id)
 
     try:
-        return agent.run(user_message=prompt, history=history)
+        return agent.run(user_message=prompt, history=history, session_id=session_id)
     finally:
         try:
             _signal.signal(_signal.SIGINT, original)
@@ -1241,6 +1253,7 @@ def cmd_run(prompt: str, max_iter: int, *, json_mode: bool = False, no_rich: boo
             with Live(dashboard.render(), console=console, refresh_per_second=6, transient=True) as live:
                 dashboard.live = live
                 result = _run_agent(prompt, max_iter=max_iter, dashboard=dashboard)
+                dashboard.finish(result, time.perf_counter() - start)
     except KeyboardInterrupt:
         if json_mode:
             _print_json_result({"status": "cancelled", "run_id": None, "run_dir": None, "reason": "Interrupted"})
@@ -1334,6 +1347,7 @@ def cmd_continue(
                 max_iter=max_iter,
                 dashboard=dashboard,
             )
+            dashboard.finish(result, time.perf_counter() - start)
     except KeyboardInterrupt:
         console.print("\n[yellow]Interrupted[/yellow]")
         return EXIT_RUN_FAILED
@@ -1727,6 +1741,7 @@ def cmd_interactive(max_iter: int) -> None:
             with Live(dashboard.render(), console=console, refresh_per_second=6, transient=True) as live:
                 dashboard.live = live
                 result = _run_agent(user_input, history=history[-6:], max_iter=max_iter, dashboard=dashboard)
+                dashboard.finish(result, time.perf_counter() - start)
         except KeyboardInterrupt:
             console.print("\n[yellow]Interrupted[/yellow]")
             continue
@@ -3118,6 +3133,10 @@ def main(argv: list[str] | None = None) -> int:
         args = parser.parse_args(raw_argv)
     except SystemExit as exc:
         return int(exc.code) if isinstance(exc.code, int) else EXIT_USAGE_ERROR
+    if not sys.stdout.isatty():
+        args.no_rich = True
+        if hasattr(args, "run_no_rich"):
+            args.run_no_rich = True
 
     if args.command == "init":
         return cmd_init()
