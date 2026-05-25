@@ -3,16 +3,32 @@
 Trend strategies determine the primary direction of the market using
 various technical indicators like moving averages, ADX, and MACD.
 
-Supported indicators:
-- EMA (Exponential Moving Average) crossover
-- ADX (Average Directional Index)
-- MACD (Moving Average Convergence Divergence)
-
-Usage:
-    from agent.backtest.strategies.trend import TrendEmaAdxStrategy
-
-    strategy = TrendEmaAdxStrategy()
-    result = strategy.generate(df)
+---
+# SKILL Metadata
+name: trend_ema_adx
+category: trend
+tags: [trend, ema, adx, multi_timeframe]
+timeframes: [1d, 4h, 1h]
+markets: [cn_futures, us_futures, a_stock, us_stock, crypto]
+parameters:
+  ema_fast:
+    type: int
+    default: 20
+    description: Fast EMA period
+  ema_slow:
+    type: int
+    default: 50
+    description: Slow EMA period
+  adx_period:
+    type: int
+    default: 14
+    description: ADX calculation period
+  adx_threshold:
+    type: float
+    default: 25.0
+    description: Minimum ADX for trend confirmation
+version: "1.0.0"
+---
 """
 
 from __future__ import annotations
