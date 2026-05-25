@@ -362,3 +362,124 @@ def compare_strategies(
     for name, metrics in strategies:
         comparator.add_from_dict(name, metrics)
     return comparator.compare(ranked_by=ranked_by)
+
+
+# ============================================================================
+# Standard Report Format
+# ============================================================================
+
+def generate_standard_report(
+    strategies: List[Tuple[str, Dict[str, Any]]],
+    ranked_by: str = "sharpe",
+    symbol: str = "",
+    period: str = "",
+) -> str:
+    """Generate a standard strategy comparison report.
+
+    This format follows the Strategy Report Output Standard for consistent
+    comparison across different strategy types.
+
+    Args:
+        strategies: List of (name, metrics_dict) tuples
+        ranked_by: Metric to rank by (default: sh Sharpe)
+        symbol: Trading symbol (e.g., 'GC=F', 'ag0')
+        period: Analysis period (e.g., '2024-01-01 to 2024-12-31')
+
+    Returns:
+        Markdown formatted report
+
+    Example:
+        >>> strategies = [
+        ...     ("trend_ema_adx", {...}),
+        ...     ("pullback_rsi", {...}),
+        ... ]
+        >>> report = generate_standard_report(strategies, symbol="GC=F")
+        >>> print(report)
+    """
+    result = compare_strategies(strategies, ranked_by=ranked_by)
+
+    lines = []
+
+    # Header
+    lines.append("# Strategy Comparison Report")
+    if symbol:
+        lines.append(f"**Symbol**: {symbol}")
+    if period:
+        lines.append(f"**Period**: {period}")
+    lines.append("")
+
+    # Summary table - sorted by ranking metric
+    lines.append("## Summary")
+    lines.append("")
+    lines.append(
+        f"| Strategy | Total Ret | Sharpe | Max DD | Win Rate |"
+    )
+    lines.append(
+        "|----------|-----------|--------|---------|---------|"
+    )
+
+    # Sort by the ranking metric
+    sorted_strategies = sorted(
+        result.strategies,
+        key=lambda x: getattr(x, ranked_by, 0.0),
+        reverse=True
+    )
+
+    for s in sorted_strategies:
+        total_str = f"{s.total_return:.1%}"
+        dd_str = f"{s.max_drawdown:.1%}"
+        win_str = f"{s.win_rate:.1%}" if s.win_rate > 0 else "-"
+        lines.append(
+            f"| {s.name} | {total_str:>8} | "
+            f"{s.sharpe_ratio:>6.2f} | {dd_str:>6} | {win_str:>7} |"
+        )
+
+    lines.append("")
+
+    # Winners highlight
+    lines.append("## Winners by Metric")
+    lines.append("")
+
+    # Get winners for each key metric
+    metrics_to_highlight = [
+        ("sharpe_ratio", "Sharpe"),
+        ("total_return", "Total Return"),
+        ("win_rate", "Win Rate"),
+        ("max_drawdown", "Lowest Drawdown"),
+    ]
+
+    for attr, label in metrics_to_highlight:
+        winners = result.get_winners(attr)
+        if winners:
+            lines.append(f"- **{label}**: {', '.join(winners)}")
+
+    lines.append("")
+
+    # Risk-adjusted recommendation
+    lines.append("## Recommendation")
+    lines.append("")
+
+    # Find best by Sharpe (risk-adjusted return)
+    rankings_sharpe = result.get_ranking("sharpe_ratio")
+    if rankings_sharpe:
+        best_sharpe_name, best_sharpe_val = rankings_sharpe[0]
+        lines.append(f"**Best Risk-Adjusted**: {best_sharpe_name} (Sharpe: {best_sharpe_val:.2f})")
+
+    # Find best by return
+    rankings_return = result.get_ranking("total_return")
+    if rankings_return:
+        best_ret_name, best_ret_val = rankings_return[0]
+        if rankings_sharpe and best_ret_name != best_sharpe_name:
+            lines.append(f"**Best Return**: {best_ret_name} ({best_ret_val:.1%})")
+
+    # Find lowest drawdown
+    rankings_dd = result.get_ranking("max_drawdown")
+    if rankings_dd:
+        best_dd_name, best_dd_val = rankings_dd[0]
+        lines.append(f"**Lowest Risk**: {best_dd_name} (Max DD: {abs(best_dd_val):.1%})")
+
+    lines.append("")
+    lines.append("---")
+    lines.append(f"*Generated at {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}*")
+
+    return "\n".join(lines)
