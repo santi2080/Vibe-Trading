@@ -10,6 +10,7 @@ from typing import Dict, List, Optional
 import pandas as pd
 
 from agent.backtest.loaders.cache import DataCache
+from agent.backtest.loaders.yfinance_loader import _to_yfinance_interval
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,9 @@ class CachedDataLoader:
         start_dt = pd.Timestamp(start_date)
         end_dt = pd.Timestamp(end_date)
 
+        # Convert interval for consistent cache keys
+        cache_interval = _to_yfinance_interval(interval)
+
         results = {}
         cache_misses = []
 
@@ -118,7 +122,7 @@ class CachedDataLoader:
         for code in codes:
             cached_data = self.cache.get(
                 symbol=code,
-                timeframe=interval,
+                timeframe=cache_interval,
                 start_time=start_dt,
                 end_time=end_dt,
                 fields=fields,
@@ -126,10 +130,10 @@ class CachedDataLoader:
 
             if cached_data is not None:
                 results[code] = cached_data
-                logger.debug(f"Cache hit for {code} ({interval}, {start_date} to {end_date})")
+                logger.debug(f"Cache hit for {code} ({cache_interval}, {start_date} to {end_date})")
             else:
                 cache_misses.append(code)
-                logger.debug(f"Cache miss for {code} ({interval}, {start_date} to {end_date})")
+                logger.debug(f"Cache miss for {code} ({cache_interval}, {start_date} to {end_date})")
 
         # Fetch missing data from base loader
         if cache_misses:
@@ -148,7 +152,7 @@ class CachedDataLoader:
                     if not data.empty:
                         self.cache.set(
                             symbol=code,
-                            timeframe=interval,
+                            timeframe=cache_interval,
                             start_time=start_dt,
                             end_time=end_dt,
                             data=data,
