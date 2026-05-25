@@ -85,3 +85,4 @@ data/cache/
 
 # US Futures data
 data/us_futures/
+memory/session_compact_*.md
