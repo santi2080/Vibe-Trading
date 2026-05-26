@@ -11,11 +11,17 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 from typing import Any, Type
 
 from agent.backtest.loaders.base import NoAvailableSourceError
 
 logger = logging.getLogger(__name__)
+
+if __name__ == "agent.backtest.loaders.registry":
+    sys.modules.setdefault("backtest.loaders.registry", sys.modules[__name__])
+elif __name__ == "backtest.loaders.registry":
+    sys.modules.setdefault("agent.backtest.loaders.registry", sys.modules[__name__])
 
 # ---------------------------------------------------------------------------
 # Global registry: source_name -> loader class

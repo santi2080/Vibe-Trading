@@ -33,6 +33,8 @@ pyharmonics>=1.5.0
 
 # Data Providers
 tushare>=1.2.89
+tqsdk>=3.9.0
+python-socks>=2.4.4
 requests>=2.31.0
 yfinance>=0.2.30
 akshare>=1.12.0

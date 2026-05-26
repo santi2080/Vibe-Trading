@@ -31,6 +31,9 @@ from typing import Dict, List, Optional
 import pandas as pd
 
 from agent.backtest.loaders.base import DataLoaderProtocol, NoAvailableSourceError, validate_date_range
+from agent.backtest.loaders.registry import register
+from agent.src.data.market import Market
+from agent.src.data.symbol_translator import DataVendor, SymbolTranslator
 
 logger = logging.getLogger(__name__)
 
@@ -91,15 +94,8 @@ _TQSdk_TO_PROJECT = {v: k for k, v in _SYMBOL_MAP.items()}
 
 
 def _to_tqsdk_symbol(code: str) -> str:
-    """Convert project symbol to TqSdk format.
-
-    Examples:
-        ag0 -> AG
-        rb0 -> RB
-        if0 -> IF
-    """
-    code = code.strip().lower()
-    return _SYMBOL_MAP.get(code, code.upper())
+    """Convert project symbol to TqSdk format."""
+    return SymbolTranslator.to_vendor_format(code.strip(), DataVendor.TQSDK, Market.CN_FUTURES)
 
 
 def _from_tqsdk_symbol(code: str) -> str:
@@ -167,11 +163,11 @@ class TqSdkConnectionPool:
     def _create_connection(self):
         """Create a new TqSdk connection."""
         with _suppress_output():
-            from tqsdk import TqApi
+            from tqsdk import TqApi, TqAuth
 
         # Check for auth credentials
-        account = os.environ.get("TQ_ACCOUNT")
-        password = os.environ.get("TQ_PASSWORD")
+        account = os.environ.get("TQSDK_ACCOUNT") or os.environ.get("TQ_ACCOUNT")
+        password = os.environ.get("TQSDK_PASSWORD") or os.environ.get("TQ_PASSWORD")
 
         if account and password:
             with _suppress_output():
@@ -267,6 +263,7 @@ def _normalize_frame(df: pd.DataFrame) -> pd.DataFrame:
     return result.sort_index()
 
 
+@register
 class TqSdkLoader:
     """Fetch Chinese futures OHLCV data from TqSdk.
 
@@ -285,7 +282,7 @@ class TqSdkLoader:
     """
 
     name = "tqsdk"
-    markets = {"futures", "a_share"}
+    markets = {"futures", "cn_futures"}
     requires_auth = True
 
     def __init__(self):
@@ -362,12 +359,14 @@ class TqSdkLoader:
                         # Get kline data
                         df = api.get_kline_serial(
                             tqsdk_code,
+                            duration_seconds=int(duration),
                             data_length=10000,
-                            duration_n=int(duration),
                         )
 
                         # Filter by date range
                         if not df.empty:
+                            df = df.copy()
+                            df["datetime"] = pd.to_datetime(df["datetime"])
                             start_dt = pd.Timestamp(start_date)
                             end_dt = pd.Timestamp(end_date) + pd.Timedelta(days=1)
 

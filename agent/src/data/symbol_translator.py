@@ -174,18 +174,18 @@ class SymbolTranslator:
 
         # 提取基础代码
         base = "".join(filter(str.isalpha, symbol))
-        exchange = cls.TQSDK_EXCHANGE_MAP.get(base.upper(), "SHFE")
+        exchange = cls.TQSDK_EXCHANGE_MAP.get(base.upper(), cls.TQSDK_EXCHANGE_MAP.get(base.lower(), "SHFE"))
 
         # 主连合约
         if symbol.endswith("0"):
-            if exchange == "CZCE":
+            if exchange in {"CFFEX", "CZCE"}:
                 return f"KQ.m@{exchange}.{base.upper()}"
             return f"KQ.m@{exchange}.{base.lower()}"
 
         # 具体合约
-        if exchange == "CZCE":
+        if exchange in {"CFFEX", "CZCE"}:
             return f"{exchange}.{symbol.upper()}"
-        return f"{exchange}.{symbol}"
+        return f"{exchange}.{symbol.lower()}"
 
     @classmethod
     def is_supported_by_vendor(cls, symbol: str, vendor: DataVendor) -> bool:

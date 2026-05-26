@@ -49,6 +49,16 @@ from .registry import (
 # Use ensure_loaders() to trigger all @register decorators
 _loaders_ensured = False
 
+_LOADER_MODULES = [
+    ("tushare", "agent.backtest.loaders.tushare"),
+    ("tqsdk_loader", "agent.backtest.loaders.tqsdk_loader"),
+    ("okx", "agent.backtest.loaders.okx"),
+    ("yfinance_loader", "agent.backtest.loaders.yfinance_loader"),
+    ("akshare_loader", "agent.backtest.loaders.akshare_loader"),
+    ("ccxt_loader", "agent.backtest.loaders.ccxt_loader"),
+    ("futu", "agent.backtest.loaders.futu"),
+]
+
 
 def ensure_loaders():
     """Ensure all loaders are imported and registered."""
@@ -59,17 +69,8 @@ def ensure_loaders():
     _loaders_ensured = True
 
     # Import loaders with optional dependencies
-    _loader_modules = [
-        ("tushare", "agent.backtest.loaders.tushare"),
-        ("okx", "agent.backtest.loaders.okx"),
-        ("yfinance_loader", "agent.backtest.loaders.yfinance_loader"),
-        ("akshare_loader", "agent.backtest.loaders.akshare_loader"),
-        ("ccxt_loader", "agent.backtest.loaders.ccxt_loader"),
-        ("futu", "agent.backtest.loaders.futu"),
-    ]
-
     import importlib
-    for name, module in _loader_modules:
+    for name, module in _LOADER_MODULES:
         try:
             importlib.import_module(module)
         except ImportError as e:
