@@ -81,8 +81,6 @@ wiki/alpha-library/manifest.json
 wiki/alpha-library/content/
 
 # Data cache
-data/cache/
+data/
 
-# US Futures data
-data/us_futures/
 memory/session_compact_*.md

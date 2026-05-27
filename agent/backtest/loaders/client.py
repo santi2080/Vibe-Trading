@@ -193,7 +193,7 @@ class DataClient:
                 return cached
 
         # Load from API
-        df = self._load_from_api(symbol, interval, start_date, end_date)
+        df = self._load_from_api(symbol, interval, start_date, end_date, force_refresh=force_refresh)
 
         if df.empty:
             logger.warning(f"Empty data returned for {symbol} {interval}")
@@ -228,6 +228,7 @@ class DataClient:
         interval: str,
         start_date: Optional[str],
         end_date: Optional[str],
+        force_refresh: bool = False,
     ) -> pd.DataFrame:
         """Load data from API with optional incremental updates."""
         loader = self._get_loader()

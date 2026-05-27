@@ -198,9 +198,11 @@ class ReportGenerator:
             )
             for r in summary["valid_signals"]:
                 direction_emoji = "📈" if r.signal_direction == "LONG" else "📉"
+                stop_loss = f"{r.stop_loss:.2f}" if r.stop_loss is not None else "-"
+                atr_1n = f"{r.atr_1n:.2f}" if r.atr_1n is not None else "-"
                 lines.append(
                     f"- **{direction_emoji} {r.symbol} ({r.name})**: {r.signal_direction} @ {r.signal_price:.2f}, "
-                    f"止损 {r.stop_loss:.2f if r.stop_loss else '-'} ({r.atr_1n:.2f if r.atr_1n else '-'} ATR)"
+                    f"止损 {stop_loss} ({atr_1n} ATR)"
                 )
             lines.append("")
 

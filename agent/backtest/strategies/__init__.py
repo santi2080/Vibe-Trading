@@ -334,12 +334,11 @@ class StrategyRegistry:
 
         # Filter by market
         if market:
-            markets = getattr(cls._strategies[n], 'supported_markets', [])
             results = [
                 n for n in results
-                if market in markets or 'all' in markets
+                if market in getattr(cls._strategies[n], 'supported_markets', [])
+                or 'all' in getattr(cls._strategies[n], 'supported_markets', [])
             ]
-
         return results
 
     @classmethod
