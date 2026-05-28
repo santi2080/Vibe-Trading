@@ -34,10 +34,11 @@ class AnalysisResult:
     risk_reward: Optional[float] = None
     confidence: float = 0.0
     error: Optional[str] = None
+    mtes: Optional[Dict[str, Any]] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             "symbol": self.symbol,
             "name": self.name,
             "market": self.market,
@@ -50,6 +51,9 @@ class AnalysisResult:
             "confidence": f"{self.confidence:.0%}",
             "error": self.error or "-",
         }
+        if self.mtes:
+            result.update(self.mtes)
+        return result
 
 
 class WatchlistAnalyzer:
@@ -88,7 +92,7 @@ class WatchlistAnalyzer:
         # 尝试导入数据层
         if self.data_client is None:
             try:
-                from agent.backtest.loaders.client import DataClient
+                from backtest.loaders.client import DataClient
 
                 self.data_client = DataClient()
                 logger.info("DataClient initialized")
@@ -98,7 +102,7 @@ class WatchlistAnalyzer:
         # 尝试导入策略层
         if self.strategy_registry is None:
             try:
-                from agent.backtest.strategies import StrategyRegistry, StrategyType
+                from backtest.strategies import StrategyRegistry, StrategyType
 
                 self.strategy_registry = StrategyRegistry
                 # 加载默认策略
@@ -109,9 +113,9 @@ class WatchlistAnalyzer:
     def _load_default_strategies(self):
         """加载默认策略"""
         try:
-            from agent.backtest.strategies.trend import TrendEmaAdxStrategy
-            from agent.backtest.strategies.pullback import PullbackRsiStrategy
-            from agent.backtest.strategies.entry import BreakoutEntryStrategy
+            from backtest.strategies.trend import TrendEmaAdxStrategy
+            from backtest.strategies.pullback import PullbackRsiStrategy
+            from backtest.strategies.entry import BreakoutEntryStrategy
 
             self._trend_strategy = TrendEmaAdxStrategy()
             self._pullback_strategy = PullbackRsiStrategy()
@@ -354,7 +358,7 @@ class WatchlistAnalyzer:
         Returns:
             AnalysisResult
         """
-        from agent.src.data.watchlist import WatchlistReader
+        from src.data.watchlist import WatchlistReader
 
         # 获取品种名称
         reader = WatchlistReader(self.watchlist_path)
@@ -425,6 +429,26 @@ class WatchlistAnalyzer:
             else:
                 signal_date = None
 
+            try:
+                from src.analysis.major_trend_evaluator import MajorTrendEvaluator, resolve_asset_class
+
+                asset_class = resolve_asset_class(market)
+                mtes_payload = MajorTrendEvaluator().evaluate(df, asset_class=asset_class).to_dict()
+            except Exception as exc:
+                logger.warning("MTES evaluation failed for %s: %s", symbol, exc)
+                mtes_payload = {
+                    "asset_class": "unknown",
+                    "trend_score": 0.0,
+                    "trend_state": "NEUTRAL_CHOPPY",
+                    "direction": "NEUTRAL",
+                    "confidence": 0.0,
+                    "regime": "unavailable",
+                    "sub_scores": {},
+                    "top_drivers": [],
+                    "regime_flags": ["mtes_unavailable"],
+                    "explanation": str(exc),
+                }
+
             return AnalysisResult(
                 symbol=symbol,
                 name=name,
@@ -439,6 +463,7 @@ class WatchlistAnalyzer:
                 entry_price=entry_price,
                 risk_reward=risk_reward,
                 confidence=pullback_result["atr_multiple"] / 2.0 if pullback_result["status"] == "CONFIRMED" else 0.0,
+                mtes=mtes_payload,
                 metadata={
                     "primary_tf": primary_tf,
                     "secondary_tf": secondary_tf,
@@ -529,6 +554,7 @@ class WatchlistAnalyzer:
         self,
         watchlist_path: Optional[str] = None,
         market_filter: Optional[str] = None,
+        verbose: bool = True,
     ) -> List[AnalysisResult]:
         """批量分析所有品种
 
@@ -542,7 +568,7 @@ class WatchlistAnalyzer:
         if watchlist_path:
             self.watchlist_path = watchlist_path
 
-        from agent.src.data.watchlist import WatchlistReader
+        from src.data.watchlist import WatchlistReader
 
         reader = WatchlistReader(self.watchlist_path)
         raw_items = reader.load_raw()
@@ -561,7 +587,8 @@ class WatchlistAnalyzer:
             if symbol.lower() in ("symbol", "code", "name"):
                 continue
 
-            print(f"分析: {symbol} ({market})...", end=" ")
+            if verbose:
+                print(f"分析: {symbol} ({market})...", end=" ")
 
             atr = item.get("atr", 0.0) if item.get("atr", 0.0) > 0 else None
             result = self.analyze_single(
@@ -574,10 +601,11 @@ class WatchlistAnalyzer:
 
             results.append(result)
 
-            if result.error:
-                print(f"❌ {result.error}")
-            else:
-                print(f"✅ {result.trend} | {result.signal_direction}@{result.signal_price:.2f}")
+            if verbose:
+                if result.error:
+                    print(f"❌ {result.error}")
+                else:
+                    print(f"✅ {result.trend} | {result.signal_direction}@{result.signal_price:.2f}")
 
         logger.info(f"分析完成: {len(results)} 个品种")
         return results

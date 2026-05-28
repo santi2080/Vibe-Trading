@@ -92,16 +92,16 @@ class ReportGenerator:
             str: Markdown 表格
         """
         if not results:
-            return "| 代码 | 名称 | 趋势 | 回调 | 信号 | 信号价 | 信号日 | 止损价 | 1N |\n|---|---|---|---|---|---|---|---|---|"
+            return "| 代码 | 名称 | 趋势 | MTES | 状态 | 回调 | 信号 | 信号价 | 信号日 | 止损价 | 1N |\n|---|---|---|---|---|---|---|---|---|---|---|"
 
-        header = "| 代码 | 名称 | 趋势 | 回调 | 信号 | 信号价 | 信号日 | 止损价 | 1N |"
-        separator = "|---|---|---|---|---|---|---|---|---|"
+        header = "| 代码 | 名称 | 趋势 | MTES | 状态 | 回调 | 信号 | 信号价 | 信号日 | 止损价 | 1N |"
+        separator = "|---|---|---|---|---|---|---|---|---|---|---|"
 
         rows = []
         for r in results:
             if r.error:
                 rows.append(
-                    f"| {r.symbol} | {r.name} | - | - | ❌ | - | - | - | - |"
+                    f"| {r.symbol} | {r.name} | - | - | - | - | ❌ | - | - | - | - |"
                 )
             else:
                 trend_emoji = {"UP": "🟢", "DOWN": "🔴", "SIDEWAYS": "🟡", "-": "⚪"}.get(r.trend, "⚪")
@@ -109,8 +109,13 @@ class ReportGenerator:
                     r.signal_direction, "⏸️"
                 )
 
+                mtes_score = r.mtes.get("trend_score", "-") if r.mtes else "-"
+                trend_state = r.mtes.get("trend_state", "-") if r.mtes else "-"
+                if isinstance(mtes_score, (int, float)):
+                    mtes_score = f"{mtes_score:.1f}"
+
                 rows.append(
-                    f"| {r.symbol} | {r.name} | {trend_emoji}{r.trend} | {r.pullback} | {signal_emoji}{r.signal_direction} | "
+                    f"| {r.symbol} | {r.name} | {trend_emoji}{r.trend} | {mtes_score} | {trend_state} | {r.pullback} | {signal_emoji}{r.signal_direction} | "
                     f"{f'{r.signal_price:.2f}' if r.signal_price else '-'} | {r.signal_date or '-'} | "
                     f"{f'{r.stop_loss:.2f}' if r.stop_loss else '-'} | {f'{r.atr_1n:.2f}' if r.atr_1n else '-'} |"
                 )
