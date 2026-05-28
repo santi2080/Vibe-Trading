@@ -14,7 +14,7 @@ import os
 import sys
 from typing import Any, Type
 
-from agent.backtest.loaders.base import NoAvailableSourceError
+from backtest.loaders.base import NoAvailableSourceError
 
 logger = logging.getLogger(__name__)
 
@@ -54,13 +54,13 @@ def _ensure_registered() -> None:
     _registered = True
 
     _loader_modules = [
-        "agent.backtest.loaders.tushare",
-        "agent.backtest.loaders.tqsdk_loader",
-        "agent.backtest.loaders.okx",
-        "agent.backtest.loaders.yfinance_loader",
-        "agent.backtest.loaders.akshare_loader",
-        "agent.backtest.loaders.ccxt_loader",
-        "agent.backtest.loaders.futu",
+        "backtest.loaders.tushare",
+        "backtest.loaders.tqsdk_loader",
+        "backtest.loaders.okx",
+        "backtest.loaders.yfinance_loader",
+        "backtest.loaders.akshare_loader",
+        "backtest.loaders.ccxt_loader",
+        "backtest.loaders.futu",
     ]
     import importlib
     for mod in _loader_modules:
@@ -197,7 +197,7 @@ def _wrap_with_cache(loader: Any, enable_cache: bool) -> Any:
         return loader
 
     try:
-        from agent.backtest.loaders.cached_loader import CachedDataLoader
+        from backtest.loaders.cached_loader import CachedDataLoader
         cache_dir = os.getenv("VIBE_CACHE_DIR", ".cache/data")
         return CachedDataLoader(loader, cache_dir=cache_dir, enable_cache=True)
     except Exception as exc:

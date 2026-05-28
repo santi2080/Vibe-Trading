@@ -31,10 +31,10 @@ from typing import Dict, List, Optional, Any
 
 import pandas as pd
 
-from agent.backtest.loaders.cache import DataCache, DataQualityChecker
-from agent.backtest.loaders.cache.quality_checker import QualityReport as VibeQualityReport
-from agent.backtest.loaders.cache.incremental_updater import IncrementalUpdater, UpdateMetadata
-from agent.backtest.loaders.registry import resolve_loader, get_loader_cls_with_fallback
+from backtest.loaders.cache import DataCache, DataQualityChecker
+from backtest.loaders.cache.quality_checker import QualityReport as VibeQualityReport
+from backtest.loaders.cache.incremental_updater import IncrementalUpdater, UpdateMetadata
+from backtest.loaders.registry import resolve_loader, get_loader_cls_with_fallback
 
 logger = logging.getLogger(__name__)
 
