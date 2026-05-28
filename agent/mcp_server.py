@@ -980,6 +980,74 @@ def reap_stale_runs() -> str:
 
 
 # ---------------------------------------------------------------------------
+# Strategy metadata tools
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool
+def list_strategies(
+    strategy_type: str = "",
+    tags: list[str] | None = None,
+    timeframe: str = "",
+) -> str:
+    """List built-in strategies with optional type, tag, and timeframe filters.
+
+    Args:
+        strategy_type: Optional type: trend, pullback, or entry.
+        tags: Optional strategy tags such as ema or adx.
+        timeframe: Optional timeframe such as 1d, 4h, or 1h.
+    """
+    registry = _get_registry()
+    params: dict[str, Any] = {}
+    if strategy_type:
+        params["strategy_type"] = strategy_type
+    if tags:
+        params["tags"] = tags
+    if timeframe:
+        params["timeframe"] = timeframe
+    return registry.execute("list_strategies", params)
+
+
+@mcp.tool
+def get_strategy_info(name: str) -> str:
+    """Get detailed metadata and usage guidance for a built-in strategy.
+
+    Args:
+        name: Strategy name, e.g. trend_ema_adx.
+    """
+    return _get_registry().execute("get_strategy_info", {"name": name})
+
+
+@mcp.tool
+def get_composer_template(
+    trend_strategy: str = "trend_ema_adx",
+    pullback_strategy: str = "pullback_rsi",
+    entry_strategy: str = "entry_breakout",
+) -> str:
+    """Generate a StrategyComposer template for selected strategies.
+
+    Args:
+        trend_strategy: Trend strategy name.
+        pullback_strategy: Pullback strategy name.
+        entry_strategy: Entry strategy name.
+    """
+    return _get_registry().execute(
+        "get_composer_template",
+        {
+            "trend_strategy": trend_strategy,
+            "pullback_strategy": pullback_strategy,
+            "entry_strategy": entry_strategy,
+        },
+    )
+
+
+@mcp.tool
+def get_mtf_template() -> str:
+    """Generate a lookahead-safe multi-timeframe alignment template."""
+    return _get_registry().execute("get_mtf_template", {})
+
+
+# ---------------------------------------------------------------------------
 # Watchlist analysis tools
 # ---------------------------------------------------------------------------
 
@@ -996,38 +1064,8 @@ def list_watchlist(watchlist_path: str = "watchlist/us_futures_watchlist.csv") -
             - "watchlist/cn_futures_watchlist.csv" (4 China futures)
             - "watchlist/etf_watchlist.csv" (35 ETFs)
     """
-    import json
-    from pathlib import Path
+    return _get_registry().execute("list_watchlist", {"watchlist_path": watchlist_path})
 
-    # 尝试导入 WatchlistReader
-    try:
-        from src.data.watchlist import WatchlistReader
-    except ImportError:
-        return json.dumps({"status": "error", "error": "WatchlistReader not available"})
-
-    path = Path(watchlist_path)
-    if not path.exists():
-        # 尝试相对于 agent 目录
-        agent_dir = Path(__file__).parent
-        path = agent_dir / watchlist_path
-
-    if not path.exists():
-        available = list(Path("watchlist").glob("*.csv")) if Path("watchlist").exists() else []
-        return json.dumps({
-            "status": "error",
-            "error": f"Watchlist not found: {watchlist_path}",
-            "available": [str(p) for p in available],
-        })
-
-    reader = WatchlistReader(str(path))
-    items = reader.load_raw()
-
-    return json.dumps({
-        "status": "ok",
-        "watchlist": str(path),
-        "count": len(items),
-        "securities": items,
-    }, ensure_ascii=False, indent=2)
 
 
 @mcp.tool
@@ -1048,34 +1086,16 @@ def analyze_security(
         primary_tf: Primary timeframe for analysis (default "1D").
         watchlist_path: Path to watchlist CSV for ATR configuration.
     """
-    import json
-    from pathlib import Path
+    return _get_registry().execute(
+        "analyze_security",
+        {
+            "symbol": symbol,
+            "market": market,
+            "primary_tf": primary_tf,
+            "watchlist_path": watchlist_path,
+        },
+    )
 
-    try:
-        from src.analysis.watchlist_analyzer import WatchlistAnalyzer
-
-        # 解析路径
-        path = Path(watchlist_path)
-        if not path.exists():
-            agent_dir = Path(__file__).parent
-            path = agent_dir / watchlist_path
-
-        analyzer = WatchlistAnalyzer(watchlist_path=str(path))
-        result = analyzer.analyze_single(
-            symbol=symbol,
-            market=market,
-            primary_tf=primary_tf,
-        )
-
-        return json.dumps({
-            "status": "ok" if not result.error else "error",
-            "result": result.__dict__,
-        }, ensure_ascii=False, indent=2)
-
-    except ImportError as e:
-        return json.dumps({"status": "error", "error": f"Import error: {e}"})
-    except Exception as e:
-        return json.dumps({"status": "error", "error": str(e)})
 
 
 @mcp.tool
@@ -1094,70 +1114,15 @@ def analyze_watchlist(
         market_filter: Optional market filter (e.g., "US_FUTURES").
         format: Output format - "summary" (default) or "full" (includes all details).
     """
-    import json
-    from pathlib import Path
+    return _get_registry().execute(
+        "analyze_watchlist",
+        {
+            "watchlist_path": watchlist_path,
+            "market_filter": market_filter,
+            "format": format,
+        },
+    )
 
-    try:
-        from src.analysis.watchlist_analyzer import WatchlistAnalyzer
-        from src.analysis.report_generator import ReportGenerator
-
-        # 解析路径
-        path = Path(watchlist_path)
-        if not path.exists():
-            agent_dir = Path(__file__).parent
-            path = agent_dir / watchlist_path
-
-        if not path.exists():
-            return json.dumps({
-                "status": "error",
-                "error": f"Watchlist not found: {watchlist_path}",
-            })
-
-        analyzer = WatchlistAnalyzer(watchlist_path=str(path))
-        results = analyzer.analyze_all(watchlist_path=str(path), market_filter=market_filter or None)
-
-        if format == "full":
-            # 返回完整结果
-            return json.dumps({
-                "status": "ok",
-                "watchlist": str(path),
-                "count": len(results),
-                "results": [r.__dict__ for r in results],
-            }, ensure_ascii=False, indent=2)
-        else:
-            # 返回汇总
-            report_gen = ReportGenerator()
-            summary = report_gen.generate_summary(results)
-
-            # 只返回有效信号
-            valid_signals = []
-            for r in results:
-                if not r.error and r.signal_direction in ("LONG", "SHORT"):
-                    valid_signals.append({
-                        "symbol": r.symbol,
-                        "name": r.name,
-                        "direction": r.signal_direction,
-                        "trend": r.trend,
-                        "price": r.signal_price,
-                        "stop_loss": r.stop_loss,
-                        "atr": r.atr_1n,
-                        "confidence": r.confidence,
-                    })
-
-            return json.dumps({
-                "status": "ok",
-                "watchlist": str(path),
-                "total": summary["total"],
-                "success": summary["success"],
-                "trends": summary["trends"],
-                "signals": summary["signals"],
-                "valid_signals": valid_signals,
-            }, ensure_ascii=False, indent=2)
-
-    except ImportError as e:
-        return json.dumps({"status": "error", "error": f"Import error: {e}"})
-    except Exception as e:
-        return json.dumps({"status": "error", "error": str(e)})
 
 
 # ---------------------------------------------------------------------------

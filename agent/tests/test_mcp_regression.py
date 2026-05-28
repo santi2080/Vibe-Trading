@@ -163,6 +163,13 @@ def test_mcp_server_exposes_well_known_tool_names() -> None:
         "start_research_goal",
         "get_research_goal",
         "add_goal_evidence",
+        "list_strategies",
+        "get_strategy_info",
+        "get_composer_template",
+        "get_mtf_template",
+        "list_watchlist",
+        "analyze_security",
+        "analyze_watchlist",
     }
     missing = expected - registered
     assert not missing, (
