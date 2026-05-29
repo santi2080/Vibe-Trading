@@ -8,6 +8,7 @@ from .trend import (
     TrendMacdStrategy,
     TrendDualEmaStrategy,
 )
+from .major_trend import MajorTrendEvaluationStrategy
 from .pullback import (
     PullbackRsiStrategy,
     PullbackBollingerBandsStrategy,
@@ -34,6 +35,7 @@ def _register_strategies():
         TrendEmaAdxStrategy(),
         TrendMacdStrategy(),
         TrendDualEmaStrategy(),
+        MajorTrendEvaluationStrategy(),
         # Pullback strategies
         PullbackRsiStrategy(),
         PullbackBollingerBandsStrategy(),
@@ -73,6 +75,7 @@ __all__ = [
     "TrendEmaAdxStrategy",
     "TrendMacdStrategy",
     "TrendDualEmaStrategy",
+    "MajorTrendEvaluationStrategy",
     # Pullback strategies
     "PullbackRsiStrategy",
     "PullbackBollingerBandsStrategy",

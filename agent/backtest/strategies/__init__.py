@@ -366,6 +366,56 @@ class StrategyRegistry:
         return {name: s.get_metadata() for name, s in cls._strategies.items()}
 
 
-# Import composer for convenience
+# Import composer and strategy modules for convenience and registration
 from .composer import StrategyComposer, ComposerState, CompositeSignal
 from .mtf import MTFAligner, MTFComposer, MTFConfig, Timeframe, AlignmentResult
+from .trend import TrendEmaAdxStrategy, TrendMacdStrategy, TrendDualEmaStrategy
+from .pullback import (
+    PullbackRsiStrategy,
+    PullbackBollingerBandsStrategy,
+    PullbackStochasticStrategy,
+    PullbackFibonacciStrategy,
+)
+from .entry import (
+    BreakoutEntryStrategy,
+    VolumeSpikeEntryStrategy,
+    VwapEntryStrategy,
+    SignalConfluenceStrategy,
+)
+from .major_trend import MajorTrendEvaluationStrategy
+from . import registry as _strategy_registry  # noqa: F401 - triggers auto-registration
+
+__all__ = [
+    # Base classes
+    "BaseStrategy",
+    "StrategyType",
+    "StrategyRegistry",
+    "StrategySignal",
+    "StrategyMetadata",
+    # Composer
+    "StrategyComposer",
+    "ComposerState",
+    "CompositeSignal",
+    # MTF Alignment
+    "MTFAligner",
+    "MTFComposer",
+    "MTFConfig",
+    "Timeframe",
+    "AlignmentResult",
+    # Trend strategies
+    "TrendEmaAdxStrategy",
+    "TrendMacdStrategy",
+    "TrendDualEmaStrategy",
+    "MajorTrendEvaluationStrategy",
+    # Pullback strategies
+    "PullbackRsiStrategy",
+    "PullbackBollingerBandsStrategy",
+    "PullbackStochasticStrategy",
+    "PullbackFibonacciStrategy",
+    # Entry strategies
+    "BreakoutEntryStrategy",
+    "VolumeSpikeEntryStrategy",
+    "VwapEntryStrategy",
+    "SignalConfluenceStrategy",
+]
+
