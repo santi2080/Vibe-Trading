@@ -5,7 +5,11 @@
 
 ## Objective
 
-Validate whether the Major Trend Evaluation System (MTES) improves major-trend classification robustness versus single-indicator trend baselines across stocks, ETFs, futures, crypto, and FX.
+Validate whether the Major Trend Evaluation System (MTES) improves major-trend classification robustness versus single-indicator trend baselines across stocks, ETFs, futures, crypto, and FX. This is an evaluation-only strategy plan; it defines how MTES will be compared before any historical validation run is claimed.
+
+## Evaluation Strategy Wrapper
+
+Use the MTES backtest wrapper from Plan 02, `MajorTrendEvaluationStrategy`, as the evaluation-only strategy path. The wrapper should emit MTES-based signals for comparison and reporting, but it must not add live execution or position-sizing behavior.
 
 ## Asset Universes
 
@@ -46,12 +50,25 @@ At minimum compare MTES against these single-indicator or narrow baselines:
 
 ## Cost and Slippage Assumptions
 
+This plan uses explicit transaction-cost assumptions so baseline comparisons remain reproducible.
+
 | Asset class | Default cost model |
 |---|---|
 | Stocks / ETFs | 2–10 bps one-way, tested across low/base/high assumptions |
 | Futures | contract-specific tick/slippage where available; otherwise 1–3 ticks one-way |
 | Crypto | 5–20 bps one-way depending on venue tier |
 | FX | spread proxy in bps; low/base/high sensitivity |
+
+## Validation Helper Reuse
+
+Reuse the existing backtest validation helpers rather than introducing a parallel statistical subsystem:
+
+- `run_validation`
+- `monte_carlo_test`
+- `bootstrap_sharpe_ci`
+- `walk_forward_analysis`
+
+These helpers should be used for future execution and reporting when MTES validation is run.
 
 ## Metrics
 
@@ -67,8 +84,6 @@ Primary metrics:
 8. Exposure percentage.
 9. Signal delay sensitivity.
 10. Cross-asset hit rate by universe.
-
-## Robustness Checks
 
 ### Parameter perturbation
 
