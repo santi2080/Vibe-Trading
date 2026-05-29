@@ -47,7 +47,7 @@ created: 2026-05-29
 | 01-03-01 | 01-03 | 2 | SPEC-8 | — | N/A | integration | `.venv/bin/python3 -m pytest agent/tests/test_strategy_watchlist_tools.py -q` | ✅ | ⬜ pending |
 | 01-03-02 | 01-03 | 2 | SPEC-8 | — | N/A | integration | `.venv/bin/python3 -m pytest agent/tests/test_strategy_watchlist_tools.py -q` | ✅ | ⬜ pending |
 | 01-03-03 | 01-03 | 2 | SPEC-8 | — | N/A | integration | `.venv/bin/python3 -m pytest agent/tests/test_strategy_watchlist_tools.py -q` | ✅ | ⬜ pending |
-| 01-04-01 | 01-04 | 3 | SPEC-9 | — | N/A | document/source | `test -f .planning/phases/01-major-trend-evaluation-system/01-BACKTEST-VALIDATION.md` | ❌ W0 | ⬜ pending |
+| 01-04-01 | 01-04 | 3 | SPEC-9 | — | N/A | document/source | `test -f docs/MTES_BACKTEST_VALIDATION_PLAN.md` | ✅ | ⬜ pending |
 | 01-04-02 | 01-04 | 3 | SPEC-1..SPEC-9 | — | N/A | integration | `.venv/bin/python3 -m pytest agent/tests/test_major_trend_evaluator.py agent/tests/test_strategy_watchlist_tools.py -q` | ✅ | ⬜ pending |
 | 01-04-03 | 01-04 | 3 | SPEC-1..SPEC-9 | — | N/A | CLI/source | `.venv/bin/python3 -m pytest agent/tests/test_major_trend_evaluator.py agent/tests/test_strategy_watchlist_tools.py -q` | ✅ | ⬜ pending |
 
@@ -57,7 +57,7 @@ created: 2026-05-29
 
 ## Wave 0 Requirements
 
-Existing focused test infrastructure covers evaluator and strategy/tool integration. Plan 01-04 must create `01-BACKTEST-VALIDATION.md` as its validation-plan artifact.
+Existing focused test infrastructure covers evaluator and strategy/tool integration. Plan 01-04 must create/update `docs/MTES_BACKTEST_VALIDATION_PLAN.md` as its validation-plan artifact.
 
 ---
 
