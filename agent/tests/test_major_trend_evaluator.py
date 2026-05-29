@@ -197,6 +197,7 @@ def test_mtf_alignment_uses_completed_higher_timeframe_bars() -> None:
     )
 
     assert result.metadata["mtf"]["method"] == "backward_lag"
+    assert result.metadata["mtf"]["aligner"] == "MTFAligner"
     assert result.metadata["mtf"]["lag_bars"] == 1
     assert result.raw_scores["mtf"] in {25.0, 90.0}
 

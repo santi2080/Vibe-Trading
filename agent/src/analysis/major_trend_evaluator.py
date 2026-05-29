@@ -420,6 +420,7 @@ class MajorTrendEvaluator:
         if higher_timeframe is None:
             return 50.0, {
                 "method": "not_provided",
+                "aligner": None,
                 "timeframe_conflict": False,
                 "base_timeframe": base_timeframe,
                 "higher_timeframe": higher_timeframe_name,
@@ -441,6 +442,7 @@ class MajorTrendEvaluator:
         if aligned_data.empty:
             return 50.0, {
                 "method": aligned.alignment_method,
+                "aligner": "MTFAligner",
                 "lag_bars": 1,
                 "timeframe_conflict": False,
                 "status": "degraded_no_aligned_bars",
@@ -454,6 +456,7 @@ class MajorTrendEvaluator:
         score = 25.0 if conflict else 90.0 if direction == htf_direction else 55.0
         return score, {
             "method": aligned.alignment_method,
+            "aligner": "MTFAligner",
             "lag_bars": 1,
             "timeframe_conflict": conflict,
             "base_direction": direction,
@@ -668,4 +671,8 @@ def clamp(value: float, lower: float, upper: float) -> float:
     return max(lower, min(upper, float(value)))
 
 
-validate_weight_profiles = lambda: [get_weight_profile(asset_class) for asset_class in ASSET_WEIGHT_PROFILES]
+def validate_weight_profiles() -> bool:
+    """Validate every composed asset-class profile at import or test time."""
+    for asset_class in ASSET_WEIGHT_PROFILES:
+        get_weight_profile(asset_class)
+    return True
