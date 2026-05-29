@@ -84,4 +84,8 @@ wiki/alpha-library/content/
 # Data cache
 /data/
 
+
+# Planning runtime state / duplicate phase context
+.planning/config.json
+.planning/phases/*/CONTEXT.md
 memory/session_compact_*.md
