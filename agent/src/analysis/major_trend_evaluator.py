@@ -1,4 +1,9 @@
-"""Major Trend Evaluation System scoring."""
+"""Major Trend Evaluation System scoring.
+
+This module provides the reusable MTES core evaluator used by watchlist and
+backtest adapters. The evaluator is deterministic for a fixed OHLCV input and
+keeps trend quality score independent from directional sign.
+"""
 
 from __future__ import annotations
 
@@ -18,73 +23,55 @@ DIMENSIONS = (
     "mtf",
 )
 
-ASSET_WEIGHT_PROFILES: dict[str, dict[str, float]] = {
-    "stock": {
-        "direction": 22,
-        "strength": 16,
-        "structure": 18,
-        "momentum": 20,
-        "volatility_regime": 12,
-        "mtf": 12,
-    },
-    "etf": {
-        "direction": 24,
-        "strength": 14,
-        "structure": 14,
-        "momentum": 22,
-        "volatility_regime": 12,
-        "mtf": 14,
-    },
-    "futures": {
-        "direction": 22,
-        "strength": 20,
-        "structure": 16,
-        "momentum": 16,
-        "volatility_regime": 14,
-        "mtf": 12,
-    },
-    "crypto": {
-        "direction": 18,
-        "strength": 16,
-        "structure": 14,
-        "momentum": 18,
-        "volatility_regime": 20,
-        "mtf": 14,
-    },
-    "fx": {
-        "direction": 24,
-        "strength": 18,
-        "structure": 14,
-        "momentum": 14,
-        "volatility_regime": 12,
-        "mtf": 18,
-    },
+BASE_WEIGHTS: dict[str, int] = {
+    "direction": 15,
+    "strength": 15,
+    "structure": 25,
+    "momentum": 15,
+    "volatility_regime": 15,
+    "mtf": 15,
 }
 
-MARKET_ASSET_CLASS = {
-    "a_stock": "stock",
-    "cn_stock": "stock",
+ASSET_WEIGHT_PROFILES: dict[str, dict[str, int]] = {
+    "stock": {},
+    "etf": {"structure": 20, "volatility_regime": 20},
+    "futures": {"direction": 18, "strength": 17, "structure": 22, "volatility_regime": 13},
+    "crypto": {"direction": 12, "strength": 13, "structure": 20, "momentum": 22, "volatility_regime": 18},
+    "fx": {"direction": 18, "strength": 12, "structure": 20, "mtf": 20},
+}
+
+DIRECTION_PERIODS: dict[str, dict[str, int]] = {
+    "stock": {"intermediate": 50, "long": 200, "slope": 40, "return": 200},
+    "etf": {"intermediate": 50, "long": 200, "slope": 40, "return": 200},
+    "futures": {"intermediate": 40, "long": 160, "slope": 32, "return": 160},
+    "crypto": {"intermediate": 30, "long": 120, "slope": 24, "return": 120},
+    "fx": {"intermediate": 60, "long": 180, "slope": 36, "return": 180},
+}
+
+MARKET_ALIASES = {
     "stock": "stock",
+    "stocks": "stock",
+    "a_stock": "stock",
     "us_stock": "stock",
-    "us_stocks": "stock",
-    "hk_stock": "stock",
-    "hk_stocks": "stock",
+    "equity": "stock",
     "etf": "etf",
-    "us_etf": "etf",
+    "fund": "etf",
     "futures": "futures",
     "future": "futures",
     "us_futures": "futures",
-    "us_future": "futures",
     "cn_futures": "futures",
-    "cn_future": "futures",
+    "commodity": "futures",
     "crypto": "crypto",
-    "ccxt": "crypto",
+    "cryptocurrency": "crypto",
     "fx": "fx",
     "forex": "fx",
+    "currency": "fx",
 }
 
 
-class TrendState(str, Enum):
+class TrendState(Enum):
+    """Locked seven-state major-trend labels."""
+
     BULL_STRONG = "BULL_STRONG"
     BULL_CONFIRMED = "BULL_CONFIRMED"
     BULL_EARLY = "BULL_EARLY"
@@ -96,20 +83,20 @@ class TrendState(str, Enum):
 
 @dataclass(frozen=True)
 class MajorTrendConfig:
-    asset_class: str = "futures"
-    long_window: int = 200
-    intermediate_window: int = 50
-    short_window: int = 20
-    adx_window: int = 14
-    momentum_windows: tuple[int, int, int] = (63, 126, 252)
+    """Configuration for the MTES evaluator."""
+
+    asset_class: str = "stock"
+    adx_period: int = 14
     structure_window: int = 55
-    volatility_window: int = 20
-    volatility_lookback: int = 252
-    efficiency_window: int = 60
+    swing_window: int = 20
+    regime_window: int = 126
+    momentum_windows: tuple[int, int, int] = (63, 126, 252)
 
 
 @dataclass(frozen=True)
 class MajorTrendResult:
+    """Structured result returned by :class:`MajorTrendEvaluator`."""
+
     asset_class: str
     trend_score: float
     trend_state: str
@@ -125,6 +112,7 @@ class MajorTrendResult:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        """Return the machine-readable MTES payload."""
         return {
             "asset_class": self.asset_class,
             "trend_score": self.trend_score,
@@ -143,11 +131,11 @@ class MajorTrendResult:
 
 
 class MajorTrendEvaluator:
-    """Scores major trend state across asset classes."""
+    """Evaluate cross-asset major-trend quality across six dimensions."""
 
     def __init__(self, config: MajorTrendConfig | None = None):
+        """Initialize the evaluator with optional configuration."""
         self.config = config or MajorTrendConfig()
-        validate_weight_profiles()
 
     def evaluate(
         self,
@@ -156,25 +144,36 @@ class MajorTrendEvaluator:
         higher_timeframe: pd.DataFrame | None = None,
         base_timeframe: str = "1d",
         higher_timeframe_name: str = "1w",
+        cross_section_context: dict[str, Any] | None = None,
     ) -> MajorTrendResult:
-        data = normalize_ohlcv(df)
+        """Score an OHLCV frame and return the MTES result contract."""
         resolved_asset_class = resolve_asset_class(asset_class or self.config.asset_class)
         weights = get_weight_profile(resolved_asset_class)
+        missing_optional = [column for column in ["volume"] if column not in df.columns]
+        data = normalize_ohlcv(df)
+        periods = DIRECTION_PERIODS[resolved_asset_class]
+        required_bars = max(periods["long"], periods["return"])
 
-        if len(data) < self.config.intermediate_window:
-            return insufficient_data_result(resolved_asset_class, weights, len(data), self.config.intermediate_window)
+        if len(data) < required_bars:
+            return insufficient_data_result(
+                resolved_asset_class,
+                weights,
+                bars=len(data),
+                required=required_bars,
+                metadata={"input": {"missing_optional": missing_optional}},
+            )
 
-        direction_score, direction, direction_meta = self.score_direction(data)
+        direction_score, direction, direction_meta = self.score_direction(data, resolved_asset_class)
         strength_score, strength_meta = self.score_strength(data, direction)
         structure_score, structure_meta = self.score_structure(data, direction)
-        momentum_score, momentum_meta = self.score_momentum(data, direction)
+        momentum_score, momentum_meta = self.score_momentum(data, direction, cross_section_context)
         regime_score, regime, regime_flags, regime_meta = self.score_volatility_regime(data)
         mtf_score, mtf_meta = self.score_mtf_alignment(
             data,
             direction,
-            higher_timeframe=higher_timeframe,
-            base_timeframe=base_timeframe,
-            higher_timeframe_name=higher_timeframe_name,
+            higher_timeframe,
+            base_timeframe,
+            higher_timeframe_name,
         )
 
         raw_scores = {
@@ -191,9 +190,28 @@ class MajorTrendEvaluator:
         }
         trend_score = round(sum(sub_scores.values()), 2)
         trend_state = classify_trend_state(trend_score, direction)
-        confidence = round(trend_score / 100, 3)
-        top_drivers = build_top_drivers(sub_scores, raw_scores)
-        explanation = build_explanation(trend_state, direction, trend_score, top_drivers, regime_flags)
+
+        if mtf_meta.get("timeframe_conflict"):
+            regime_flags.append("timeframe_conflict")
+
+        metadata = {
+            "status": "scored",
+            "bars": len(data),
+            "required_bars": required_bars,
+            "input": {"missing_optional": missing_optional},
+            "direction": direction_meta,
+            "strength": strength_meta,
+            "structure": structure_meta,
+            "momentum": momentum_meta,
+            "volatility_regime": regime_meta,
+            "mtf": mtf_meta,
+        }
+        top_drivers = build_top_drivers(sub_scores, raw_scores, mtf_meta)
+        confidence = round(min(1.0, trend_score / 100), 3)
+        explanation = (
+            f"{trend_state} with {trend_score:.1f}/100 quality; "
+            f"direction={direction}, regime={regime}."
+        )
 
         return MajorTrendResult(
             asset_class=resolved_asset_class,
@@ -203,171 +221,191 @@ class MajorTrendEvaluator:
             confidence=confidence,
             regime=regime,
             sub_scores=sub_scores,
-            raw_scores={key: round(value, 2) for key, value in raw_scores.items()},
-            weights=weights,
+            raw_scores=raw_scores,
+            weights={dimension: float(weight) for dimension, weight in weights.items()},
             top_drivers=top_drivers,
-            regime_flags=regime_flags,
+            regime_flags=sorted(set(regime_flags)),
             explanation=explanation,
-            metadata={
-                "bars": len(data),
-                "direction": direction_meta,
-                "strength": strength_meta,
-                "structure": structure_meta,
-                "momentum": momentum_meta,
-                "volatility_regime": regime_meta,
-                "mtf": mtf_meta,
-            },
+            metadata=metadata,
         )
 
-    def score_direction(self, df: pd.DataFrame) -> tuple[float, str, dict[str, Any]]:
+    def score_direction(self, df: pd.DataFrame, asset_class: str) -> tuple[float, str, dict[str, Any]]:
+        """Score direction using price/MA, MA spread, long-MA slope, and long return."""
+        periods = DIRECTION_PERIODS[asset_class]
         close = df["close"]
-        intermediate = close.ewm(span=self.config.intermediate_window, adjust=False).mean()
-        long_ma = close.ewm(span=self.config.long_window, adjust=False).mean()
-        latest_close = float(close.iloc[-1])
-        latest_intermediate = float(intermediate.iloc[-1])
-        latest_long = float(long_ma.iloc[-1])
-        slope_window = min(20, max(1, len(long_ma) - 1))
-        long_slope = safe_pct_change(latest_long, float(long_ma.iloc[-1 - slope_window]))
-        long_return = safe_pct_change(latest_close, float(close.iloc[max(0, len(close) - self.config.long_window)]))
+        intermediate_ma = close.rolling(periods["intermediate"]).mean()
+        long_ma = close.rolling(periods["long"]).mean()
+        current = float(close.iloc[-1])
+        intermediate = float(intermediate_ma.iloc[-1])
+        long_value = float(long_ma.iloc[-1])
+        slope_base = float(long_ma.iloc[-1 - periods["slope"]])
+        long_slope = (long_value - slope_base) / abs(slope_base) if slope_base else 0.0
+        return_base = float(close.iloc[-1 - periods["return"]])
+        long_return = (current - return_base) / abs(return_base) if return_base else 0.0
 
-        bull_checks = [
-            latest_close > latest_long,
-            latest_intermediate > latest_long,
-            long_slope > 0,
-            long_return > 0,
-        ]
-        bear_checks = [
-            latest_close < latest_long,
-            latest_intermediate < latest_long,
-            long_slope < 0,
-            long_return < 0,
-        ]
-        bull_count = sum(bull_checks)
-        bear_count = sum(bear_checks)
-        if bull_count > bear_count:
+        signals = {
+            "price_vs_long_ma": compare_sign(current, long_value, tolerance=0.005),
+            "intermediate_vs_long_ma": compare_sign(intermediate, long_value, tolerance=0.0025),
+            "long_ma_slope": compare_sign(long_slope, 0.0, tolerance=0.001),
+            "long_horizon_return": compare_sign(long_return, 0.0, tolerance=0.01),
+        }
+        net = sum(signals.values())
+        if net >= 2:
             direction = "BULL"
-            score = 25 * bull_count
-        elif bear_count > bull_count:
+        elif net <= -2:
             direction = "BEAR"
-            score = 25 * bear_count
         else:
             direction = "NEUTRAL"
-            score = 25 * max(bull_count, bear_count)
 
-        return float(score), direction, {
-            "close": latest_close,
-            "intermediate_ema": latest_intermediate,
-            "long_ema": latest_long,
-            "long_slope_pct": round(long_slope, 4),
-            "long_return_pct": round(long_return, 4),
-            "bull_checks": bull_count,
-            "bear_checks": bear_count,
+        agreement = abs(net) / len(signals)
+        magnitude = min(1.0, abs(long_return) * 4 + abs(long_slope) * 12)
+        score = clamp(35 + agreement * 45 + magnitude * 20, 0, 100)
+        if direction == "NEUTRAL":
+            score = min(score, 45.0)
+
+        return round(score, 2), direction, {
+            "periods": periods,
+            "signals": signals,
+            "long_slope": round(long_slope, 6),
+            "long_horizon_return": round(long_return, 6),
         }
 
     def score_strength(self, df: pd.DataFrame, direction: str) -> tuple[float, dict[str, Any]]:
-        adx, plus_di, minus_di = calculate_adx(df, self.config.adx_window)
-        latest_adx = fill_float(adx.iloc[-1], default=0.0)
-        latest_plus = fill_float(plus_di.iloc[-1], default=0.0)
-        latest_minus = fill_float(minus_di.iloc[-1], default=0.0)
-        adx_component = clamp(latest_adx / 35 * 70, 0, 70)
-        if direction == "BULL":
-            directional_component = 30 if latest_plus > latest_minus else 0
-        elif direction == "BEAR":
-            directional_component = 30 if latest_minus > latest_plus else 0
+        """Score trend strength with ADX and directional movement agreement."""
+        adx, plus_di, minus_di = calculate_adx(df, self.config.adx_period)
+        adx_value = safe_last(adx, default=0.0)
+        plus_value = safe_last(plus_di, default=0.0)
+        minus_value = safe_last(minus_di, default=0.0)
+        di_agrees = (
+            (direction == "BULL" and plus_value >= minus_value)
+            or (direction == "BEAR" and minus_value >= plus_value)
+            or direction == "NEUTRAL"
+        )
+        score = min(100.0, adx_value * 2.5)
+        if di_agrees:
+            score = min(100.0, score + 10.0)
         else:
-            directional_component = 0
-        return round(adx_component + directional_component, 2), {
-            "adx": round(latest_adx, 2),
-            "plus_di": round(latest_plus, 2),
-            "minus_di": round(latest_minus, 2),
+            score = max(0.0, score - 20.0)
+        return round(score, 2), {
+            "adx": round(adx_value, 4),
+            "plus_di": round(plus_value, 4),
+            "minus_di": round(minus_value, 4),
+            "di_agrees_with_direction": di_agrees,
         }
 
     def score_structure(self, df: pd.DataFrame, direction: str) -> tuple[float, dict[str, Any]]:
-        lookback = min(self.config.structure_window, max(2, len(df) - 1))
+        """Score Donchian/range position and swing structure evidence."""
+        window = min(self.config.structure_window, max(20, len(df) // 2))
         close = df["close"]
         high = df["high"]
         low = df["low"]
-        prior_high = float(high.iloc[-lookback - 1:-1].max()) if len(df) > lookback else float(high.iloc[:-1].max())
-        prior_low = float(low.iloc[-lookback - 1:-1].min()) if len(df) > lookback else float(low.iloc[:-1].min())
-        latest_close = float(close.iloc[-1])
-        recent = close.iloc[-lookback:]
-        midpoint = lookback // 2
-        first_half_high = float(high.iloc[-lookback:-lookback + midpoint].max()) if midpoint > 0 else float(high.iloc[-lookback:].max())
-        second_half_high = float(high.iloc[-midpoint:].max()) if midpoint > 0 else float(high.iloc[-lookback:].max())
-        first_half_low = float(low.iloc[-lookback:-lookback + midpoint].min()) if midpoint > 0 else float(low.iloc[-lookback:].min())
-        second_half_low = float(low.iloc[-midpoint:].min()) if midpoint > 0 else float(low.iloc[-lookback:].min())
+        prior_high = float(high.iloc[-window:-1].max())
+        prior_low = float(low.iloc[-window:-1].min())
+        current = float(close.iloc[-1])
+        price_range = max(prior_high - prior_low, 1e-9)
+        range_position = clamp((current - prior_low) / price_range, 0, 1)
 
-        if direction == "BULL":
-            score = 0
-            score += 45 if latest_close >= prior_high else clamp((latest_close - prior_low) / max(prior_high - prior_low, 1e-9) * 35, 0, 35)
-            score += 30 if second_half_high > first_half_high else 0
-            score += 25 if second_half_low > first_half_low else 0
-        elif direction == "BEAR":
-            score = 0
-            score += 45 if latest_close <= prior_low else clamp((prior_high - latest_close) / max(prior_high - prior_low, 1e-9) * 35, 0, 35)
-            score += 30 if second_half_low < first_half_low else 0
-            score += 25 if second_half_high < first_half_high else 0
+        if current > prior_high:
+            breakout_state = "breakout_up"
+        elif current < prior_low:
+            breakout_state = "breakout_down"
         else:
-            range_width = (float(recent.max()) - float(recent.min())) / max(abs(latest_close), 1e-9)
-            score = 35 if range_width < 0.08 else 20
+            breakout_state = "in_range"
 
-        return round(clamp(score, 0, 100), 2), {
-            "lookback": lookback,
-            "prior_high": round(prior_high, 4),
-            "prior_low": round(prior_low, 4),
-            "latest_close": round(latest_close, 4),
+        swing = self._swing_structure(df, direction)
+        range_score = range_position * 100 if direction == "BULL" else (1 - range_position) * 100
+        if direction == "NEUTRAL":
+            range_score = 50 - abs(range_position - 0.5) * 60
+        breakout_bonus = 15 if (
+            (direction == "BULL" and breakout_state == "breakout_up")
+            or (direction == "BEAR" and breakout_state == "breakout_down")
+        ) else 0
+        swing_score = {"aligned": 90, "mixed": 55, "opposed": 25}.get(swing, 55)
+        score = clamp(range_score * 0.45 + swing_score * 0.45 + breakout_bonus, 0, 100)
+
+        return round(score, 2), {
+            "range_position": round(range_position, 4),
+            "breakout_state": breakout_state,
+            "swing_structure": swing,
+            "window": window,
         }
 
-    def score_momentum(self, df: pd.DataFrame, direction: str) -> tuple[float, dict[str, Any]]:
+    def score_momentum(
+        self,
+        df: pd.DataFrame,
+        direction: str,
+        cross_section_context: dict[str, Any] | None,
+    ) -> tuple[float, dict[str, Any]]:
+        """Score absolute 3/6/12 month momentum with optional relative rank."""
         close = df["close"]
-        components: list[float] = []
         returns: dict[str, float | None] = {}
+        available_scores: list[float] = []
         for window in self.config.momentum_windows:
-            label = f"{window}b"
+            key = f"return_{window}"
             if len(close) <= window:
-                returns[label] = None
+                returns[key] = None
                 continue
-            value = safe_pct_change(float(close.iloc[-1]), float(close.iloc[-1 - window]))
-            returns[label] = round(value, 4)
-            if direction == "BULL":
-                components.append(clamp(value / 0.20 * 100, 0, 100))
-            elif direction == "BEAR":
-                components.append(clamp((-value) / 0.20 * 100, 0, 100))
+            base = float(close.iloc[-1 - window])
+            value = (float(close.iloc[-1]) - base) / abs(base) if base else 0.0
+            returns[key] = round(value, 6)
+            signed = value if direction == "BULL" else -value if direction == "BEAR" else abs(value) * 0.25
+            available_scores.append(clamp(50 + signed * 250, 0, 100))
+
+        absolute_score = float(np.mean(available_scores)) if available_scores else 35.0
+        metadata: dict[str, Any] = {
+            "absolute_returns": returns,
+            "missing_windows": [key for key, value in returns.items() if value is None],
+            "relative_status": "not_provided",
+        }
+        score = absolute_score
+
+        if cross_section_context:
+            rank = resolve_relative_rank(cross_section_context)
+            if rank is not None:
+                relative_score = rank * 100
+                score = absolute_score * 0.75 + relative_score * 0.25
+                metadata["relative_status"] = "applied"
+                metadata["relative_rank"] = round(rank, 4)
             else:
-                components.append(max(0, 40 - abs(value) * 100))
-        score = sum(components) / len(components) if components else 0
-        return round(score, 2), {"returns": returns, "available_windows": len(components)}
+                metadata["relative_status"] = "unavailable"
+
+        return round(clamp(score, 0, 100), 2), metadata
 
     def score_volatility_regime(self, df: pd.DataFrame) -> tuple[float, str, list[str], dict[str, Any]]:
+        """Score trend-following suitability, primarily using efficiency/chop."""
+        window = min(self.config.regime_window, len(df) - 1)
         close = df["close"]
+        recent = close.iloc[-window:]
+        net_move = abs(float(recent.iloc[-1] - recent.iloc[0]))
+        path = float(recent.diff().abs().sum())
+        trend_efficiency = net_move / path if path else 0.0
         returns = close.pct_change().dropna()
-        if returns.empty:
-            return 0.0, "insufficient", ["insufficient_volatility_data"], {}
-        vol_window = min(self.config.volatility_window, len(returns))
-        rolling_vol = returns.rolling(vol_window).std() * np.sqrt(252)
-        current_vol = fill_float(rolling_vol.iloc[-1], default=float(returns.std() * np.sqrt(252)))
-        history = rolling_vol.dropna().tail(self.config.volatility_lookback)
-        percentile = percentile_rank(history, current_vol) if len(history) else 50.0
-        efficiency_window = min(self.config.efficiency_window, max(2, len(close) - 1))
-        net_move = abs(float(close.iloc[-1]) - float(close.iloc[-1 - efficiency_window]))
-        path = close.diff().abs().tail(efficiency_window).sum()
-        efficiency = float(net_move / path) if path and path > 0 else 0.0
+        historical_volatility = float(returns.iloc[-window:].std() * np.sqrt(252)) if len(returns) else 0.0
+        atr = calculate_atr(df, 14)
+        atr_value = safe_last(atr, default=0.0)
+        atr_pct = atr_value / abs(float(close.iloc[-1])) if float(close.iloc[-1]) else 0.0
 
-        percentile_score = 100 - abs(percentile - 55) * 1.35
-        efficiency_score = clamp(efficiency * 130, 0, 100)
-        score = clamp(0.55 * percentile_score + 0.45 * efficiency_score, 0, 100)
         flags: list[str] = []
-        if percentile >= 90:
+        if trend_efficiency < 0.25:
+            flags.append("choppy")
+        if historical_volatility > 0.85:
             flags.append("extreme_volatility")
-        if percentile <= 10:
-            flags.append("compressed_volatility")
-        if efficiency < 0.18:
-            flags.append("choppy_noise")
-        regime = "trend_friendly" if score >= 65 else "choppy" if score < 40 else "mixed"
+        if atr_pct > 0.08:
+            flags.append("high_atr")
+
+        score = clamp(20 + trend_efficiency * 85, 0, 100)
+        if "extreme_volatility" in flags:
+            score -= 10
+        if "high_atr" in flags:
+            score -= 8
+        score = clamp(score, 0, 100)
+        regime = "trend_friendly" if score >= 65 else "mixed" if score >= 40 else "choppy"
+
         return round(score, 2), regime, flags, {
-            "volatility_percentile": round(percentile, 2),
-            "annualized_volatility": round(current_vol, 4),
-            "trend_efficiency": round(efficiency, 4),
+            "trend_efficiency": round(trend_efficiency, 6),
+            "atr_pct": round(atr_pct, 6),
+            "historical_volatility": round(historical_volatility, 6),
+            "primary_penalty": "trend_efficiency_chop",
         }
 
     def score_mtf_alignment(
@@ -378,20 +416,21 @@ class MajorTrendEvaluator:
         base_timeframe: str,
         higher_timeframe_name: str,
     ) -> tuple[float, dict[str, Any]]:
-        if higher_timeframe is None or higher_timeframe.empty or direction == "NEUTRAL":
-            return 50.0 if direction != "NEUTRAL" else 25.0, {"status": "not_provided"}
+        """Score higher-timeframe alignment through the project MTFAligner."""
+        if higher_timeframe is None:
+            return 50.0, {
+                "method": "not_provided",
+                "aligner": None,
+                "timeframe_conflict": False,
+                "base_timeframe": base_timeframe,
+                "higher_timeframe": higher_timeframe_name,
+            }
 
-        try:
-            from backtest.strategies.mtf import MTFAligner, MTFConfig
-        except ImportError:
-            try:
-                from agent.backtest.strategies.mtf import MTFAligner, MTFConfig
-            except ImportError:
-                return 50.0, {"status": "mtf_aligner_unavailable"}
+        from backtest.strategies.mtf import MTFAligner, MTFConfig
 
         htf = normalize_ohlcv(higher_timeframe)
         htf = htf.copy()
-        htf["major_direction"] = htf["close"].ewm(span=min(20, len(htf)), adjust=False).mean()
+        htf["major_direction"] = directional_series(htf["close"])
         aligned = MTFAligner(MTFConfig(lag_bars=1)).align_htf_to_ltf(
             htf_data=htf[["major_direction"]],
             ltf_data=df[["close"]],
@@ -401,20 +440,80 @@ class MajorTrendEvaluator:
         )
         aligned_data = aligned.data.dropna(subset=["htf_major_direction"])
         if aligned_data.empty:
-            return 40.0, {"status": "no_aligned_values", "warmup_bars": aligned.warmup_bars}
-        latest_htf = float(aligned_data["htf_major_direction"].iloc[-1])
-        latest_close = float(aligned_data["close"].iloc[-1])
-        agreement = (direction == "BULL" and latest_close >= latest_htf) or (direction == "BEAR" and latest_close <= latest_htf)
-        return (90.0 if agreement else 25.0), {
-            "status": "aligned",
+            return 50.0, {
+                "method": aligned.alignment_method,
+                "aligner": "MTFAligner",
+                "lag_bars": 1,
+                "timeframe_conflict": False,
+                "status": "degraded_no_aligned_bars",
+                "base_timeframe": base_timeframe,
+                "higher_timeframe": higher_timeframe_name,
+            }
+
+        htf_signal = float(aligned_data["htf_major_direction"].iloc[-1])
+        htf_direction = "BULL" if htf_signal > 0 else "BEAR" if htf_signal < 0 else "NEUTRAL"
+        conflict = direction in {"BULL", "BEAR"} and htf_direction in {"BULL", "BEAR"} and direction != htf_direction
+        score = 25.0 if conflict else 90.0 if direction == htf_direction else 55.0
+        return score, {
             "method": aligned.alignment_method,
+            "aligner": "MTFAligner",
+            "lag_bars": 1,
+            "timeframe_conflict": conflict,
+            "base_direction": direction,
+            "higher_direction": htf_direction,
+            "base_timeframe": base_timeframe,
+            "higher_timeframe": higher_timeframe_name,
             "warmup_bars": aligned.warmup_bars,
-            "latest_htf_value": round(latest_htf, 4),
-            "agreement": agreement,
         }
+
+    def _swing_structure(self, df: pd.DataFrame, direction: str) -> str:
+        """Classify swing structure as aligned, mixed, or opposed."""
+        window = min(self.config.swing_window, max(5, len(df) // 4))
+        current_high = float(df["high"].iloc[-window:].max())
+        previous_high = float(df["high"].iloc[-2 * window : -window].max())
+        current_low = float(df["low"].iloc[-window:].min())
+        previous_low = float(df["low"].iloc[-2 * window : -window].min())
+        higher_high = current_high > previous_high
+        higher_low = current_low > previous_low
+        lower_high = current_high < previous_high
+        lower_low = current_low < previous_low
+
+        if direction == "BULL":
+            if higher_high and higher_low:
+                return "aligned"
+            if lower_high and lower_low:
+                return "opposed"
+        if direction == "BEAR":
+            if lower_high and lower_low:
+                return "aligned"
+            if higher_high and higher_low:
+                return "opposed"
+        return "mixed"
+
+
+def resolve_asset_class(asset_class: str) -> str:
+    """Resolve market aliases to a supported MTES asset class."""
+    normalized = str(asset_class).strip().lower()
+    resolved = MARKET_ALIASES.get(normalized, normalized)
+    if resolved not in ASSET_WEIGHT_PROFILES:
+        raise ValueError(f"unsupported asset class: {asset_class}")
+    return resolved
+
+
+def get_weight_profile(asset_class: str) -> dict[str, int]:
+    """Return final Base+Override weights for a supported asset class."""
+    resolved = resolve_asset_class(asset_class)
+    profile = BASE_WEIGHTS | ASSET_WEIGHT_PROFILES[resolved]
+    if set(profile) != set(DIMENSIONS):
+        raise ValueError(f"weight profile for {resolved} must contain exactly {DIMENSIONS}")
+    total = sum(profile.values())
+    if total != 100:
+        raise ValueError(f"weight profile for {resolved} totals {total}, expected 100")
+    return dict(profile)
 
 
 def normalize_ohlcv(df: pd.DataFrame) -> pd.DataFrame:
+    """Validate, sort, and coerce OHLCV input data."""
     data = df.copy()
     if not isinstance(data.index, pd.DatetimeIndex):
         if "timestamp" in data.columns:
@@ -435,30 +534,36 @@ def normalize_ohlcv(df: pd.DataFrame) -> pd.DataFrame:
     return data.dropna(subset=["open", "high", "low", "close"])
 
 
-def resolve_asset_class(value: str) -> str:
-    key = value.strip().lower()
-    asset_class = MARKET_ASSET_CLASS.get(key, key)
-    if asset_class not in ASSET_WEIGHT_PROFILES:
-        raise ValueError(f"unsupported asset class: {value}")
-    return asset_class
-
-
-def get_weight_profile(asset_class: str) -> dict[str, float]:
-    resolved = resolve_asset_class(asset_class)
-    return dict(ASSET_WEIGHT_PROFILES[resolved])
-
-
-def validate_weight_profiles() -> None:
-    for name, weights in ASSET_WEIGHT_PROFILES.items():
-        missing = set(DIMENSIONS) - set(weights)
-        if missing:
-            raise ValueError(f"weight profile {name} missing dimensions: {sorted(missing)}")
-        total = sum(weights.values())
-        if round(total, 6) != 100:
-            raise ValueError(f"weight profile {name} totals {total}, expected 100")
+def insufficient_data_result(
+    asset_class: str,
+    weights: dict[str, int],
+    bars: int,
+    required: int,
+    metadata: dict[str, Any] | None = None,
+) -> MajorTrendResult:
+    """Return the locked no-score result for insufficient long-horizon data."""
+    sub_scores = {dimension: 0.0 for dimension in DIMENSIONS}
+    raw_scores = {dimension: 0.0 for dimension in DIMENSIONS}
+    extra_metadata = metadata or {}
+    return MajorTrendResult(
+        asset_class=asset_class,
+        trend_score=0.0,
+        trend_state=TrendState.NEUTRAL_CHOPPY.value,
+        direction="NEUTRAL",
+        confidence=0.0,
+        regime="insufficient",
+        sub_scores=sub_scores,
+        raw_scores=raw_scores,
+        weights={dimension: float(weight) for dimension, weight in weights.items()},
+        top_drivers=[],
+        regime_flags=["insufficient_data"],
+        explanation=f"Insufficient data: {bars} bars available, {required} required.",
+        metadata={"status": "no_score", "bars": bars, "required_bars": required, **extra_metadata},
+    )
 
 
 def classify_trend_state(score: float, direction: str) -> str:
+    """Classify score and independent direction into seven locked states."""
     if direction == "BULL":
         if score >= 80:
             return TrendState.BULL_STRONG.value
@@ -476,86 +581,98 @@ def classify_trend_state(score: float, direction: str) -> str:
     return TrendState.NEUTRAL_CHOPPY.value
 
 
-def insufficient_data_result(asset_class: str, weights: dict[str, float], bars: int, required: int) -> MajorTrendResult:
-    sub_scores = {dimension: 0.0 for dimension in DIMENSIONS}
-    raw_scores = {dimension: 0.0 for dimension in DIMENSIONS}
-    return MajorTrendResult(
-        asset_class=asset_class,
-        trend_score=0.0,
-        trend_state=TrendState.NEUTRAL_CHOPPY.value,
-        direction="NEUTRAL",
-        confidence=0.0,
-        regime="insufficient",
-        sub_scores=sub_scores,
-        raw_scores=raw_scores,
-        weights=weights,
-        top_drivers=[],
-        regime_flags=["insufficient_data"],
-        explanation=f"Insufficient data: {bars} bars available, {required} required.",
-        metadata={"bars": bars, "required_bars": required},
-    )
+def build_top_drivers(
+    sub_scores: dict[str, float],
+    raw_scores: dict[str, float],
+    mtf_meta: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Build explainability drivers from weighted scores and conflict metadata."""
+    drivers = [
+        {"name": dimension, "sub_score": sub_scores[dimension], "raw_score": raw_scores[dimension]}
+        for dimension in DIMENSIONS
+    ]
+    drivers.sort(key=lambda item: item["sub_score"], reverse=True)
+    top = drivers[:3]
+    if mtf_meta.get("timeframe_conflict"):
+        top.append({"name": "timeframe_conflict", "sub_score": sub_scores["mtf"], "raw_score": raw_scores["mtf"]})
+    return top
 
 
 def calculate_adx(df: pd.DataFrame, period: int) -> tuple[pd.Series, pd.Series, pd.Series]:
+    """Calculate ADX and directional indicators."""
     high = df["high"]
     low = df["low"]
     close = df["close"]
     tr = pd.concat([high - low, (high - close.shift()).abs(), (low - close.shift()).abs()], axis=1).max(axis=1)
-    atr = tr.rolling(window=period).mean()
-    up_move = high.diff()
-    down_move = -low.diff()
-    plus_dm = up_move.where((up_move > down_move) & (up_move > 0), 0.0)
-    minus_dm = down_move.where((down_move > up_move) & (down_move > 0), 0.0)
-    plus_di = 100 * (plus_dm.rolling(window=period).mean() / atr.replace(0, np.nan))
-    minus_di = 100 * (minus_dm.rolling(window=period).mean() / atr.replace(0, np.nan))
+    plus_dm = high.diff().where(lambda series: series > 0, 0.0)
+    minus_dm = (-low.diff()).where(lambda series: series > 0, 0.0)
+    atr = tr.rolling(window=period).mean().replace(0, np.nan)
+    plus_di = 100 * plus_dm.rolling(window=period).mean() / atr
+    minus_di = 100 * minus_dm.rolling(window=period).mean() / atr
     dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, np.nan)
-    adx = dx.rolling(window=period).mean()
-    return adx.fillna(0), plus_di.fillna(0), minus_di.fillna(0)
+    adx = dx.rolling(window=period).mean().fillna(0.0)
+    return adx, plus_di.fillna(0.0), minus_di.fillna(0.0)
 
 
-def build_top_drivers(sub_scores: dict[str, float], raw_scores: dict[str, float]) -> list[dict[str, Any]]:
-    ordered = sorted(sub_scores.items(), key=lambda item: item[1], reverse=True)
-    return [
-        {"dimension": dimension, "contribution": contribution, "raw_score": round(raw_scores[dimension], 2)}
-        for dimension, contribution in ordered[:3]
-        if contribution > 0
-    ]
+def calculate_atr(df: pd.DataFrame, period: int) -> pd.Series:
+    """Calculate average true range."""
+    high = df["high"]
+    low = df["low"]
+    close = df["close"]
+    tr = pd.concat([high - low, (high - close.shift()).abs(), (low - close.shift()).abs()], axis=1).max(axis=1)
+    return tr.rolling(window=period).mean().fillna(0.0)
 
 
-def build_explanation(
-    trend_state: str,
-    direction: str,
-    score: float,
-    top_drivers: list[dict[str, Any]],
-    regime_flags: list[str],
-) -> str:
-    driver_text = ", ".join(driver["dimension"] for driver in top_drivers) or "no dominant drivers"
-    flag_text = f" Regime flags: {', '.join(regime_flags)}." if regime_flags else ""
-    return f"{trend_state} ({direction}) with score {score:.1f}; strongest drivers: {driver_text}.{flag_text}"
+def directional_series(close: pd.Series) -> pd.Series:
+    """Return a compact directional signal series for MTF alignment."""
+    span = max(3, min(20, len(close) // 2))
+    average = close.ewm(span=span, adjust=False).mean()
+    slope = average.diff(max(1, min(5, len(close) // 4))).fillna(0.0)
+    return np.sign(slope + (close - average) * 0.01)
 
 
-def safe_pct_change(current: float, prior: float) -> float:
-    if prior == 0 or np.isnan(prior):
-        return 0.0
-    return (current - prior) / abs(prior)
+def resolve_relative_rank(context: dict[str, Any]) -> float | None:
+    """Resolve a 0-1 relative momentum rank from cross-sectional context."""
+    if "relative_rank" in context:
+        return clamp(float(context["relative_rank"]), 0, 1)
+    returns = context.get("returns_252") or context.get("momentum_returns")
+    asset_id = context.get("asset_id")
+    if not isinstance(returns, dict) or asset_id not in returns:
+        return None
+    ordered = sorted(float(value) for value in returns.values())
+    if len(ordered) <= 1:
+        return 1.0
+    value = float(returns[asset_id])
+    below_or_equal = sum(1 for item in ordered if item <= value)
+    return (below_or_equal - 1) / (len(ordered) - 1)
 
 
-def percentile_rank(values: pd.Series, current: float) -> float:
-    clean = values.dropna()
+def compare_sign(left: float, right: float, tolerance: float) -> int:
+    """Compare two values with tolerance and return -1/0/1."""
+    reference = max(abs(right), 1.0)
+    difference = (left - right) / reference
+    if difference > tolerance:
+        return 1
+    if difference < -tolerance:
+        return -1
+    return 0
+
+
+def safe_last(series: pd.Series, default: float) -> float:
+    """Return the last finite value in a series or a default."""
+    clean = series.replace([np.inf, -np.inf], np.nan).dropna()
     if clean.empty:
-        return 50.0
-    return float((clean <= current).mean() * 100)
-
-
-def fill_float(value: Any, default: float = 0.0) -> float:
-    try:
-        result = float(value)
-    except (TypeError, ValueError):
         return default
-    if np.isnan(result) or np.isinf(result):
-        return default
-    return result
+    return float(clean.iloc[-1])
 
 
-def clamp(value: float, minimum: float, maximum: float) -> float:
-    return max(minimum, min(maximum, float(value)))
+def clamp(value: float, lower: float, upper: float) -> float:
+    """Clamp a numeric value to an inclusive range."""
+    return max(lower, min(upper, float(value)))
+
+
+def validate_weight_profiles() -> bool:
+    """Validate every composed asset-class profile at import or test time."""
+    for asset_class in ASSET_WEIGHT_PROFILES:
+        get_weight_profile(asset_class)
+    return True
