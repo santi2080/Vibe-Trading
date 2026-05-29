@@ -10,7 +10,6 @@ from typing import Dict, List, Optional
 import pandas as pd
 
 from agent.backtest.loaders.cache import DataCache
-from agent.backtest.loaders.yfinance_loader import _to_yfinance_interval
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +112,8 @@ class CachedDataLoader:
         end_dt = pd.Timestamp(end_date)
 
         # Convert interval for consistent cache keys
+        from agent.backtest.loaders.yfinance_loader import _to_yfinance_interval
+
         cache_interval = _to_yfinance_interval(interval)
 
         results = {}

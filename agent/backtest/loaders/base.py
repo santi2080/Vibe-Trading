@@ -9,6 +9,7 @@ re-implementing the loop.
 
 from __future__ import annotations
 
+import sys
 import time
 from typing import Callable, Protocol, TypeVar, runtime_checkable
 
@@ -17,6 +18,12 @@ import pandas as pd
 
 class NoAvailableSourceError(Exception):
     """Raised when no data source is available for a given market."""
+
+
+if __name__ == "agent.backtest.loaders.base":
+    sys.modules.setdefault("backtest.loaders.base", sys.modules[__name__])
+elif __name__ == "backtest.loaders.base":
+    sys.modules.setdefault("agent.backtest.loaders.base", sys.modules[__name__])
 
 
 def validate_date_range(start_date: str, end_date: str) -> None:

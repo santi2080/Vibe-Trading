@@ -54,13 +54,13 @@ def _ensure_registered() -> None:
     _registered = True
 
     _loader_modules = [
-        "backtest.loaders.tushare",
-        "backtest.loaders.tqsdk_loader",
-        "backtest.loaders.okx",
-        "backtest.loaders.yfinance_loader",
-        "backtest.loaders.akshare_loader",
-        "backtest.loaders.ccxt_loader",
-        "backtest.loaders.futu",
+        "agent.backtest.loaders.tushare",
+        "agent.backtest.loaders.tqsdk_loader",
+        "agent.backtest.loaders.okx",
+        "agent.backtest.loaders.yfinance_loader",
+        "agent.backtest.loaders.akshare_loader",
+        "agent.backtest.loaders.ccxt_loader",
+        "agent.backtest.loaders.futu",
     ]
     import importlib
     for mod in _loader_modules:
@@ -197,7 +197,7 @@ def _wrap_with_cache(loader: Any, enable_cache: bool) -> Any:
         return loader
 
     try:
-        from backtest.loaders.cached_loader import CachedDataLoader
+        from agent.backtest.loaders.cached_loader import CachedDataLoader
         cache_dir = os.getenv("VIBE_CACHE_DIR", ".cache/data")
         return CachedDataLoader(loader, cache_dir=cache_dir, enable_cache=True)
     except Exception as exc:

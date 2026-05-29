@@ -32,21 +32,29 @@ Usage:
     result = fetcher.fetch(["600519.SH", "AAPL.US"], "2024-01-01", "2024-12-31")
 """
 
+from __future__ import annotations
+
+import importlib
+import logging
+import sys
+from typing import Any
+
+sys.modules["agent.backtest.loaders"] = sys.modules[__name__]
+sys.modules["backtest.loaders"] = sys.modules[__name__]
+
 from .base import DataLoaderProtocol, NoAvailableSourceError
-from .cached_loader import CachedDataLoader
-from .client import DataClient, get_client, reset_client
-from .enhanced_loader import EnhancedCachedLoader
-from .hybrid_fetcher import HybridDataFetcher, get_fetcher
 from .registry import (
+    FALLBACK_CHAINS,
+    LOADER_REGISTRY,
+    get_loader_cls_with_fallback,
     register,
     resolve_loader,
-    get_loader_cls_with_fallback,
-    LOADER_REGISTRY,
-    FALLBACK_CHAINS,
 )
 
-# Lazy import loaders to avoid import errors when dependencies are missing
-# Use ensure_loaders() to trigger all @register decorators
+logger = logging.getLogger(__name__)
+
+# Lazy import loaders to avoid import errors when dependencies are missing.
+# Use ensure_loaders() to trigger all @register decorators.
 _loaders_ensured = False
 
 _LOADER_MODULES = [
@@ -59,8 +67,18 @@ _LOADER_MODULES = [
     ("futu", "agent.backtest.loaders.futu"),
 ]
 
+_LAZY_ATTRS: dict[str, tuple[str, str]] = {
+    "CachedDataLoader": ("cached_loader", "CachedDataLoader"),
+    "EnhancedCachedLoader": ("enhanced_loader", "EnhancedCachedLoader"),
+    "DataClient": ("client", "DataClient"),
+    "get_client": ("client", "get_client"),
+    "reset_client": ("client", "reset_client"),
+    "HybridDataFetcher": ("hybrid_fetcher", "HybridDataFetcher"),
+    "get_fetcher": ("hybrid_fetcher", "get_fetcher"),
+}
 
-def ensure_loaders():
+
+def ensure_loaders() -> None:
     """Ensure all loaders are imported and registered."""
     global _loaders_ensured
     if _loaders_ensured:
@@ -68,19 +86,23 @@ def ensure_loaders():
 
     _loaders_ensured = True
 
-    # Import loaders with optional dependencies
-    import importlib
     for name, module in _LOADER_MODULES:
         try:
             importlib.import_module(module)
-        except ImportError as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.debug(f"Loader {name} not available: {e}")
+        except ImportError as exc:
+            logger.debug("Loader %s not available: %s", name, exc)
 
 
-# Don't auto-import loaders to avoid import errors
-# Call ensure_loaders() when needed
+def __getattr__(name: str) -> Any:
+    """Lazily expose heavy loader helpers without importing them at package load."""
+    if name in _LAZY_ATTRS:
+        module_name, attr_name = _LAZY_ATTRS[name]
+        module = importlib.import_module(f"{__name__}.{module_name}")
+        value = getattr(module, attr_name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     # protocols and base
