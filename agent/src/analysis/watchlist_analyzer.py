@@ -433,7 +433,17 @@ class WatchlistAnalyzer:
                 from src.analysis.major_trend_evaluator import MajorTrendEvaluator, resolve_asset_class
 
                 asset_class = resolve_asset_class(market)
-                mtes_payload = MajorTrendEvaluator().evaluate(df, asset_class=asset_class).to_dict()
+                higher_timeframe_df = self._load_data_from_file(symbol, market, secondary_tf)
+                if higher_timeframe_df is None or higher_timeframe_df.empty:
+                    higher_timeframe_df = self._load_data(symbol, market, secondary_tf)
+
+                mtes_payload = MajorTrendEvaluator().evaluate(
+                    df,
+                    asset_class=asset_class,
+                    higher_timeframe=higher_timeframe_df,
+                    base_timeframe=str(primary_tf).strip().lower(),
+                    higher_timeframe_name=str(secondary_tf).strip().lower(),
+                ).to_dict()
             except Exception as exc:
                 logger.warning("MTES evaluation failed for %s: %s", symbol, exc)
                 mtes_payload = {
@@ -527,12 +537,19 @@ class WatchlistAnalyzer:
         }
 
         market_dir = market_dir_map.get(market, "us_futures")
-        data_path = Path(f"data/{market_dir}/{symbol}/1d.parquet")
+        timeframe_key = str(timeframe).strip().lower()
+        data_path = Path(f"data/{market_dir}/{symbol}/{timeframe_key}.parquet")
+
+        if not data_path.exists():
+            # Fallback to daily cache for legacy paths
+            data_path = Path(f"data/{market_dir}/{symbol}/1d.parquet")
 
         if not data_path.exists():
             # 尝试 trading-assistant 数据目录
-            ta_feature = Path(f"/Users/iagent/projects/trading-assistant/data/features/{market_dir}/{symbol}/1d.parquet")
-            ta_cache = Path(f"/Users/iagent/projects/trading-assistant/data/cache/{symbol}_1d.parquet")
+            ta_feature = Path(
+                f"/Users/iagent/projects/trading-assistant/data/features/{market_dir}/{symbol}/{timeframe_key}.parquet"
+            )
+            ta_cache = Path(f"/Users/iagent/projects/trading-assistant/data/cache/{symbol}_{timeframe_key}.parquet")
             if ta_feature.exists():
                 data_path = ta_feature
             elif ta_cache.exists():
