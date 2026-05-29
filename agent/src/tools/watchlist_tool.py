@@ -9,6 +9,22 @@ from typing import Any
 from src.agent.tools import BaseTool
 
 
+def _to_plain_json(value: Any) -> Any:
+    """Convert nested values to JSON-safe plain Python types."""
+    if isinstance(value, dict):
+        return {str(k): _to_plain_json(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_to_plain_json(v) for v in value]
+    if isinstance(value, tuple):
+        return [_to_plain_json(v) for v in value]
+    if hasattr(value, "item"):
+        try:
+            return _to_plain_json(value.item())
+        except Exception:
+            return str(value)
+    return value
+
+
 _AGENT_DIR = Path(__file__).resolve().parents[2]
 _REPO_DIR = _AGENT_DIR.parent
 _WATCHLIST_DIR = _REPO_DIR / "watchlist"
@@ -165,14 +181,14 @@ class AnalyzeWatchlistTool(BaseTool):
         mtes_results = [
             {
                 "symbol": r.symbol,
-                "asset_class": r.mtes.get("asset_class") if r.mtes else None,
-                "trend_score": r.mtes.get("trend_score") if r.mtes else None,
-                "trend_state": r.mtes.get("trend_state") if r.mtes else None,
-                "direction": r.mtes.get("direction") if r.mtes else None,
-                "confidence": r.mtes.get("confidence") if r.mtes else None,
-                "regime": r.mtes.get("regime") if r.mtes else None,
-                "sub_scores": r.mtes.get("sub_scores") if r.mtes else {},
-                "top_drivers": r.mtes.get("top_drivers") if r.mtes else [],
+                "asset_class": _to_plain_json(r.mtes.get("asset_class") if r.mtes else None),
+                "trend_score": _to_plain_json(r.mtes.get("trend_score") if r.mtes else None),
+                "trend_state": _to_plain_json(r.mtes.get("trend_state") if r.mtes else None),
+                "direction": _to_plain_json(r.mtes.get("direction") if r.mtes else None),
+                "confidence": _to_plain_json(r.mtes.get("confidence") if r.mtes else None),
+                "regime": _to_plain_json(r.mtes.get("regime") if r.mtes else None),
+                "sub_scores": _to_plain_json(r.mtes.get("sub_scores") if r.mtes else {}),
+                "top_drivers": _to_plain_json(r.mtes.get("top_drivers") if r.mtes else []),
             }
             for r in results
             if not r.error
