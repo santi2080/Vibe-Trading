@@ -60,3 +60,14 @@
 - Plan 03: completed (`.planning/phases/04-signal-execution-system/04-03-PLAN.md`) - Execution Simulator
 - Plan 04: completed (`.planning/phases/04-signal-execution-system/04-04-PLAN.md`) - Portfolio Tracker
 - Plan 05: completed (`.planning/phases/04-signal-execution-system/04-05-PLAN.md`) - Performance Metrics
+
+### Phase 5: MTES v2 Direction-Primary Scoring
+
+**Goal:** Refactor MTES to use direction-primary scoring where trend_score = -100 ~ +100 (signed), with direction as the primary signal and strength metrics as confirmation.
+
+**Status:** completed (2026-05-31)
+
+**Plans:**
+- SPEC: completed (`.planning/phases/05-mtes-refactor/05-SPEC.md`)
+- Plan 01: completed - V2 data structures and scoring functions
+- Validation: completed - 14 tests pass
