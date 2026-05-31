@@ -23,6 +23,7 @@ DIMENSIONS = (
     "mtf",
 )
 
+# V1 旧权重配置 (保留兼容)
 BASE_WEIGHTS: dict[str, int] = {
     "direction": 15,
     "strength": 15,
@@ -38,6 +39,25 @@ ASSET_WEIGHT_PROFILES: dict[str, dict[str, int]] = {
     "futures": {"direction": 18, "strength": 17, "structure": 22, "volatility_regime": 13},
     "crypto": {"direction": 12, "strength": 13, "structure": 20, "momentum": 22, "volatility_regime": 18},
     "fx": {"direction": 18, "strength": 12, "structure": 20, "mtf": 20},
+}
+
+# V2 新权重配置 (方向为主)
+# 方向权重: 主趋势方向的确定性权重 (0.5 ~ 0.8)
+DIRECTION_WEIGHTS: dict[str, float] = {
+    "stock": 0.65,
+    "etf": 0.60,
+    "futures": 0.70,
+    "crypto": 0.55,
+    "fx": 0.75,
+}
+
+# 强度组内部权重 (5个维度)
+STRENGTH_COMPONENTS: dict[str, dict[str, float]] = {
+    "stock": {"strength": 0.25, "structure": 0.25, "momentum": 0.20, "regime": 0.15, "mtf": 0.15},
+    "etf": {"strength": 0.20, "structure": 0.25, "momentum": 0.20, "regime": 0.20, "mtf": 0.15},
+    "futures": {"strength": 0.30, "structure": 0.25, "momentum": 0.15, "regime": 0.15, "mtf": 0.15},
+    "crypto": {"strength": 0.20, "structure": 0.20, "momentum": 0.25, "regime": 0.20, "mtf": 0.15},
+    "fx": {"strength": 0.20, "structure": 0.25, "momentum": 0.15, "regime": 0.20, "mtf": 0.20},
 }
 
 DIRECTION_PERIODS: dict[str, dict[str, int]] = {
@@ -83,7 +103,7 @@ class TrendState(Enum):
 
 @dataclass(frozen=True)
 class MajorTrendConfig:
-    """Configuration for the MTES evaluator."""
+    """Configuration for the MTES evaluator (v1+v2 compatible)."""
 
     asset_class: str = "stock"
     adx_period: int = 14
@@ -91,16 +111,25 @@ class MajorTrendConfig:
     swing_window: int = 20
     regime_window: int = 126
     momentum_windows: tuple[int, int, int] = (63, 126, 252)
+    # V2 新增配置
+    use_v2_scoring: bool = True  # 启用 v2 评分逻辑
 
 
 @dataclass(frozen=True)
 class MajorTrendResult:
-    """Structured result returned by :class:`MajorTrendEvaluator`."""
+    """Structured result returned by :class:`MajorTrendEvaluator` (v1+v2 compatible).
+
+    V2 新增字段:
+        direction_signal: -100 ~ +100 (带符号的方向信号)
+        direction_confidence: 0.0 ~ 1.0 (方向可信度)
+        strength_score: 0 ~ 100 (综合强度分)
+        strength_components: 强度组各维度得分
+    """
 
     asset_class: str
-    trend_score: float
+    trend_score: float  # V2: -100 ~ +100 (signed), V1: 0 ~ 100
     trend_state: str
-    direction: str
+    direction: str  # V2: 独立于 trend_score
     confidence: float
     regime: str
     sub_scores: dict[str, float]
@@ -110,12 +139,43 @@ class MajorTrendResult:
     regime_flags: list[str]
     explanation: str
     metadata: dict[str, Any] = field(default_factory=dict)
+    # V2 新增字段
+    direction_signal: float = 0.0  # -100 ~ +100
+    direction_confidence: float = 0.0  # 0.0 ~ 1.0
+    strength_score: float = 0.0  # 0 ~ 100
+    strength_components: dict[str, float] = field(default_factory=dict)
+    use_v2_scoring: bool = True
 
     def to_dict(self) -> dict[str, Any]:
         """Return the machine-readable MTES payload."""
-        return {
+        result = {
             "asset_class": self.asset_class,
             "trend_score": self.trend_score,
+            "trend_state": self.trend_state,
+            "direction": self.direction,
+            "confidence": self.confidence,
+            "regime": self.regime,
+            "sub_scores": self.sub_scores,
+            "raw_scores": self.raw_scores,
+            "weights": self.weights,
+            "top_drivers": self.top_drivers,
+            "regime_flags": self.regime_flags,
+            "explanation": self.explanation,
+            "metadata": self.metadata,
+            # V2 字段
+            "direction_signal": self.direction_signal,
+            "direction_confidence": self.direction_confidence,
+            "strength_score": self.strength_score,
+            "strength_components": self.strength_components,
+            "use_v2_scoring": self.use_v2_scoring,
+        }
+        return result
+
+    def to_v1_dict(self) -> dict[str, Any]:
+        """Convert to v1 API format for backward compatibility."""
+        return {
+            "asset_class": self.asset_class,
+            "trend_score": abs(self.trend_score),  # 转为 0-100
             "trend_state": self.trend_state,
             "direction": self.direction,
             "confidence": self.confidence,
@@ -163,8 +223,9 @@ class MajorTrendEvaluator:
                 metadata={"input": {"missing_optional": missing_optional}},
             )
 
+        # 计算各维度原始分
         direction_score, direction, direction_meta = self.score_direction(data, resolved_asset_class)
-        strength_score, strength_meta = self.score_strength(data, direction)
+        strength_dim_score, strength_meta = self.score_strength(data, direction)
         structure_score, structure_meta = self.score_structure(data, direction)
         momentum_score, momentum_meta = self.score_momentum(data, direction, cross_section_context)
         regime_score, regime, regime_flags, regime_meta = self.score_volatility_regime(data)
@@ -178,7 +239,7 @@ class MajorTrendEvaluator:
 
         raw_scores = {
             "direction": direction_score,
-            "strength": strength_score,
+            "strength": strength_dim_score,
             "structure": structure_score,
             "momentum": momentum_score,
             "volatility_regime": regime_score,
@@ -188,14 +249,36 @@ class MajorTrendEvaluator:
             dimension: round(raw_scores[dimension] * weights[dimension] / 100, 2)
             for dimension in DIMENSIONS
         }
-        trend_score = round(sum(sub_scores.values()), 2)
-        trend_state = classify_trend_state(trend_score, direction)
 
         if mtf_meta.get("timeframe_conflict"):
             regime_flags.append("timeframe_conflict")
 
+        # V2 评分逻辑
+        if self.config.use_v2_scoring:
+            # V2: 方向为主，强度辅助
+            direction_signal, direction, direction_confidence, direction_meta = calculate_direction_signal(
+                data, resolved_asset_class
+            )
+            strength_score, strength_components = calculate_strength_score(
+                data, direction, raw_scores, resolved_asset_class
+            )
+            trend_score, confidence = calculate_final_score_v2(
+                direction_signal, direction_confidence, strength_score, resolved_asset_class
+            )
+            trend_state = classify_trend_state_v2(trend_score, direction)
+        else:
+            # V1 兼容逻辑
+            direction_signal = 0.0
+            direction_confidence = 0.0
+            strength_score = strength_dim_score
+            strength_components = {}
+            trend_score = round(sum(sub_scores.values()), 2)
+            trend_state = classify_trend_state(trend_score, direction)
+            confidence = round(min(1.0, trend_score / 100), 3)
+
         metadata = {
             "status": "scored",
+            "scoring_version": "v2" if self.config.use_v2_scoring else "v1",
             "bars": len(data),
             "required_bars": required_bars,
             "input": {"missing_optional": missing_optional},
@@ -207,10 +290,9 @@ class MajorTrendEvaluator:
             "mtf": mtf_meta,
         }
         top_drivers = build_top_drivers(sub_scores, raw_scores, mtf_meta)
-        confidence = round(min(1.0, trend_score / 100), 3)
         explanation = (
-            f"{trend_state} with {trend_score:.1f}/100 quality; "
-            f"direction={direction}, regime={regime}."
+            f"{trend_state} with {abs(trend_score):.1f}/100 {'+' if trend_score >= 0 else '-'}; "
+            f"direction={direction}, confidence={confidence:.1%}, regime={regime}."
         )
 
         return MajorTrendResult(
@@ -227,6 +309,12 @@ class MajorTrendEvaluator:
             regime_flags=sorted(set(regime_flags)),
             explanation=explanation,
             metadata=metadata,
+            # V2 新增字段
+            direction_signal=direction_signal,
+            direction_confidence=direction_confidence,
+            strength_score=strength_score,
+            strength_components=strength_components,
+            use_v2_scoring=self.config.use_v2_scoring,
         )
 
     def score_direction(self, df: pd.DataFrame, asset_class: str) -> tuple[float, str, dict[str, Any]]:
@@ -560,6 +648,161 @@ def insufficient_data_result(
         explanation=f"Insufficient data: {bars} bars available, {required} required.",
         metadata={"status": "no_score", "bars": bars, "required_bars": required, **extra_metadata},
     )
+
+
+# =============================================================================
+# V2 新评分体系辅助函数
+# =============================================================================
+
+def get_direction_weight(asset_class: str) -> float:
+    """获取 V2 方向权重 (主趋势方向确定性权重)。"""
+    resolved = resolve_asset_class(asset_class)
+    return DIRECTION_WEIGHTS.get(resolved, 0.65)
+
+
+def get_strength_components(asset_class: str) -> dict[str, float]:
+    """获取 V2 强度组内部权重。"""
+    resolved = resolve_asset_class(asset_class)
+    return STRENGTH_COMPONENTS.get(resolved, STRENGTH_COMPONENTS["stock"])
+
+
+def calculate_direction_signal(
+    df: pd.DataFrame, asset_class: str
+) -> tuple[float, str, float, dict[str, Any]]:
+    """V2: 计算方向信号值和可信度。
+
+    返回:
+        signal_value: -100 ~ +100 (BULL 正, BEAR 负, NEUTRAL 0)
+        direction: "BULL" / "BEAR" / "NEUTRAL"
+        confidence: 0.0 ~ 1.0 (方向可信度)
+        metadata: 信号详情
+    """
+    periods = DIRECTION_PERIODS[asset_class]
+    close = df["close"]
+    intermediate_ma = close.rolling(periods["intermediate"]).mean()
+    long_ma = close.rolling(periods["long"]).mean()
+
+    current = float(close.iloc[-1])
+    long_value = float(long_ma.iloc[-1])
+    slope_base = float(long_ma.iloc[-1 - periods["slope"]])
+    long_slope = (long_value - slope_base) / abs(slope_base) if slope_base else 0.0
+    return_base = float(close.iloc[-1 - periods["return"]])
+    long_return = (current - return_base) / abs(return_base) if return_base else 0.0
+
+    signals = {
+        "price_vs_long_ma": compare_sign(current, long_value, tolerance=0.005),
+        "intermediate_vs_long_ma": compare_sign(float(intermediate_ma.iloc[-1]), long_value, tolerance=0.0025),
+        "long_ma_slope": compare_sign(long_slope, 0.0, tolerance=0.001),
+        "long_horizon_return": compare_sign(long_return, 0.0, tolerance=0.01),
+    }
+    net = sum(signals.values())  # -4 ~ +4
+    agreement = abs(net) / len(signals)  # 0.0 ~ 1.0
+
+    # 方向判定
+    if net >= 2:
+        direction = "BULL"
+        signal_value = 50.0 + agreement * 50.0  # 62.5 ~ 100
+    elif net <= -2:
+        direction = "BEAR"
+        signal_value = -50.0 - agreement * 50.0  # -62.5 ~ -100
+    else:
+        direction = "NEUTRAL"
+        signal_value = 0.0
+
+    metadata = {
+        "periods": periods,
+        "signals": signals,
+        "net_signals": net,
+        "agreement": round(agreement, 4),
+        "long_slope": round(long_slope, 6),
+        "long_horizon_return": round(long_return, 6),
+    }
+
+    return round(signal_value, 2), direction, round(agreement, 4), metadata
+
+
+def calculate_strength_score(
+    df: pd.DataFrame,
+    direction: str,
+    raw_scores: dict[str, float],
+    asset_class: str,
+) -> tuple[float, dict[str, float]]:
+    """V2: 计算综合强度分 (5个维度加权平均)。
+
+    返回:
+        strength_score: 0 ~ 100
+        components: 各强度维度得分
+    """
+    components = get_strength_components(asset_class)
+
+    # 强度组各维度
+    strength_vals = {
+        "strength": raw_scores.get("strength", 0.0),
+        "structure": raw_scores.get("structure", 0.0),
+        "momentum": raw_scores.get("momentum", 0.0),
+        "regime": raw_scores.get("volatility_regime", 0.0),
+        "mtf": raw_scores.get("mtf", 0.0),
+    }
+
+    # 加权平均
+    total_score = sum(strength_vals[k] * components.get(k, 0.2) for k in strength_vals)
+    return round(total_score, 2), {k: round(v, 2) for k, v in strength_vals.items()}
+
+
+def calculate_final_score_v2(
+    direction_signal: float,
+    direction_confidence: float,
+    strength_score: float,
+    asset_class: str,
+) -> tuple[float, float]:
+    """V2: 计算最终评分。
+
+    公式:
+        trend_score = direction_signal * direction_weight + strength_contribution * strength_weight
+
+    返回:
+        trend_score: -100 ~ +100 (带符号)
+        confidence: 0.0 ~ 1.0
+    """
+    direction_weight = get_direction_weight(asset_class)
+    strength_weight = 1.0 - direction_weight
+
+    # 方向贡献: 方向信号值 * 方向权重
+    direction_contribution = direction_signal * direction_weight / 100.0
+
+    # 强度贡献: 标准化到 -1 ~ +1，然后 * 强度权重
+    strength_contribution = (strength_score - 50.0) / 50.0 * strength_weight
+
+    # 合成
+    raw_score = direction_contribution + strength_contribution
+    trend_score = clamp(raw_score * 100.0, -100.0, 100.0)
+
+    # 综合可信度
+    confidence = direction_confidence * 0.7 + (strength_score / 100.0) * 0.3
+
+    return round(trend_score, 2), round(min(1.0, max(0.0, confidence)), 3)
+
+
+def classify_trend_state_v2(score: float, direction: str) -> str:
+    """V2: 趋势状态分类 (支持带符号评分)。
+
+    score: -100 ~ +100
+    """
+    if direction == "BULL":
+        if score >= 60:
+            return TrendState.BULL_STRONG.value
+        if score >= 30:
+            return TrendState.BULL_CONFIRMED.value
+        if score >= 0:
+            return TrendState.BULL_EARLY.value
+    elif direction == "BEAR":
+        if score <= -60:
+            return TrendState.BEAR_STRONG.value
+        if score <= -30:
+            return TrendState.BEAR_CONFIRMED.value
+        if score <= 0:
+            return TrendState.BEAR_EARLY.value
+    return TrendState.NEUTRAL_CHOPPY.value
 
 
 def classify_trend_state(score: float, direction: str) -> str:

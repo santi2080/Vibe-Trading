@@ -104,11 +104,22 @@ def test_strong_bull_fixture_scores_and_classifies() -> None:
         TrendState.BULL_CONFIRMED.value,
         TrendState.BULL_STRONG.value,
     }
-    assert 0 <= result.trend_score <= 100
+    # V2: trend_score 范围 -100 ~ +100
+    assert -100 <= result.trend_score <= 100
+    assert result.trend_score >= 0  # BULL 方向时为正
     assert set(result.sub_scores) == EXPECTED_DIMENSIONS
-    assert round(sum(result.sub_scores.values()), 2) == result.trend_score
+    # V2: sub_scores 总和不再等于 trend_score（因为 V2 使用新公式）
+    # 只验证 sub_scores 存在且值在 0-100 范围内
+    assert all(0 <= v <= 100 for v in result.sub_scores.values())
     assert len(result.top_drivers) >= 3
     assert result.to_dict()["trend_score"] == result.trend_score
+    # V2 新增字段验证
+    assert hasattr(result, "direction_signal")
+    assert hasattr(result, "direction_confidence")
+    assert hasattr(result, "strength_score")
+    assert 0 <= result.direction_signal <= 100  # BULL 方向时为正
+    assert 0 <= result.direction_confidence <= 1
+    assert 0 <= result.strength_score <= 100
 
 
 def test_insufficient_long_horizon_data_returns_no_score_metadata() -> None:
@@ -130,7 +141,8 @@ def test_missing_volume_does_not_crash() -> None:
     result = MajorTrendEvaluator().evaluate(df, asset_class="fx")
 
     assert result.asset_class == "fx"
-    assert result.trend_score >= 0
+    # V2: trend_score 范围 -100 ~ +100
+    assert -100 <= result.trend_score <= 100
     assert result.metadata["input"].get("missing_optional") == ["volume"]
 
 
