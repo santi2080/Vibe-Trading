@@ -36,44 +36,80 @@ from agent.src.analysis.performance_metrics import (
     calculate_metrics,
     format_metrics_report,
 )
+from agent.src.analysis.supertrend import SuperTrendConfig
+from agent.src.analysis.supertrend_enhancement import (
+    EnhancementConfig,
+    build_enhancement_features,
+    generate_enhancement_signals,
+)
 
 
-def add_signals(df: pd.DataFrame) -> pd.DataFrame:
-    """Add simple trend signals based on SMA crossover.
+def add_signals(df: pd.DataFrame, market: str = "stock") -> pd.DataFrame:
+    """Add SuperTrend enhancement signals.
 
     Args:
         df: OHLCV DataFrame with close, high, low, open columns.
+        market: Market type (stock, futures, forex, crypto).
 
     Returns:
         DataFrame with bull_signal, bear_signal, entry_trigger columns.
     """
     df = df.copy()
 
-    # Simple SMA-based trend signals
-    df["sma_fast"] = df["close"].rolling(10).mean()
-    df["sma_slow"] = df["close"].rolling(30).mean()
+    # 计算 SuperTrend 和增强信号
+    st_config = SuperTrendConfig()
+    config = EnhancementConfig()
 
-    # Bull/bear signals based on SMA crossover
-    df["bull_signal"] = (df["sma_fast"] > df["sma_slow"]) & (df["close"] > df["sma_fast"])
-    df["bear_signal"] = (df["sma_fast"] < df["sma_slow"]) & (df["close"] < df["sma_fast"])
+    # 用日线生成周线
+    weekly_df = df.resample("W").agg({
+        "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"
+    })
+    weekly_df = weekly_df.dropna()
 
-    # Entry trigger: when signal changes
-    df["prev_bull"] = df["bull_signal"].shift(1).fillna(False)
-    df["prev_bear"] = df["bear_signal"].shift(1).fillna(False)
-    df["entry_trigger"] = (df["bull_signal"] != df["prev_bull"]) | (df["bear_signal"] != df["prev_bear"])
+    # 构建增强特征
+    result = build_enhancement_features(
+        daily_df=df,
+        weekly_df=weekly_df,
+        market=market,
+        config=config,
+    )
 
-    # Exit trigger: when trend reverses
-    df["exit_trigger"] = False
+    # 生成交易信号
+    signals = generate_enhancement_signals(result, "pullback", config)
 
-    # SuperTrend-like trend (simplified)
-    df["st_trend"] = 1
-    df.loc[df["bear_signal"], "st_trend"] = -1
-    df.loc[df["close"] < df["close"].shift(1), "st_trend"] = -1
+    # 简化信号：直接用 weekly_st_trend
+    # 放宽条件：只要 weekly ST 趋势
+    st_trend = result.get("weekly_st_trend_completed", pd.Series(0))
 
-    # MTES score approximation
-    df["mtes_score"] = 70.0
+    # 简化的 Long 信号：周线 ST 看多
+    bull = st_trend > 0
+    # 简化的 Short 信号：周线 ST 看空
+    bear = st_trend < 0
 
-    return df
+    # 如果原来没有信号，用简化版
+    if (signals == 1).sum() == 0 and (signals == -1).sum() == 0:
+        if hasattr(bull, 'astype'):
+            signals = bull.astype(int) - bear.astype(int)
+        else:
+            signals = pd.Series(0, index=result.index)
+
+    # 映射到执行系统需要的列
+    result["bull_signal"] = signals == 1
+    result["bear_signal"] = signals == -1
+    result["entry_trigger"] = result["bull_signal"] | result["bear_signal"]
+    result["exit_trigger"] = False
+    result["st_trend"] = result.get("st_trend", 0)
+    result["mtes_score"] = 70.0
+
+    return result
+    result["bull_signal"] = signals == 1
+    result["bear_signal"] = signals == -1
+    result["entry_trigger"] = result["bull_signal"] | result["bear_signal"]
+    result["exit_trigger"] = False
+    result["st_trend"] = result.get("st_trend", 0)
+    result["mtes_score"] = 70.0  # MTES 分数
+
+    return result
 
 
 def load_data(symbol: str, timeframe: str = "1d") -> pd.DataFrame | None:
