@@ -89,3 +89,6 @@ wiki/alpha-library/content/
 .planning/config.json
 .planning/phases/*/CONTEXT.md
 memory/session_compact_*.md
+
+# Reports (generated, not source)
+reports/
