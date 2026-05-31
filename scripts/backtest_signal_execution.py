@@ -31,16 +31,49 @@ from agent.src.analysis.signal_executor import (
     check_exit_conditions,
 )
 from agent.src.analysis.risk_manager import RiskConfig, RiskManager
-from agent.src.analysis.execution_simulator import (
-    ExecutionSimulator,
-    OrderSide,
-    SlippageConfig,
-)
 from agent.src.analysis.portfolio_tracker import PortfolioTracker
 from agent.src.analysis.performance_metrics import (
     calculate_metrics,
     format_metrics_report,
 )
+
+
+def add_signals(df: pd.DataFrame) -> pd.DataFrame:
+    """Add simple trend signals based on SMA crossover.
+
+    Args:
+        df: OHLCV DataFrame with close, high, low, open columns.
+
+    Returns:
+        DataFrame with bull_signal, bear_signal, entry_trigger columns.
+    """
+    df = df.copy()
+
+    # Simple SMA-based trend signals
+    df["sma_fast"] = df["close"].rolling(10).mean()
+    df["sma_slow"] = df["close"].rolling(30).mean()
+
+    # Bull/bear signals based on SMA crossover
+    df["bull_signal"] = (df["sma_fast"] > df["sma_slow"]) & (df["close"] > df["sma_fast"])
+    df["bear_signal"] = (df["sma_fast"] < df["sma_slow"]) & (df["close"] < df["sma_fast"])
+
+    # Entry trigger: when signal changes
+    df["prev_bull"] = df["bull_signal"].shift(1).fillna(False)
+    df["prev_bear"] = df["bear_signal"].shift(1).fillna(False)
+    df["entry_trigger"] = (df["bull_signal"] != df["prev_bull"]) | (df["bear_signal"] != df["prev_bear"])
+
+    # Exit trigger: when trend reverses
+    df["exit_trigger"] = False
+
+    # SuperTrend-like trend (simplified)
+    df["st_trend"] = 1
+    df.loc[df["bear_signal"], "st_trend"] = -1
+    df.loc[df["close"] < df["close"].shift(1), "st_trend"] = -1
+
+    # MTES score approximation
+    df["mtes_score"] = 70.0
+
+    return df
 
 
 def load_data(symbol: str, timeframe: str = "1d") -> pd.DataFrame | None:
@@ -90,6 +123,9 @@ def run_backtest(
     if len(df) < 50:
         return {"error": "Insufficient data for backtest"}
 
+    # 添加信号
+    df = add_signals(df)
+
     tracker = PortfolioTracker(
         initial_capital=initial_capital,
         capital=initial_capital,
@@ -105,9 +141,6 @@ def run_backtest(
         initial_capital=initial_capital,
         current_capital=initial_capital,
     )
-
-    slippage_config = SlippageConfig(market_slippage_bps=slippage_bps)
-    executor = ExecutionSimulator(slippage_config=slippage_config)
 
     bars_processed = 0
     signals_generated = 0
@@ -268,8 +301,8 @@ def main():
     parser.add_argument("--timeframe", default="1d", help="Timeframe (1d, 4h, 1h)")
     parser.add_argument("--capital", type=float, default=100000.0, help="Initial capital")
     parser.add_argument("--threshold", type=float, default=60.0, help="MTES threshold")
-    parser.add_argument("--sl", type=float, default=0.02, help="Stop loss %")
-    parser.add_argument("--tp", type=float, default=0.04, help="Take profit %")
+    parser.add_argument("--sl", type=float, default=0.02, help="Stop loss percentage")
+    parser.add_argument("--tp", type=float, default=0.04, help="Take profit percentage")
     parser.add_argument("--slippage", type=float, default=1.0, help="Slippage in bps")
 
     args = parser.parse_args()
