@@ -66,25 +66,77 @@ aligner.align_htf_to_ltf(htf_data=d1, ltf_data=h1)
 generate_standard_report(strategies, symbol='GC=F')
 ```
 
-## 数据层架构
+## 趋势指标准确性分析（2026-05-30）
 
-### HybridDataFetcher
+### 分析脚本
+- `scripts/analyze_trend_accuracy.py` - 趋势准确性与滞后性分析
+- `scripts/compare_mtes_strategies.py` - MTES vs 经典策略对比
+- `scripts/diagnose_mtes_vs_supertrend.py` - MTES vs SuperTrend 诊断
 
-| 组件 | 功能 |
-|------|------|
-| SymbolRouter | 自动识别 9 种市场类型 |
-| SourcePool | 多数据源管理、健康跟踪 |
-| DataFusion | 多源智能选择、数据验证 |
+### 分析结论
+
+| 指标 | 准确率 | 平均滞后 | 排名 |
+|------|--------|---------|------|
+| **MTES** | 81.7% | 7.7K | 🥇 |
+| **ADX(14)>25** | 76.1% | 6.3K | 🥈 |
+| **EMA(50/200)** | 58.6% | 7.1K | 🥉 |
+| **SuperTrend** | 42.3% | 0.5K | 4 |
+
+### 分市场推荐
+
+| 市场 | 推荐指标 | 准确率 |
+|------|---------|--------|
+| 贵金属 | MTES | 81% |
+| 股指期货 | ADX(14)>25 | 73% |
+| 原油 | MTES | 86% |
+
+### 关键发现
+- MTES 上涨判断 100% 准确，下跌判断偏弱
+- ADX 下跌判断 90%+ 准确，适合做空信号
+- SuperTrend 滞后最小(0.5K)但准确率低(~42%)
 
 ## Git 提交
 
 ```
-8ac688a feat(agent): add strategy tools for Agent context integration
-1e317cf feat(strategy): add standard report format
-99b3074 feat(strategy): enhance strategy layer with registry, composer, and MTF
-9fd80cb feat(strategy): add taxonomy system with SKILL metadata
+9154de6 docs(planning): sync milestone/phase state to completed
+851ea01 docs(phase-01): complete phase execution
+6a7a137 docs(01): add phase verification report
+825f22a docs(01-04): add execution summary
+0cc330f docs(01-04): finalize MTES validation plan artifact
 ```
 
 ## 会话记录
 
-- [2026-05-25 策略层优化完成](session_compact_20260525_155000.md)
+- [2026-05-30 趋势指标准确性分析](session_compact_20260530_144429.md)
+- [2026-05-31 Phase 03-03 增强策略实现](session_compact_20260531_114200.md)
+
+## Phase 03 实施状态 (2026-05-31)
+
+### 已完成模块
+
+| 模块 | 文件 | 测试 |
+|------|------|------|
+| 03-01 SuperTrend计算 | `agent/src/analysis/supertrend.py` | 35 passed |
+| 03-02 交易指标 | `agent/src/analysis/supertrend_metrics.py` | 28 passed |
+| 03-03 增强策略 | `agent/src/analysis/supertrend_enhancement.py` | 35 passed |
+
+### 核心API
+
+```python
+# 增强策略配置
+config = EnhancementConfig(
+    trading_mode="auto",  # long_only/long_short
+    use_range_filter=True,
+    use_regime_filter=True,
+    use_mtes_conflict_filter=False,
+)
+
+# 构建特征
+features = build_enhancement_features(daily_df, weekly_df, market="futures")
+
+# 生成信号
+signals = generate_enhancement_signals(features, entry_family="pullback")
+
+# 实验矩阵
+matrix = build_experiment_matrix()  # E1-E8
+```
