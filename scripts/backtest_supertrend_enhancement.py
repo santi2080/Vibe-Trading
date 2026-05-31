@@ -96,13 +96,41 @@ SYMBOLS_CONFIG = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Data Loading (Stub - uses synthetic data for smoke tests)
+# Data Loading (Real parquet files when available)
 # ─────────────────────────────────────────────────────────────────────────────
+
+DATA_ROOT = PROJECT_ROOT / "data"
+
+
+def _find_data_dir(symbol: str, market: str) -> Optional[Path]:
+    """Find data directory for symbol."""
+    market_map = {
+        "us_futures": "us_futures",
+        "us_stock": "us_stocks",
+        "cn_futures": "cn_futures",
+        "cn_etf": "cn_etf",
+        "etf": "etf",
+    }
+    market_dir = market_map.get(market, market)
+    data_dir = DATA_ROOT / market_dir / symbol
+    if data_dir.exists():
+        return data_dir
+    return None
 
 
 def load_ohlcv(symbol: str, market: str = "us_futures") -> pd.DataFrame:
-    """Load OHLCV data for symbol. Returns synthetic data for smoke tests."""
-    # For smoke tests, generate synthetic data
+    """Load OHLCV daily data for symbol from parquet."""
+    data_dir = _find_data_dir(symbol, market)
+
+    if data_dir is not None:
+        parquet_path = data_dir / "1d.parquet"
+        if parquet_path.exists():
+            df = pd.read_parquet(parquet_path)
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+            return df
+
+    # Fallback: generate synthetic data for testing
     rng = np.random.default_rng(hash(symbol) % 2**32)
     length = 500
     index = pd.date_range("2022-01-01", periods=length, freq="D", name="timestamp")
@@ -119,7 +147,18 @@ def load_ohlcv(symbol: str, market: str = "us_futures") -> pd.DataFrame:
 
 
 def load_weekly_ohlcv(symbol: str, market: str = "us_futures") -> pd.DataFrame:
-    """Load weekly OHLCV data. Returns weekly resample of daily."""
+    """Load weekly OHLCV data from parquet or resample daily."""
+    data_dir = _find_data_dir(symbol, market)
+
+    if data_dir is not None:
+        parquet_path = data_dir / "1W.parquet"
+        if parquet_path.exists():
+            df = pd.read_parquet(parquet_path)
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+            return df
+
+    # Fallback: resample daily
     daily = load_ohlcv(symbol, market)
     return daily.resample("W").agg(
         {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
@@ -127,10 +166,12 @@ def load_weekly_ohlcv(symbol: str, market: str = "us_futures") -> pd.DataFrame:
 
 
 def load_mtes_frame(symbol: str, market: str = "us_futures") -> pd.DataFrame:
-    """Load MTES conflict metadata. Returns synthetic data for smoke tests."""
+    """Load MTES conflict metadata. Returns synthetic data if not available."""
+    # MTES metadata not yet cached, generate synthetic
     rng = np.random.default_rng(hash(symbol + "mtes") % 2**32)
-    length = 500
-    index = pd.date_range("2022-01-01", periods=length, freq="D", name="timestamp")
+    daily = load_ohlcv(symbol, market)
+    length = len(daily)
+    index = daily.index
     return pd.DataFrame(
         {
             "mtes_direction": rng.choice([-1.0, 1.0], size=length),

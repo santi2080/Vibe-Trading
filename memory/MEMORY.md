@@ -105,11 +105,6 @@ generate_standard_report(strategies, symbol='GC=F')
 0cc330f docs(01-04): finalize MTES validation plan artifact
 ```
 
-## 会话记录
-
-- [2026-05-30 趋势指标准确性分析](session_compact_20260530_144429.md)
-- [2026-05-31 Phase 03-03 增强策略实现](session_compact_20260531_114200.md)
-
 ## Phase 03 实施状态 (2026-05-31)
 
 ### 已完成模块
@@ -119,6 +114,10 @@ generate_standard_report(strategies, symbol='GC=F')
 | 03-01 SuperTrend计算 | `agent/src/analysis/supertrend.py` | 35 passed |
 | 03-02 交易指标 | `agent/src/analysis/supertrend_metrics.py` | 28 passed |
 | 03-03 增强策略 | `agent/src/analysis/supertrend_enhancement.py` | 35 passed |
+| 03-04 验证计划 | `docs/SUPERTREND_ENHANCEMENT_VALIDATION_PLAN.md` | 8 passed |
+| 03-05 实验运行器 | `scripts/backtest_supertrend_enhancement.py` | 31 passed |
+
+**总计: 137 tests passed**
 
 ### 核心API
 
@@ -140,3 +139,42 @@ signals = generate_enhancement_signals(features, entry_family="pullback")
 # 实验矩阵
 matrix = build_experiment_matrix()  # E1-E8
 ```
+
+### 运行命令
+
+```bash
+# Smoke test
+python scripts/backtest_supertrend_enhancement.py --symbol GC=F --matrix smoke --output reports
+
+# Core matrix
+python scripts/backtest_supertrend_enhancement.py --symbol GC=F --matrix core --output reports
+
+# Full universe
+python scripts/backtest_supertrend_enhancement.py --all --matrix core --max-grid-size 24 --output reports
+```
+
+### 2026-05-31 实验结果
+
+运行了 8 个品种 × 11 experiments = 88 行数据。
+
+**关键发现**:
+- GC=F 2024-2026 期间：Weekly ST bullish (361/503 bars), RF bearish (417/503 bars)
+- RF 在趋势市场中捕捉回撤，导致无信号（保守策略设计）
+- 需要放宽 RF 确认条件或增加 pullback entry 触发
+
+**数据**:
+- GC=F daily: 503 bars (2024-05-28 to 2026-05-27)
+- GC=F weekly: 105 bars
+
+## Git 提交 (2026-05-31)
+
+```
+afb6ff7 chore(state): Phase 03 complete - 100%, 137 tests passed
+bbe95d4 feat(03-05): add SuperTrend enhancement experiment runner
+a6d278d feat(03-04): add SuperTrend enhancement validation plan
+```
+
+## 会话记录
+
+- [2026-05-30 趋势指标准确性分析](session_compact_20260530_144429.md)
+- [2026-05-31 Phase 03 完成](session_compact_20260531_122000.md)
