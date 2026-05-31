@@ -71,3 +71,25 @@
 - SPEC: completed (`.planning/phases/05-mtes-refactor/05-SPEC.md`)
 - Plan 01: completed - V2 data structures and scoring functions
 - Validation: completed - 14 tests pass
+
+### Phase 6: MTES v3 - 分层递进趋势系统
+
+**Goal:** 将当前 MTES 6 维度加权评分架构重构为三层递进趋势系统，消除 SMA 滞后问题，引入 SMC 市场结构分析和 Elder 三重滤网。
+
+**Architecture:**
+```
+Layer 0: 预处理层 (ADX 预过滤, 数据验证)
+Layer 1: 大周期趋势锁定 (SMC + Elder 三重滤网 + Ichimoku)
+Layer 2: 趋势强度确认 (ADX 门槛 + 动量背离)
+Layer 3: 入场时机 (FVG 回踩 + RSI 极值)
+```
+
+**Status:** planned (2026-06-01)
+
+**Plans:**
+- SPEC: completed (`.planning/phases/06-mtes-v3-layered-system/06-SPEC.md`)
+- Discussion: completed (`.planning/phases/06-mtes-v3-layered-system/06-DISCUSSION-LOG.md`)
+- Plan 01: completed - 核心架构 + Layer 0 + Layer 1 SMC
+- Plan 02: completed - Elder 三重滤网 + Ichimoku
+- Plan 03: completed - Layer 2 趋势强度 + Layer 3 入场时机
+- Plan 04: completed - 整合测试 + MTES v2 适配器
