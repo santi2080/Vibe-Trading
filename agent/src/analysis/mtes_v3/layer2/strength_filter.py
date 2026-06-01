@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 from typing import Literal
 
-from ..base import StrengthRating
+from ..base import StrengthRatingResult
 
 
 class ADXStrengthFilter:
@@ -73,7 +73,7 @@ class ADXStrengthFilter:
         # 简化实现：返回 0 表示 ADX 稳定
         return 0.0
 
-    def filter(self, df: pd.DataFrame, mtf_bias: str = None) -> StrengthRating:
+    def filter(self, df: pd.DataFrame, mtf_bias: str = None) -> StrengthRatingResult:
         """趋势强度评级"""
         adx_value = self._calculate_adx(df)
         adx_slope = self.calculate_adx_slope(df)
@@ -88,7 +88,7 @@ class ADXStrengthFilter:
         else:
             rating = "EXHAUSTED"
 
-        return StrengthRating(
+        return StrengthRatingResult(
             rating=rating,
             adx_value=adx_value,
             divergence=False,

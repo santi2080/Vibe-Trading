@@ -81,10 +81,10 @@ class MTESv3:
         # ===== Layer 0: 预处理 =====
         prefilter_result = self.preprocessor.analyze(df)
 
-        if not prefilter_result.get("passed", False):
+        if not prefilter_result.passed:
             return self._create_insufficient_result(prefilter_result)
 
-        adx_value = prefilter_result.get("adx_value", 0)
+        adx_value = prefilter_result.adx_value
 
         # ===== Layer 1: 大周期趋势锁定 =====
         mtf_trend = self.layer1.analyze(df)
@@ -122,18 +122,18 @@ class MTESv3:
             final_confidence=final_confidence,
         )
 
-    def _create_insufficient_result(self, prefilter_result: dict) -> MTESv3Result:
+    def _create_insufficient_result(self, prefilter_result) -> MTESv3Result:
         """创建预过滤失败的结果"""
         return MTESv3Result(
             passed_prefilter=False,
             mtf_trend=TrendBias(
                 direction="NEUTRAL",
                 confidence=0.0,
-                signals={"prefilter_reason": prefilter_result.get("reason")}
+                signals={"prefilter_reason": prefilter_result.reason}
             ),
             strength=StrengthRatingResult(
                 rating="EXHAUSTED",
-                adx_value=prefilter_result.get("adx_value", 0),
+                adx_value=prefilter_result.adx_value,
                 divergence=False,
                 regime="RANGE"
             ),

@@ -4,7 +4,6 @@ import pytest
 import pandas as pd
 import numpy as np
 from agent.src.analysis.mtes_v3.mtes_v3 import MTESv3, MTESv3Config
-from agent.src.analysis.mtes_v3.preprocessor import PreprocessorConfig
 
 
 def create_sample_df(n: int = 250, trend: str = "neutral") -> pd.DataFrame:
@@ -47,20 +46,24 @@ class TestMTESv3Config:
     def test_default_config(self):
         """Test default configuration."""
         config = MTESv3Config()
-        assert config.min_confidence == 0.5
-        assert config.score_multiplier == 1.0
-        assert isinstance(config.prefilter_config, PreprocessorConfig)
+        assert config.adx_prefilter_threshold == 20.0
+        assert config.adx_strong_threshold == 30.0
+        assert config.adx_ready_threshold == 25.0
+        assert config.rsi_oversold == 35.0
+        assert config.rsi_overbought == 65.0
 
     def test_custom_config(self):
         """Test custom configuration."""
         config = MTESv3Config(
-            min_confidence=0.6,
-            score_multiplier=1.2,
-            prefilter_config=PreprocessorConfig(adx_threshold=25.0)
+            adx_prefilter_threshold=25.0,
+            adx_strong_threshold=35.0,
+            rsi_oversold=30.0,
+            rsi_overbought=70.0
         )
-        assert config.min_confidence == 0.6
-        assert config.score_multiplier == 1.2
-        assert config.prefilter_config.adx_threshold == 25.0
+        assert config.adx_prefilter_threshold == 25.0
+        assert config.adx_strong_threshold == 35.0
+        assert config.rsi_oversold == 30.0
+        assert config.rsi_overbought == 70.0
 
 
 class TestMTESv3:
@@ -70,13 +73,14 @@ class TestMTESv3:
         """Test MTESv3 initialization."""
         mtes = MTESv3()
         assert mtes.preprocessor is not None
-        assert mtes.smc_analyzer is not None
+        assert mtes.layer1 is not None
+        assert mtes.strength_filter is not None
 
     def test_initialization_with_config(self):
         """Test MTESv3 initialization with custom config."""
-        config = MTESv3Config(min_confidence=0.7)
+        config = MTESv3Config(adx_prefilter_threshold=25.0)
         mtes = MTESv3(config)
-        assert mtes.config.min_confidence == 0.7
+        assert mtes.config.adx_prefilter_threshold == 25.0
 
     def test_analyze_bull_trend(self):
         """Test analysis of bull trend."""
@@ -112,12 +116,7 @@ class TestMTESv3:
         """Test analysis with high ADX threshold fails."""
         df = create_sample_df(n=250, trend="bull")
         # Set high threshold so even strong trends fail
-        from agent.src.analysis.mtes_v3.mtes_v3 import MTESv3Config
-        from agent.src.analysis.mtes_v3.preprocessor import PreprocessorConfig
-
-        config = MTESv3Config(
-            prefilter_config=PreprocessorConfig(adx_threshold=100.0)
-        )
+        config = MTESv3Config(adx_prefilter_threshold=100.0)
         mtes = MTESv3(config)
         result = mtes.analyze(df)
 

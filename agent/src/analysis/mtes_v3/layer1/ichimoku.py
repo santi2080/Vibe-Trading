@@ -71,8 +71,23 @@ class IchimokuCloud:
         return senkou_b.shift(self.displacement)
 
     def calculate_chikou(self, df: pd.DataFrame) -> pd.Series:
-        """延迟线: 当前收盘价向后移 26 期"""
+        """延迟线: 当前收盘价向后移 26 期（用于绘图）"""
         return df['close'].shift(-self.displacement)
+
+    def calculate_chikou_comparison(self, df: pd.DataFrame) -> pd.Series:
+        """Chikou 比较值: 当前价格 vs 26 期前价格
+
+        正确理解 Chikou Span:
+        - 将当前收盘价与 26 期前的价格比较
+        - Chikou > 26期前价格 = 多头确认
+        - Chikou < 26期前价格 = 空头确认
+        """
+        if len(df) <= self.displacement:
+            return pd.Series([False] * len(df), index=df.index)
+
+        current_close = df['close']
+        past_close = df['close'].shift(self.displacement)
+        return current_close > past_close
 
     def analyze(self, df: pd.DataFrame) -> IchimokuSignal:
         """完整 Ichimoku 分析"""
@@ -92,7 +107,7 @@ class IchimokuCloud:
         kijun = self.calculate_kijun(df)
         senkou_a = self.calculate_senkou_a(df)
         senkou_b = self.calculate_senkou_b(df)
-        chikou = self.calculate_chikou(df)
+        chikou_comparison = self.calculate_chikou_comparison(df)
 
         # 当前值
         current_close = df['close'].iloc[-1]
@@ -100,7 +115,7 @@ class IchimokuCloud:
         current_kijun = kijun.iloc[-1]
         current_senkou_a = senkou_a.iloc[-1]
         current_senkou_b = senkou_b.iloc[-1]
-        current_chikou = chikou.iloc[-1]
+        current_chikou_above = chikou_comparison.iloc[-1]
 
         # 云带当前值
         cloud_top = max(current_senkou_a, current_senkou_b)
@@ -114,32 +129,32 @@ class IchimokuCloud:
         tenkan_below_kijun = current_tenkan < current_kijun
         cloud_bullish = current_senkou_a > current_senkou_b
         cloud_bearish = current_senkou_a < current_senkou_b
-        chikou_above_price = current_chikou > current_close
+        chikou_above_price = current_chikou_above
 
-        # 计算置信度
-        confidence = 0.3
+        # 计算置信度（修复后）
+        confidence = 0.2  # 基础置信度
 
-        # 价格在云上
+        # 价格在云上/下（最重要，占 0.25）
         if price_above_cloud:
-            confidence += 0.2
+            confidence += 0.25
         elif price_below_cloud:
-            confidence += 0.2
+            confidence += 0.25
 
-        # TK 交叉
+        # TK 交叉（次重要，占 0.20）
         if tenkan_above_kijun:
-            confidence += 0.15
+            confidence += 0.20
         elif tenkan_below_kijun:
-            confidence += 0.15
+            confidence += 0.20
 
-        # 云的颜色
+        # 云的颜色（次重要，占 0.15）
         if cloud_bullish:
             confidence += 0.15
         elif cloud_bearish:
             confidence += 0.15
 
-        # 延迟线确认
+        # 延迟线确认（确认信号，占 0.20）
         if chikou_above_price:
-            confidence += 0.2
+            confidence += 0.20
 
         # 综合判断趋势
         bullish_signals = sum([
