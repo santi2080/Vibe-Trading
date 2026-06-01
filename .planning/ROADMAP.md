@@ -51,7 +51,7 @@
 
 **Depends on:** Phase 01 MTES, Phase 03 SuperTrend Enhancement Strategy, existing backtest infrastructure.
 
-**Status:** planned (2026-05-31)
+**Status:** completed (executed 2026-05-31)
 
 **Plans:**
 - SPEC: completed (`.planning/phases/04-signal-execution-system/04-SPEC.md`)
@@ -60,21 +60,22 @@
 - Plan 03: completed (`.planning/phases/04-signal-execution-system/04-03-PLAN.md`) - Execution Simulator
 - Plan 04: completed (`.planning/phases/04-signal-execution-system/04-04-PLAN.md`) - Portfolio Tracker
 - Plan 05: completed (`.planning/phases/04-signal-execution-system/04-05-PLAN.md`) - Performance Metrics
+- Execute: completed (`.planning/phases/04-signal-execution-system/04-01-SUMMARY.md` to `04-05-SUMMARY.md`)
 
 ### Phase 5: MTES v2 Direction-Primary Scoring
 
 **Goal:** Refactor MTES to use direction-primary scoring where trend_score = -100 ~ +100 (signed), with direction as the primary signal and strength metrics as confirmation.
 
-**Status:** completed (2026-05-31)
+**Status:** completed (validated 2026-05-31)
 
 **Plans:**
 - SPEC: completed (`.planning/phases/05-mtes-refactor/05-SPEC.md`)
-- Plan 01: completed - V2 data structures and scoring functions
-- Validation: completed - 14 tests pass
+- Plan 01: completed (`.planning/phases/05-mtes-refactor/05-01-PLAN.md`) - V2 data structures and scoring functions
+- Validation: completed (`.planning/phases/05-mtes-refactor/05-VALIDATION.md`) - 14 tests pass
 
 ### Phase 6: MTES v3 - 分层递进趋势系统
 
-**Goal:** 将当前 MTES 6 维度加权评分架构重构为三层递进趋势系统，消除 SMA 滞后问题，引入 SMC 市场结构分析和 Elder 三重滤网。
+**Goal:** 将当前 MTES 6 维度加权评分架构重构为分层递进趋势系统，消除 SMA 滞后问题，引入 SMC 市场结构分析和 Elder 三重滤网。
 
 **Architecture:**
 ```
@@ -89,7 +90,9 @@ Layer 3: 入场时机 (FVG 回踩 + RSI 极值)
 **Plans:**
 - SPEC: completed (`.planning/phases/06-mtes-v3-layered-system/06-SPEC.md`)
 - Discussion: completed (`.planning/phases/06-mtes-v3-layered-system/06-DISCUSSION-LOG.md`)
-- Plan 01: completed - 核心架构 + Layer 0 + Layer 1 SMC
-- Plan 02: completed - Elder 三重滤网 + Ichimoku
-- Plan 03: completed - Layer 2 趋势强度 + Layer 3 入场时机
-- Plan 04: completed - 整合测试 + MTES v2 适配器
+- Plan 01: completed (`.planning/phases/06-mtes-v3-layered-system/06-01-PLAN.md`) - 核心架构 + Layer 0 + Layer 1 SMC
+- Plan 02: completed (`.planning/phases/06-mtes-v3-layered-system/06-02-PLAN.md`) - Elder 三重滤网 + Ichimoku
+- Plan 03: completed (`.planning/phases/06-mtes-v3-layered-system/06-03-PLAN.md`) - Layer 2 趋势强度 + Layer 3 入场时机
+- Plan 04: completed (`.planning/phases/06-mtes-v3-layered-system/06-04-PLAN.md`) - 整合测试 + MTES v2 适配器
+- Execute: completed (`.planning/phases/06-mtes-v3-layered-system/06-01-SUMMARY.md` to `06-04-SUMMARY.md`)
+- Verify: completed (`.planning/phases/06-mtes-v3-layered-system/06-VERIFICATION.md`)
