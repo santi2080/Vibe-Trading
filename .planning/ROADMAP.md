@@ -84,7 +84,7 @@ Layer 2: 趋势强度确认 (ADX 门槛 + 动量背离)
 Layer 3: 入场时机 (FVG 回踩 + RSI 极值)
 ```
 
-**Status:** planned (2026-06-01)
+**Status:** completed (verified 2026-06-01)
 
 **Plans:**
 - SPEC: completed (`.planning/phases/06-mtes-v3-layered-system/06-SPEC.md`)
