@@ -16,205 +16,134 @@ from .base import (
     StrengthRatingResult,
     EntrySignal,
     MTESv3Result,
-    BaseLayer,
 )
 from .preprocessor import Preprocessor, PreprocessorConfig
-from .layer1 import SMCAnalyzer
+from .layer1 import Layer1Integrator
+from .layer2 import ADXStrengthFilter, MomentumDivergenceDetector
+from .layer3 import EntryTiming
 
 
 @dataclass
 class MTESv3Config:
-    """Configuration for MTES v3.
-
-    Attributes:
-        prefilter_config: Configuration for the preprocessor
-        min_confidence: Minimum confidence required for a valid signal
-        score_multiplier: Multiplier for final score calculation
-    """
-    prefilter_config: PreprocessorConfig = field(default_factory=PreprocessorConfig)
-    min_confidence: float = 0.5
-    score_multiplier: float = 1.0
+    """MTES v3 配置"""
+    adx_prefilter_threshold: float = 20.0
+    adx_strong_threshold: float = 30.0
+    adx_ready_threshold: float = 25.0
+    rsi_oversold: float = 35.0
+    rsi_overbought: float = 65.0
 
 
 class MTESv3:
-    """Multi-Timeframe Evaluation System v3.
+    """MTES v3 分层递进趋势系统
 
-    A layered progressive trend analysis system that:
-    - Layer 0: Pre-filters data using ADX
-    - Layer 1: Identifies multi-timeframe trend using SMC
-    - Layer 2: Confirms trend strength (placeholder)
-    - Layer 3: Identifies entry timing (placeholder)
+    架构:
+    - Layer 0: 预过滤器 (ADX)
+    - Layer 1: 大周期趋势锁定 (SMC + Elder + Ichimoku)
+    - Layer 2: 趋势强度确认 (ADX + 背离)
+    - Layer 3: 入场时机 (RSI + FVG + Range Filter)
     """
 
     def __init__(self, config: Optional[MTESv3Config] = None):
-        """Initialize MTES v3.
-
-        Args:
-            config: MTESv3 configuration (uses defaults if not provided)
-        """
+        """初始化 MTES v3"""
         self.config = config or MTESv3Config()
 
-        # Initialize layers
-        self.preprocessor = Preprocessor(self.config.prefilter_config)
-        self.smc_analyzer = SMCAnalyzer()
+        # 初始化预过滤器
+        self.preprocessor = Preprocessor(PreprocessorConfig(
+            adx_threshold=self.config.adx_prefilter_threshold
+        ))
+
+        # Layer 1: 大周期趋势锁定
+        self.layer1 = Layer1Integrator()
+
+        # Layer 2: 趋势强度确认
+        self.strength_filter = ADXStrengthFilter(
+            adx_strong=self.config.adx_strong_threshold,
+            adx_weak=self.config.adx_ready_threshold
+        )
+        self.divergence_detector = MomentumDivergenceDetector()
+
+        # Layer 3: 入场时机
+        self.entry_timing = EntryTiming(
+            rsi_oversold=self.config.rsi_oversold,
+            rsi_overbought=self.config.rsi_overbought
+        )
 
     def analyze(self, df: pd.DataFrame, **kwargs) -> MTESv3Result:
-        """Perform complete MTES v3 analysis.
+        """完整 MTES v3 分析
 
         Args:
-            df: OHLCV DataFrame with columns [open, high, low, close, volume]
-            **kwargs: Additional arguments for specific layers
+            df: OHLCV DataFrame
+            **kwargs: 额外参数
 
         Returns:
-            MTESv3Result with trend analysis and entry signals
+            MTESv3Result
         """
-        # Layer 0: Pre-filter
+        # ===== Layer 0: 预处理 =====
         prefilter_result = self.preprocessor.analyze(df)
 
-        if not prefilter_result.passed:
-            # Return neutral result if prefilter fails
-            return MTESv3Result(
-                passed_prefilter=False,
-                mtf_trend=TrendBias(
-                    direction="NEUTRAL",
-                    confidence=0.0,
-                    signals={"prefilter_reason": prefilter_result.reason}
-                ),
-                strength=StrengthRatingResult(
-                    rating="EXHAUSTED",
-                    adx_value=prefilter_result.adx_value,
-                    regime="RANGE"
-                ),
-                entry=EntrySignal(signal="WAIT", reason="prefilter_failed"),
-                final_score=0.0,
-                final_confidence=0.0,
-            )
+        if not prefilter_result.get("passed", False):
+            return self._create_insufficient_result(prefilter_result)
 
-        # Layer 1: SMC Market Structure Analysis
-        smc_result = self.smc_analyzer.analyze(df)
+        adx_value = prefilter_result.get("adx_value", 0)
 
-        # Build trend bias from SMC result
-        mtf_trend = TrendBias(
-            direction=smc_result.trend,
-            confidence=smc_result.confidence,
-            signals={
-                "bos_confirmed": smc_result.bos_confirmed,
-                "mss_confirmed": smc_result.mss_confirmed,
-                "swing_count": len(smc_result.swings),
-                "last_swing_high": smc_result.last_swing_high,
-                "last_swing_low": smc_result.last_swing_low,
-            }
+        # ===== Layer 1: 大周期趋势锁定 =====
+        mtf_trend = self.layer1.analyze(df)
+
+        # ===== Layer 2: 趋势强度确认 =====
+        strength = self.strength_filter.filter(df, mtf_trend.direction)
+
+        # 动量背离检测
+        divergence = self.divergence_detector.analyze(df)
+
+        # ===== Layer 3: 入场时机 =====
+        entry = self.entry_timing.find_entry(
+            df,
+            mtf_trend.direction,
+            strength.rating
         )
 
-        # Layer 2: Trend Strength (simplified using ADX)
-        strength_rating = self._get_strength_rating(
-            prefilter_result.adx_value,
-            mtf_trend.direction
-        )
-
-        # Layer 3: Entry Signal (simplified based on trend)
-        entry_signal = self._get_entry_signal(mtf_trend, strength_rating)
-
-        # Calculate final score
-        final_score = self._calculate_score(mtf_trend, strength_rating)
-        final_confidence = self._calculate_confidence(
-            mtf_trend,
-            strength_rating,
-            prefilter_result
+        # ===== 综合评分 =====
+        final_score = self._calculate_final_score(mtf_trend, strength)
+        final_confidence = self._calculate_final_confidence(
+            mtf_trend, strength, adx_value, divergence
         )
 
         return MTESv3Result(
             passed_prefilter=True,
             mtf_trend=mtf_trend,
-            strength=strength_rating,
-            entry=entry_signal,
+            strength=StrengthRatingResult(
+                rating=strength.rating,
+                adx_value=strength.adx_value,
+                divergence=divergence.detected,
+                regime=strength.regime
+            ),
+            entry=entry,
             final_score=final_score,
             final_confidence=final_confidence,
         )
 
-    def _get_strength_rating(
-        self,
-        adx_value: float,
-        trend_direction: str
-    ) -> StrengthRatingResult:
-        """Determine strength rating from ADX.
-
-        Args:
-            adx_value: Current ADX value
-            trend_direction: Current trend direction
-
-        Returns:
-            StrengthRatingResult
-        """
-        if adx_value >= 30:
-            rating = "STRONG"
-            regime = "TRENDING"
-        elif adx_value >= 25:
-            rating = "READY"
-            regime = "TRENDING"
-        elif adx_value >= 20:
-            rating = "WEAK"
-            regime = "TRANSITIONAL"
-        else:
-            rating = "EXHAUSTED"
-            regime = "RANGE"
-
-        return StrengthRatingResult(
-            rating=rating,
-            adx_value=adx_value,
-            divergence=False,  # TODO: Implement divergence detection
-            regime=regime,
+    def _create_insufficient_result(self, prefilter_result: dict) -> MTESv3Result:
+        """创建预过滤失败的结果"""
+        return MTESv3Result(
+            passed_prefilter=False,
+            mtf_trend=TrendBias(
+                direction="NEUTRAL",
+                confidence=0.0,
+                signals={"prefilter_reason": prefilter_result.get("reason")}
+            ),
+            strength=StrengthRatingResult(
+                rating="EXHAUSTED",
+                adx_value=prefilter_result.get("adx_value", 0),
+                divergence=False,
+                regime="RANGE"
+            ),
+            entry=EntrySignal(signal="WAIT", reason="prefilter_failed"),
+            final_score=0.0,
+            final_confidence=0.0,
         )
 
-    def _get_entry_signal(
-        self,
-        trend: TrendBias,
-        strength: StrengthRatingResult
-    ) -> EntrySignal:
-        """Generate entry signal based on trend and strength.
-
-        Args:
-            trend: Current trend bias
-            strength: Current strength rating
-
-        Returns:
-            EntrySignal
-        """
-        # Only generate signals if trend is strong
-        if strength.rating in ["STRONG", "READY"] and trend.direction in ["BULL", "BEAR"]:
-            if trend.direction == "BULL":
-                return EntrySignal(
-                    signal="LONG",
-                    reason=f"{strength.rating} BULL trend"
-                )
-            else:
-                return EntrySignal(
-                    signal="SHORT",
-                    reason=f"{strength.rating} BEAR trend"
-                )
-
-        return EntrySignal(
-            signal="WAIT",
-            reason="insufficient_trend_strength"
-        )
-
-    def _calculate_score(
-        self,
-        trend: TrendBias,
-        strength: StrengthRatingResult
-    ) -> float:
-        """Calculate final score.
-
-        Score range: -100 (strong bear) to +100 (strong bull)
-
-        Args:
-            trend: Current trend bias
-            strength: Current strength rating
-
-        Returns:
-            Final score
-        """
-        # Direction contribution: -100, 0, or +100
+    def _calculate_final_score(self, trend: TrendBias, strength) -> float:
+        """计算最终评分 (-100 ~ +100)"""
         if trend.direction == "BULL":
             direction_score = 100
         elif trend.direction == "BEAR":
@@ -222,72 +151,35 @@ class MTESv3:
         else:
             direction_score = 0
 
-        # Strength multiplier
-        if strength.rating == "STRONG":
-            strength_mult = 1.0
-        elif strength.rating == "READY":
-            strength_mult = 0.8
-        elif strength.rating == "WEAK":
-            strength_mult = 0.5
-        else:
-            strength_mult = 0.2
+        strength_mult = {
+            "STRONG": 1.0,
+            "READY": 0.8,
+            "WEAK": 0.5,
+            "EXHAUSTED": 0.2
+        }.get(strength.rating, 0.5)
 
-        # Confidence factor
-        confidence_factor = trend.confidence
-
-        final_score = direction_score * strength_mult * confidence_factor
-
+        final_score = direction_score * strength_mult * trend.confidence
         return round(final_score, 2)
 
-    def _calculate_confidence(
-        self,
-        trend: TrendBias,
-        strength: StrengthRatingResult,
-        prefilter_result: any
-    ) -> float:
-        """Calculate final confidence.
-
-        Args:
-            trend: Current trend bias
-            strength: Current strength rating
-            prefilter_result: Preprocessor result
-
-        Returns:
-            Final confidence (0-1)
-        """
-        # Base confidence from prefilter
-        adx_factor = min(prefilter_result.adx_value / 40.0, 1.0)  # Normalize to 40
-
-        # Trend confidence
+    def _calculate_final_confidence(self, trend: TrendBias, strength, adx_value: float, divergence) -> float:
+        """计算最终置信度 (0-1)"""
+        adx_factor = min(adx_value / 40.0, 1.0)
         trend_factor = trend.confidence
+        strength_factor = {
+            "STRONG": 1.0,
+            "READY": 0.8,
+            "WEAK": 0.5,
+            "EXHAUSTED": 0.2
+        }.get(strength.rating, 0.3)
+        divergence_bonus = 0.1 if divergence.detected else 0
 
-        # Strength factor
-        if strength.rating == "STRONG":
-            strength_factor = 1.0
-        elif strength.rating == "READY":
-            strength_factor = 0.8
-        elif strength.rating == "WEAK":
-            strength_factor = 0.5
-        else:
-            strength_factor = 0.2
-
-        # Combined confidence
-        confidence = (adx_factor * 0.3 + trend_factor * 0.4 + strength_factor * 0.3)
+        confidence = (adx_factor * 0.25 + trend_factor * 0.35 +
+                     strength_factor * 0.30 + divergence_bonus)
 
         return round(min(confidence, 1.0), 3)
 
-    def analyze_batch(
-        self,
-        data_dict: dict[str, pd.DataFrame]
-    ) -> dict[str, MTESv3Result]:
-        """Analyze multiple symbols at once.
-
-        Args:
-            data_dict: Dictionary mapping symbol -> DataFrame
-
-        Returns:
-            Dictionary mapping symbol -> MTESv3Result
-        """
+    def analyze_batch(self, data_dict: dict[str, pd.DataFrame]) -> dict[str, MTESv3Result]:
+        """批量分析多个品种"""
         results = {}
         for symbol, df in data_dict.items():
             results[symbol] = self.analyze(df)

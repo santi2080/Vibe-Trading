@@ -1,10 +1,9 @@
-"""Layer 3: Entry Timing.
-
-This layer identifies optimal entry timing using:
-- FVG (Fair Value Gap) detection
-- Elder Second/Third Screen filters
-- RSI Extremes
-- Buy Stop execution
 """
+Layer 3: Entry Timing
 
-__all__ = []
+包含:
+- EntryTiming: 入场时机检测
+"""
+from .entry_timing import EntryTiming
+
+__all__ = ['EntryTiming']

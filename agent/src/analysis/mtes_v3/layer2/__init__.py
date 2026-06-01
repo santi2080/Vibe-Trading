@@ -1,9 +1,11 @@
-"""Layer 2: Trend Strength Confirmation.
-
-This layer confirms trend strength using:
-- ADX threshold filtering
-- Momentum divergence detection
-- Volatility regime adaptation
 """
+Layer 2: Trend Strength Confirmation
 
-__all__ = []
+包含:
+- ADXStrengthFilter: ADX 趋势强度过滤器
+- MomentumDivergenceDetector: 动量背离检测器
+"""
+from .strength_filter import ADXStrengthFilter
+from .divergence import MomentumDivergenceDetector, DivergenceResult
+
+__all__ = ['ADXStrengthFilter', 'MomentumDivergenceDetector', 'DivergenceResult']
