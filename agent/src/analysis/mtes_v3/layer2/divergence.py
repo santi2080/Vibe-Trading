@@ -48,15 +48,23 @@ class MomentumDivergenceDetector:
         return macd_line - signal_line
 
     def _find_local_extrema(self, series: pd.Series, window: int = 5) -> list:
-        """识别局部极值点"""
+        """识别局部极值点 - 向量化优化版本"""
+        values = series.values
+        n = len(values)
+
+        # 向量化计算 rolling max/min
+        rolling_max = pd.Series(values).rolling(window * 2 + 1, center=True).max()
+        rolling_min = pd.Series(values).rolling(window * 2 + 1, center=True).min()
+
         extrema = []
-        for i in range(window, len(series) - window):
+        for i in range(window, n - window):
             # 检查是否是局部最高点
-            if series.iloc[i] == series.iloc[i-window:i+window+1].max():
-                extrema.append(('high', i, series.iloc[i]))
+            if values[i] >= rolling_max.iloc[i]:
+                extrema.append(('high', i, values[i]))
             # 检查是否是局部最低点
-            elif series.iloc[i] == series.iloc[i-window:i+window+1].min():
-                extrema.append(('low', i, series.iloc[i]))
+            elif values[i] <= rolling_min.iloc[i]:
+                extrema.append(('low', i, values[i]))
+
         return extrema
 
     def analyze(self, df: pd.DataFrame) -> DivergenceResult:
