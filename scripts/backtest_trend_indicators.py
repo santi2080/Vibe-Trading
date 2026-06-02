@@ -17,7 +17,7 @@ import sys
 import json
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass, field, asdict
 import warnings
 
@@ -32,6 +32,9 @@ warnings.filterwarnings('ignore')
 
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "agent"))
+
+from src.data.watchlist import WatchlistReader
+from src.data.watchlist_data_health import check_watchlist_data
 
 # 测试品种配置
 SYMBOLS_CONFIG = {
@@ -718,7 +721,90 @@ def backtest_symbol(symbol: str, name: str, market: str, timeframe: str = "1d") 
     return result
 
 
-def generate_report(results: List[SymbolResult], output_dir: Path) -> Path:
+def _serialize_gate_payload(payload: dict[str, Any]) -> str:
+    """Serialize gate payloads with consistent JSON formatting."""
+    return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+def build_watchlist_gate_payload(watchlist_path: str | Path, now: datetime | None = None) -> dict[str, Any]:
+    """Build the watchlist data-health gate payload for backtest entry points."""
+    report = check_watchlist_data(
+        watchlist_path=watchlist_path,
+        data_dir=PROJECT_ROOT / "data",
+        now=now,
+    )
+    report_payload = report.to_dict()
+    if report.can_backtest:
+        message = "Watchlist data health check passed before backtest execution"
+        if report.gate_status == "WARN":
+            message = "Watchlist data health check passed with warnings before backtest execution"
+        return {
+            "status": "ok",
+            "message": message,
+            **report_payload,
+        }
+    return {
+        "status": "error",
+        "error_type": "data_health_gate_blocked",
+        "message": "Watchlist data health blocked backtest execution",
+        **report_payload,
+    }
+
+
+def _load_watchlist_symbols(
+    watchlist_path: str | Path,
+    market_filter: str | None = None,
+) -> list[tuple[str, str, str]]:
+    """Load symbol/name/market tuples from a watchlist CSV."""
+    reader = WatchlistReader(str(watchlist_path))
+    symbols: list[tuple[str, str, str]] = []
+    for item in reader.load_raw():
+        symbol = item.get("symbol", "")
+        if not symbol or symbol.lower() in ("symbol", "code", "name"):
+            continue
+        market = item.get("market", "us_futures")
+        if market_filter and market.upper() != market_filter.upper():
+            continue
+        symbols.append((symbol, item.get("name") or symbol, market))
+    return symbols
+
+
+def run_watchlist_backtest(
+    watchlist_path: str | Path,
+    *,
+    timeframe: str = "1d",
+    market_filter: str | None = None,
+    output_dir: Path | None = None,
+    now: datetime | None = None,
+    emit_output: bool = True,
+) -> tuple[int, dict[str, Any], list[SymbolResult]]:
+    """Run the watchlist-aware backtest path with a local data-health gate."""
+    gate_payload = build_watchlist_gate_payload(watchlist_path, now=now)
+    if emit_output:
+        print(_serialize_gate_payload(gate_payload))
+
+    if not gate_payload["gate"]["can_backtest"]:
+        if emit_output:
+            print("❌ Watchlist data health blocked backtest execution.", file=sys.stderr)
+        return 1, gate_payload, []
+
+    symbols = _load_watchlist_symbols(watchlist_path, market_filter=market_filter)
+    if emit_output:
+        print(f"\n🔍 测试 Watchlist: {watchlist_path} ({len(symbols)} 个品种)")
+
+    results: list[SymbolResult] = []
+    for symbol, name, market in symbols:
+        result = backtest_symbol(symbol, name, market, timeframe)
+        if result:
+            results.append(result)
+
+    if results:
+        generate_report(results, output_dir or Path("reports"), gate_payload=gate_payload)
+
+    return 0, gate_payload, results
+
+
+def generate_report(results: List[SymbolResult], output_dir: Path, gate_payload: dict[str, Any] | None = None) -> Path:
     """生成报告"""
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -756,6 +842,19 @@ def generate_report(results: List[SymbolResult], output_dir: Path) -> Path:
         'overall_score': 'mean',
     }).round(1).sort_values('overall_score', ascending=False)
 
+    gate_summary = ""
+    if gate_payload:
+        gate = gate_payload.get("gate", {})
+        gate_summary = f"""
+## Watchlist Data Health Gate
+
+- Gate 状态: {gate.get("status", "N/A")}
+- 可回测: {gate.get("can_backtest", False)}
+- Blocking failures: {gate.get("blocking_failures", 0)}
+- Warnings: {gate.get("warnings", 0)}
+
+"""
+
     # 生成报告
     report = f"""# 趋势指标回测报告
 
@@ -766,8 +865,7 @@ def generate_report(results: List[SymbolResult], output_dir: Path) -> Path:
 - 测试品种: {len(results)} 个
 - 测试周期: {results[0].period if results else 'N/A'}
 - 时间框架: {results[0].timeframe if results else 'N/A'}
-
-## 指标平均得分排名
+{gate_summary}## 指标平均得分排名
 
 | 排名 | 指标 | 方向准确性 | 信号领先性 | 噪音过滤 | 综合得分 |
 |:----:|------|:----------:|:----------:|:--------:|:--------:|
@@ -822,7 +920,17 @@ def generate_report(results: List[SymbolResult], output_dir: Path) -> Path:
     return md_path
 
 
-def main():
+def _parse_gate_now(now_value: str) -> datetime | None:
+    """Parse optional ISO timestamp used by the watchlist gate."""
+    if not now_value:
+        return None
+    try:
+        return datetime.fromisoformat(now_value)
+    except ValueError as exc:
+        raise ValueError(f"Invalid --now timestamp: {now_value}") from exc
+
+
+def main() -> int:
     parser = argparse.ArgumentParser(description='趋势指标回测工具')
     parser.add_argument('--symbol', type=str, help='单一品种符号')
     parser.add_argument('--name', type=str, default='', help='品种名称')
@@ -830,6 +938,8 @@ def main():
     parser.add_argument('--timeframe', type=str, default='1d', choices=['1d', '1W'], help='时间周期')
     parser.add_argument('--compare', action='store_true', help='比较所有指标')
     parser.add_argument('--all', action='store_true', help='测试所有品种')
+    parser.add_argument('--watchlist', type=str, help='基于 watchlist 执行受 data health gate 保护的回测')
+    parser.add_argument('--now', type=str, default='', help='watchlist gate 使用的 ISO 时间戳（测试用）')
     parser.add_argument('--market-filter', type=str, help='市场过滤 (贵金属/能源/股指/农产品/债券/ETF)')
     parser.add_argument('--output', type=str, default='reports', help='输出目录')
 
@@ -837,6 +947,22 @@ def main():
 
     results = []
     output_dir = Path(args.output)
+    try:
+        gate_now = _parse_gate_now(args.now)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    if args.watchlist:
+        exit_code, _, _ = run_watchlist_backtest(
+            args.watchlist,
+            timeframe=args.timeframe,
+            market_filter=args.market_filter,
+            output_dir=output_dir,
+            now=gate_now,
+            emit_output=True,
+        )
+        return exit_code
 
     if args.symbol:
         # 单品种测试
@@ -857,6 +983,7 @@ def main():
         else:
             print(f"❌ 未知市场: {args.market_filter}")
             print(f"可用市场: {list(SYMBOLS_CONFIG.keys())}")
+            return 1
 
     elif args.all or args.compare:
         # 所有品种
@@ -867,17 +994,20 @@ def main():
                 results.append(result)
 
     else:
-        print("❌ 请指定 --symbol, --market-filter, 或 --all")
+        print("❌ 请指定 --symbol, --market-filter, --watchlist, 或 --all")
         print("\n用法示例:")
         print("  python scripts/backtest_trend_indicators.py --symbol GC=F --compare")
         print("  python scripts/backtest_trend_indicators.py --market-filter 贵金属")
+        print("  python scripts/backtest_trend_indicators.py --watchlist watchlist/us_futures_watchlist.csv")
         print("  python scripts/backtest_trend_indicators.py --all --output reports/")
-        return
+        return 1
 
     # 生成报告
     if results:
         generate_report(results, output_dir)
 
+    return 0
+
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

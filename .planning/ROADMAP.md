@@ -96,3 +96,21 @@ Layer 3: 入场时机 (FVG 回踩 + RSI 极值)
 - Plan 04: completed (`.planning/phases/06-mtes-v3-layered-system/06-04-PLAN.md`) - 整合测试 + MTES v2 适配器
 - Execute: completed (`.planning/phases/06-mtes-v3-layered-system/06-01-SUMMARY.md` to `06-04-SUMMARY.md`)
 - Verify: completed (`.planning/phases/06-mtes-v3-layered-system/06-VERIFICATION.md`)
+
+### Phase 7: Watchlist Local Data Health Gate
+
+**Goal:** Implement the deferred REQ-001 gate so watchlist-based backtests and analysis can inspect standard local parquet data before running, report per-symbol/per-timeframe health, and block backtests when required local data is missing, empty, invalid, or stale.
+
+**Depends on:** Existing `WatchlistReader`, `watchlist_data_health.py`, watchlist tools/MCP wrappers, local `data/{market}/{symbol}/{timeframe}.parquet` cache conventions, and current watchlist/backtest entry points.
+
+**Requirements:** REQ-001
+
+**Status:** completed (verified 2026-06-02)
+
+**Plans:**
+- Context: completed (`.planning/phases/07-watchlist-data-health-gate/07-CONTEXT.md`)
+- Research: completed (`.planning/phases/07-watchlist-data-health-gate/07-RESEARCH.md`)
+- Plan 01: completed (`.planning/phases/07-watchlist-data-health-gate/07-01-PLAN.md`) - Tool/MCP exposure for watchlist data health gate
+- Plan 02: completed (`.planning/phases/07-watchlist-data-health-gate/07-02-PLAN.md`) - Backtest/analyze gate integration and verification
+- Execute: completed (`.planning/phases/07-watchlist-data-health-gate/07-01-SUMMARY.md`, `.planning/phases/07-watchlist-data-health-gate/07-02-SUMMARY.md`)
+- Verify: completed (`.planning/phases/07-watchlist-data-health-gate/07-VERIFICATION.md`)

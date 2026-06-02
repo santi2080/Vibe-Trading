@@ -3,13 +3,12 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: mtes-v3-layered-system
 status: completed
-last_updated: "2026-06-01T12:30:00Z"
+last_updated: "2026-06-02T08:05:01Z"
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 20
-  completed_plans: 20
-  pending_plans: 0
+  total_phases: 7
+  completed_phases: 7
+  total_plans: 22
+  completed_plans: 22
   percent: 100
 ---
 
@@ -26,15 +25,18 @@ progress:
 
 ## Milestone Status
 
-v2.0 milestone implementation is complete.
+v2.0 milestone implementation is complete, including the previously deferred REQ-001 watchlist data gate.
 
 Key closeout evidence:
+
 - `reports/mtes_v2v3_comparison_report.md` documents MTES v2 vs v3 comparison and historical backtest outcome.
 - `scripts/backtest_mtes_v2v3.py` provides the comparative historical backtest entry point.
 - `agent/tests/mtes_v3/` focused suite passes against the current codebase.
+- `agent/src/tools/watchlist_tool.py` now exposes `check_watchlist_data` and enforces the gate before watchlist analysis.
+- `scripts/backtest_trend_indicators.py` now provides a gate-protected `--watchlist` backtest path.
 
 ## Open Backlog / Follow-ups
 
-- ⚠️ `REQ-001` Watchlist 本地数据完整性门禁仍为 deferred backlog，尚未纳入已完成阶段。
+- ✅ `REQ-001` Watchlist 本地数据完整性门禁已完成并验证（见 `07-01-SUMMARY.md`, `07-02-SUMMARY.md`, `07-VERIFICATION.md`）。
 - ℹ️ 如果后续需要更严格的 GSD 归档一致性，可再补 Phase 04 / Phase 05 的独立 verification/summary 工件；当前不阻塞里程碑收尾。
-- 🔜 Next logical step: close out milestone v2.0, then choose the next phase (recommended: REQ-001 data gate or MTES v3 robustness research).
+- 🔜 Next logical step: close out milestone v2.0 archive artifacts, then choose the next phase (recommended: MTES v3 robustness research or new milestone planning).

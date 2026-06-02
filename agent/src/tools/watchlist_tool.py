@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from src.agent.tools import BaseTool
+from src.data.watchlist_data_health import check_watchlist_data
 
 
 def _to_plain_json(value: Any) -> Any:
@@ -28,6 +30,7 @@ def _to_plain_json(value: Any) -> Any:
 _AGENT_DIR = Path(__file__).resolve().parents[2]
 _REPO_DIR = _AGENT_DIR.parent
 _WATCHLIST_DIR = _REPO_DIR / "watchlist"
+_DATA_DIR = _REPO_DIR / "data"
 
 
 def _resolve_watchlist_path(watchlist_path: str) -> Path:
@@ -46,6 +49,59 @@ def _resolve_watchlist_path(watchlist_path: str) -> Path:
         raise ValueError(f"Watchlist path {watchlist_path!r} escapes the watchlist directory") from exc
 
     return candidate
+
+
+def _parse_iso_now(now_value: Any) -> datetime | None:
+    if now_value in (None, ""):
+        return None
+    if not isinstance(now_value, str):
+        raise ValueError("now must be an ISO-8601 string")
+    try:
+        return datetime.fromisoformat(now_value)
+    except ValueError as exc:
+        raise ValueError(f"Invalid now timestamp: {now_value}") from exc
+
+
+
+
+def _build_watchlist_data_health_payload(path: Path, now: datetime | None = None) -> dict[str, Any]:
+    report = check_watchlist_data(watchlist_path=path, data_dir=_DATA_DIR, now=now)
+    return _to_plain_json(report.to_dict())
+
+
+def _filter_data_health_payload_by_market(
+    payload: dict[str, Any], market_filter: str | None = None
+) -> dict[str, Any]:
+    """Limit gate evaluation to the requested market subset when provided."""
+    if not market_filter:
+        return payload
+
+    normalized_filter = market_filter.upper()
+    filtered_items = [
+        item for item in payload["items"] if str(item.get("market", "")).upper() == normalized_filter
+    ]
+    blocking_failures = sum(1 for item in filtered_items if item.get("status") == "FAIL")
+    warnings = sum(1 for item in filtered_items if item.get("status") == "WARN")
+    can_backtest = blocking_failures == 0
+    if blocking_failures:
+        gate_status = "FAIL"
+    elif warnings:
+        gate_status = "WARN"
+    else:
+        gate_status = "PASS"
+
+    filtered_payload = dict(payload)
+    filtered_payload["items"] = filtered_items
+    filtered_payload["gate"] = {
+        **payload["gate"],
+        "empty_watchlist": False,
+        "status": gate_status,
+        "can_backtest": can_backtest,
+        "blocking_failures": blocking_failures,
+        "warnings": warnings,
+        "total_checks": len(filtered_items),
+    }
+    return filtered_payload
 
 
 class ListWatchlistTool(BaseTool):
@@ -82,6 +138,49 @@ class ListWatchlistTool(BaseTool):
             ensure_ascii=False,
             indent=2,
         )
+
+
+class CheckWatchlistDataTool(BaseTool):
+    """Expose the watchlist local parquet data-health gate as JSON."""
+
+    name = "check_watchlist_data"
+    description = "Check standard local parquet data health for a watchlist before analysis or backtesting."
+    parameters = {
+        "type": "object",
+        "properties": {
+            "watchlist_path": {
+                "type": "string",
+                "description": "Path to watchlist CSV, defaults to watchlist/us_futures_watchlist.csv.",
+            },
+            "now": {
+                "type": "string",
+                "description": "Optional ISO timestamp used for deterministic data-health checks.",
+            },
+        },
+        "required": [],
+    }
+    repeatable = True
+
+    def execute(self, **kwargs: Any) -> str:
+        watchlist_path = kwargs.get("watchlist_path", "watchlist/us_futures_watchlist.csv")
+        try:
+            path = _resolve_watchlist_path(watchlist_path)
+        except ValueError as exc:
+            return json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False)
+        if not path.exists():
+            return json.dumps({"status": "error", "error": f"Watchlist not found: {watchlist_path}"}, ensure_ascii=False)
+
+        try:
+            now = _parse_iso_now(kwargs.get("now"))
+        except ValueError as exc:
+            return json.dumps(
+                {"status": "error", "error_type": "validation", "error": str(exc)},
+                ensure_ascii=False,
+                indent=2,
+            )
+
+        payload = _build_watchlist_data_health_payload(path, now=now)
+        return json.dumps({"status": "ok", **payload}, ensure_ascii=False, indent=2)
 
 
 class AnalyzeSecurityTool(BaseTool):
@@ -149,6 +248,25 @@ class AnalyzeWatchlistTool(BaseTool):
         if not path.exists():
             return json.dumps({"status": "error", "error": f"Watchlist not found: {watchlist_path}"}, ensure_ascii=False)
 
+        data_health_gate = _filter_data_health_payload_by_market(
+            _build_watchlist_data_health_payload(path),
+            kwargs.get("market_filter") or None,
+        )
+        if not data_health_gate["gate"]["can_backtest"]:
+            return json.dumps(
+                {
+                    "status": "error",
+                    "error_type": "data_health_gate_blocked",
+                    "message": "Watchlist data health blocked analysis execution",
+                    "watchlist": data_health_gate["watchlist"],
+                    "gate": data_health_gate["gate"],
+                    "rules": data_health_gate["rules"],
+                    "items": data_health_gate["items"],
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+
         analyzer = WatchlistAnalyzer(watchlist_path=str(path))
         results = analyzer.analyze_all(
             watchlist_path=str(path),
@@ -158,7 +276,13 @@ class AnalyzeWatchlistTool(BaseTool):
 
         if kwargs.get("format", "summary") == "full":
             return json.dumps(
-                {"status": "ok", "watchlist": str(path), "count": len(results), "results": [r.__dict__ for r in results]},
+                {
+                    "status": "ok",
+                    "watchlist": str(path),
+                    "count": len(results),
+                    "data_health_gate": data_health_gate,
+                    "results": [r.__dict__ for r in results],
+                },
                 ensure_ascii=False,
                 indent=2,
             )
@@ -197,6 +321,7 @@ class AnalyzeWatchlistTool(BaseTool):
             {
                 "status": "ok",
                 "watchlist": str(path),
+                "data_health_gate": data_health_gate,
                 "total": summary["total"],
                 "success": summary["success"],
                 "trends": summary["trends"],

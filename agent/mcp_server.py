@@ -1067,6 +1067,25 @@ def list_watchlist(watchlist_path: str = "watchlist/us_futures_watchlist.csv") -
     return _get_registry().execute("list_watchlist", {"watchlist_path": watchlist_path})
 
 
+@mcp.tool
+def check_watchlist_data(
+    watchlist_path: str = "watchlist/us_futures_watchlist.csv",
+    now: str = "",
+) -> str:
+    """Check local parquet data health for a watchlist before analysis or backtesting.
+
+    Returns the same machine-readable JSON payload as the registry tool, including
+    gate status, blocking failures, warnings, rules, and per-symbol/per-timeframe items.
+
+    Args:
+        watchlist_path: Path to watchlist CSV file.
+        now: Optional ISO timestamp for deterministic health checks.
+    """
+    params = {"watchlist_path": watchlist_path}
+    if now.strip():
+        params["now"] = now
+    return _get_registry().execute("check_watchlist_data", params)
+
 
 @mcp.tool
 def analyze_security(
