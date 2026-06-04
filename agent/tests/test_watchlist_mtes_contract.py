@@ -11,6 +11,7 @@ import pytest
 
 from src.analysis.watchlist_analyzer import WatchlistAnalyzer
 from src.tools import build_registry
+from src.tools import watchlist_tool
 
 
 REQUIRED_MTES_FIELDS = {
@@ -144,7 +145,35 @@ def test_watchlist_timeframes_are_passed_into_mtes_evaluator(
     assert not calls[0]["higher_timeframe"].empty
 
 
-def test_analyze_watchlist_tool_includes_machine_readable_mtes_and_no_stdout(capsys) -> None:
+def test_analyze_watchlist_tool_includes_machine_readable_mtes_and_no_stdout(
+    capsys,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        watchlist_tool,
+        "_build_watchlist_data_health_payload",
+        lambda path, now=None: {
+            "watchlist": str(path),
+            "checked_at": "2026-05-27T12:00:00",
+            "data_dir": str(watchlist_tool._DATA_DIR),
+            "calendar_adjusted": False,
+            "gate": {
+                "empty_watchlist": False,
+                "status": "PASS",
+                "can_backtest": True,
+                "blocking_failures": 0,
+                "warnings": 0,
+                "total_checks": 2,
+            },
+            "rules": {
+                "blocking_timeframes": ["1d", "1h"],
+                "staleness_thresholds": {"1d": "48h", "1h": "6h", "4h": "12h"},
+                "market_overrides": {"us_futures:1h": "24h"},
+                "calendar_adjusted": False,
+            },
+            "items": [],
+        },
+    )
     registry = build_registry()
 
     payload = json.loads(
