@@ -120,10 +120,17 @@ Layer 3: 入场时机 (FVG 回踩 + RSI 极值)
 
 **Goal:** Build a composite strategy signal layer that composes existing trend strategies (MTES v2/v3, Enhanced SuperTrend) into a unified TradingSignal contract with direction/status/readiness separation, minimal scoring, and standard explainability fields.
 
+**Status:** completed (verified 2026-06-05)
+
 **Requirements**: PH08-CONTRACT, PH08-CLAMP, PH08-DEFER-EXEC, PH08-MAP, PH08-SERIAL
 **Depends on:** Phase 7
-**Plans:** 1 plan
 
 Plans:
-- [ ] 08-01-PLAN.md — TradingSignal contract + CompositeTrendStrategy (wave 1)
+- [x] 08-01-PLAN.md — TradingSignal contract + CompositeTrendStrategy (wave 1) ✅
+
+**Deliverables:**
+- `agent/src/strategies/composite/base.py` — TradingSignal dataclass
+- `agent/src/strategies/composite/trend_composite.py` — CompositeTrendStrategy
+- `agent/src/strategies/composite/__init__.py` — Public API
+- 43 tests (19 + 24), full suite 65 passed
 

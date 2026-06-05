@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.0
-milestone_name: mtes-v3-layered-system
+milestone_name: composite-strategy-signal-layer
 status: completed
-last_updated: "2026-06-05T09:21:31.219Z"
+last_updated: "2026-06-05T14:50:00.000Z"
 progress:
   total_phases: 8
-  completed_phases: 7
-  total_plans: 22
-  completed_plans: 22
-  percent: 88
+  completed_phases: 8
+  total_plans: 23
+  completed_plans: 23
+  percent: 100
 ---
 
 # State
@@ -22,27 +22,34 @@ progress:
 - ✅ Phase 04 Signal Execution System — complete (5 plans, execution summaries complete).
 - ✅ Phase 05 MTES v2 Direction-Primary Scoring — complete (validated, 15 focused tests + MTES v2 script 7/7).
 - ✅ Phase 06 MTES v3 Layered System — complete and verified (4 plans, 117 focused tests).
+- ✅ Phase 07 Watchlist Data Health Gate — complete (2 plans, verified).
+- ✅ Phase 08 Composite Strategy Signal Layer — complete (1 plan, 43 tests, committed).
 
 ## Milestone Status
 
-v2.0 milestone implementation is complete, including the previously deferred REQ-001 watchlist data gate.
+v2.0 milestone **100% complete** — 所有 8 个 Phase 已完成并验证。
 
-Key closeout evidence:
+### Phase 08 Key Deliverables
 
-- `reports/mtes_v2v3_comparison_report.md` documents MTES v2 vs v3 comparison and historical backtest outcome.
-- `scripts/backtest_mtes_v2v3.py` provides the comparative historical backtest entry point.
-- `agent/tests/mtes_v3/` focused suite passes against the current codebase.
-- `agent/src/tools/watchlist_tool.py` now exposes `check_watchlist_data` and enforces the gate before watchlist analysis.
-- `scripts/backtest_trend_indicators.py` now provides a gate-protected `--watchlist` backtest path.
+- `agent/src/strategies/composite/base.py` — TradingSignal frozen dataclass
+- `agent/src/strategies/composite/trend_composite.py` — CompositeTrendStrategy
+- `agent/src/strategies/composite/__init__.py` — Public API exports
+- `agent/tests/strategies/test_composite_signal_base.py` — 19 tests
+- `agent/tests/strategies/test_composite_trend_strategy.py` — 24 tests
+- Full strategy test suite: **65 passed**
+
+### Wave 2 Deferral
+
+Wave 2 ("wired to existing trend adapters") deferred — CompositeTrendStrategy 支持注入任意 TrendStrategyBase，现有 MTES/SuperTrend 适配器已可接入。
 
 ## Open Backlog / Follow-ups
 
-- ✅ `REQ-001` Watchlist 本地数据完整性门禁已完成并验证（见 `07-01-SUMMARY.md`, `07-02-SUMMARY.md`, `07-VERIFICATION.md`）。
-- ℹ️ 如果后续需要更严格的 GSD 归档一致性，可再补 Phase 04 / Phase 05 的独立 verification/summary 工件；当前不阻塞里程碑收尾。
-- 🔜 Next logical step: close out milestone v2.0 archive artifacts, then choose the next phase (recommended: MTES v3 robustness research or new milestone planning).
+- ℹ️ Wave 2 可选接入代码：演示 CompositeTrendStrategy 与现有 MTES/SuperTrend 适配器的集成
+- ℹ️ 可选：创建 v2.0 里程碑归档报告
+- 🔜 Next: 选择下一个里程碑方向（建议：策略层回测验证、组合策略实证、或新功能规划）
 
 ## Accumulated Context
 
 ### Roadmap Evolution
 
-- Phase 8 added: Establish Composite Strategy Signal Layer
+- Phase 8 added: Establish Composite Strategy Signal Layer ✅
