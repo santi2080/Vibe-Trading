@@ -13,6 +13,7 @@ from src.analysis.major_trend_evaluator import (
     DIRECTION_PERIODS,
     MajorTrendEvaluator,
     TrendState,
+    classify_trend_state_v2,
     get_weight_profile,
 )
 
@@ -120,6 +121,25 @@ def test_strong_bull_fixture_scores_and_classifies() -> None:
     assert 0 <= result.direction_signal <= 100  # BULL 方向时为正
     assert 0 <= result.direction_confidence <= 1
     assert 0 <= result.strength_score <= 100
+
+def test_v2_strong_state_requires_strength_confirmation() -> None:
+    """V2 STRONG classification requires both signed score and strength confirmation."""
+    assert (
+        classify_trend_state_v2(61.0, "BULL", strength_score=49.0)
+        == TrendState.BULL_CONFIRMED.value
+    )
+    assert (
+        classify_trend_state_v2(61.0, "BULL", strength_score=50.0)
+        == TrendState.BULL_STRONG.value
+    )
+    assert (
+        classify_trend_state_v2(-61.0, "BEAR", strength_score=49.0)
+        == TrendState.BEAR_CONFIRMED.value
+    )
+    assert (
+        classify_trend_state_v2(-61.0, "BEAR", strength_score=50.0)
+        == TrendState.BEAR_STRONG.value
+    )
 
 
 def test_insufficient_long_horizon_data_returns_no_score_metadata() -> None:

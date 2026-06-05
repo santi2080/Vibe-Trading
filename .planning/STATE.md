@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: mtes-v3-layered-system
 status: completed
-last_updated: "2026-06-02T08:05:01Z"
+last_updated: "2026-06-05T09:21:31.219Z"
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 7
   total_plans: 22
   completed_plans: 22
-  percent: 100
+  percent: 88
 ---
 
 # State
@@ -20,7 +20,7 @@ progress:
 - ✅ Phase 02 Trend Indicator Backtest — complete (1 plan, verified).
 - ✅ Phase 03 SuperTrend Enhancement Strategy — complete (5 plans, implementation summaries complete).
 - ✅ Phase 04 Signal Execution System — complete (5 plans, execution summaries complete).
-- ✅ Phase 05 MTES v2 Direction-Primary Scoring — complete (validated, 14 tests).
+- ✅ Phase 05 MTES v2 Direction-Primary Scoring — complete (validated, 15 focused tests + MTES v2 script 7/7).
 - ✅ Phase 06 MTES v3 Layered System — complete and verified (4 plans, 117 focused tests).
 
 ## Milestone Status
@@ -40,3 +40,9 @@ Key closeout evidence:
 - ✅ `REQ-001` Watchlist 本地数据完整性门禁已完成并验证（见 `07-01-SUMMARY.md`, `07-02-SUMMARY.md`, `07-VERIFICATION.md`）。
 - ℹ️ 如果后续需要更严格的 GSD 归档一致性，可再补 Phase 04 / Phase 05 的独立 verification/summary 工件；当前不阻塞里程碑收尾。
 - 🔜 Next logical step: close out milestone v2.0 archive artifacts, then choose the next phase (recommended: MTES v3 robustness research or new milestone planning).
+
+## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 8 added: Establish Composite Strategy Signal Layer

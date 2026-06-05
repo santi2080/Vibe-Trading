@@ -265,7 +265,7 @@ class MajorTrendEvaluator:
             trend_score, confidence = calculate_final_score_v2(
                 direction_signal, direction_confidence, strength_score, resolved_asset_class
             )
-            trend_state = classify_trend_state_v2(trend_score, direction)
+            trend_state = classify_trend_state_v2(trend_score, direction, strength_score)
         else:
             # V1 兼容逻辑
             direction_signal = 0.0
@@ -783,20 +783,26 @@ def calculate_final_score_v2(
     return round(trend_score, 2), round(min(1.0, max(0.0, confidence)), 3)
 
 
-def classify_trend_state_v2(score: float, direction: str) -> str:
+def classify_trend_state_v2(
+    score: float,
+    direction: str,
+    strength_score: float | None = None,
+) -> str:
     """V2: 趋势状态分类 (支持带符号评分)。
 
     score: -100 ~ +100
+    strength_score: 0 ~ 100；当提供时，STRONG 状态需要强度组确认。
     """
+    has_strong_confirmation = strength_score is None or strength_score >= 50.0
     if direction == "BULL":
-        if score >= 60:
+        if score >= 60 and has_strong_confirmation:
             return TrendState.BULL_STRONG.value
         if score >= 30:
             return TrendState.BULL_CONFIRMED.value
         if score >= 0:
             return TrendState.BULL_EARLY.value
     elif direction == "BEAR":
-        if score <= -60:
+        if score <= -60 and has_strong_confirmation:
             return TrendState.BEAR_STRONG.value
         if score <= -30:
             return TrendState.BEAR_CONFIRMED.value

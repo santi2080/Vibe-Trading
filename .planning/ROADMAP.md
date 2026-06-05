@@ -66,12 +66,13 @@
 
 **Goal:** Refactor MTES to use direction-primary scoring where trend_score = -100 ~ +100 (signed), with direction as the primary signal and strength metrics as confirmation.
 
-**Status:** completed (validated 2026-05-31)
+**Status:** completed (validated 2026-06-05)
 
 **Plans:**
 - SPEC: completed (`.planning/phases/05-mtes-refactor/05-SPEC.md`)
 - Plan 01: completed (`.planning/phases/05-mtes-refactor/05-01-PLAN.md`) - V2 data structures and scoring functions
-- Validation: completed (`.planning/phases/05-mtes-refactor/05-VALIDATION.md`) - 14 tests pass
+- Execute: completed (`.planning/phases/05-mtes-refactor/05-01-SUMMARY.md`)
+- Validation: completed (`.planning/phases/05-mtes-refactor/05-VALIDATION.md`) - 15 focused tests pass; MTES v2 validation script 7/7 passes
 
 ### Phase 6: MTES v3 - 分层递进趋势系统
 
@@ -114,3 +115,15 @@ Layer 3: 入场时机 (FVG 回踩 + RSI 极值)
 - Plan 02: completed (`.planning/phases/07-watchlist-data-health-gate/07-02-PLAN.md`) - Backtest/analyze gate integration and verification
 - Execute: completed (`.planning/phases/07-watchlist-data-health-gate/07-01-SUMMARY.md`, `.planning/phases/07-watchlist-data-health-gate/07-02-SUMMARY.md`)
 - Verify: completed (`.planning/phases/07-watchlist-data-health-gate/07-VERIFICATION.md`)
+
+### Phase 8: Establish Composite Strategy Signal Layer
+
+**Goal:** Build a composite strategy signal layer that composes existing trend strategies (MTES v2/v3, Enhanced SuperTrend) into a unified TradingSignal contract with direction/status/readiness separation, minimal scoring, and standard explainability fields.
+
+**Requirements**: PH08-CONTRACT, PH08-CLAMP, PH08-DEFER-EXEC, PH08-MAP, PH08-SERIAL
+**Depends on:** Phase 7
+**Plans:** 1 plan
+
+Plans:
+- [ ] 08-01-PLAN.md — TradingSignal contract + CompositeTrendStrategy (wave 1)
+

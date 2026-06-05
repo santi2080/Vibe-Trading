@@ -26,8 +26,9 @@ def make_test_data(trend: str, length: int = 300, seed: int = 42) -> pd.DataFram
         # 稳定上涨趋势
         close = 100 * np.exp(np.linspace(0, 0.6, length))
     elif trend == "weak_bull":
-        # 缓慢上涨
-        close = 100 * np.exp(np.linspace(0, 0.15, length))
+        # 弱上涨：略高于长周期阈值，方向应为 BULL，强度不应达到 STRONG。
+        # 1.2% 的总涨幅会让部分方向信号成立，但 ADX/动量/结构确认保持偏弱。
+        close = 100 * np.exp(np.linspace(0, 0.012, length))
     elif trend == "strong_bear":
         # 稳定下跌
         close = 100 * np.exp(np.linspace(0, -0.6, length))
