@@ -46,7 +46,7 @@
 | Phase | Milestone | Plans | Status | Completed |
 |-------|-----------|-------|--------|----------|
 | 01-08 | v2.0 | 23/23 | Complete | 2026-06-06 |
-| 09 | v2.1 | — | Not started | — |
+| 09 | v2.1 | 4/4 | Not started | — |
 | 10 | v2.1 | — | Not started | — |
 | 11 | v2.1 | — | Not started | — |
 
@@ -56,4 +56,5 @@
 - Performance optimization
 
 ---
+
 *Last updated: 2026-06-06*
