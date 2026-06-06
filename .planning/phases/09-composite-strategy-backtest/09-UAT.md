@@ -2,7 +2,7 @@
 status: complete
 phase: 09-composite-strategy-backtest
 source:
-  - 09-SUMMARY.md
+  - 09-SUMMARY-AGGREGATE.md
 started: 2026-06-06T06:09:16Z
 updated: 2026-06-06T06:18:43Z
 ---

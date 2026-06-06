@@ -32,11 +32,12 @@ Vibe-Trading is a multi-agent trading analysis system that combines trend evalua
 - ✓ SuperTrend 增强策略 — v2.0
 - ✓ Signal Execution System — v2.0
 - ✓ Watchlist Data Health Gate — v2.0
+- ✓ CompositeTrendStrategy 回测验证 — v2.1 / Phase 09
+- ✓ MTES v3 + SuperTrend 组合评估 — v2.1 / Phase 09
 
 ### Active
 
-- [ ] CompositeTrendStrategy 回测验证
-- [ ] MTES v3 + SuperTrend 组合评估
+- [ ] v2.1 milestone archive and next milestone definition
 
 ## Key Decisions
 
@@ -44,7 +45,7 @@ Vibe-Trading is a multi-agent trading analysis system that combines trend evalua
 |----------|-----------|--------|
 | MTES v3 分层架构 | SMC + Elder + Ichimoku 组合趋势判断 | ✓ Validated |
 | TradingSignal 合约 | 方向/状态/就绪分离 | ✓ Validated |
-| CompositeTrendStrategy | 多策略组合框架 | ⏳ Validating |
+| CompositeTrendStrategy | 多策略组合框架 | ✓ Validated via Phase 09 backtest |
 
 ## Evolution
 
@@ -58,4 +59,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? → Update if drifted
 
 ---
-*Last updated: 2026-06-06 after v2.0 milestone*
+*Last updated: 2026-06-06 after Phase 09 / v2.1 verification*

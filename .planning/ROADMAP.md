@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v2.0** — composite-strategy-signal-layer (shipped 2026-06-06)
-- 🚧 **v2.1** — composite-strategy-backtest (in progress)
+- ✅ **v2.1** — composite-strategy-backtest (complete, pending archive)
 
 ## Current Milestone: v2.1
 
@@ -46,7 +46,7 @@
 | Phase | Milestone | Plans | Status | Completed |
 |-------|-----------|-------|--------|----------|
 | 01-08 | v2.0 | 23/23 | Complete | 2026-06-06 |
-| 09 | v2.1 | 4/4 | Not started | — |
+| 09 | v2.1 | 4/4 | Complete    | 2026-06-06 |
 | 10 | v2.1 | — | Not started | — |
 | 11 | v2.1 | — | Not started | — |
 
