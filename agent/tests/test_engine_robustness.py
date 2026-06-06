@@ -23,7 +23,7 @@ from backtest.engines.base import _align
 from backtest.engines import base as base_engine
 from backtest.engines.china_a import ChinaAEngine
 from backtest.loaders.base import validate_date_range
-from backtest.runner import BacktestConfigSchema
+from backtest.runner import BacktestConfigSchema, _enforce_data_limits
 
 
 # ---------------------------------------------------------------------------
@@ -375,10 +375,48 @@ class TestBacktestConfigSchema:
         )
         assert c.start_date == c.end_date
 
+    def test_code_count_limit_rejected(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("VIBE_TRADING_MAX_BACKTEST_CODES", "1")
 
-# ---------------------------------------------------------------------------
-# 4. Date range validation in loaders
-# ---------------------------------------------------------------------------
+        with pytest.raises(Exception, match="codes length"):
+            BacktestConfigSchema(
+                codes=["AAPL.US", "MSFT.US"],
+                start_date="2025-01-01",
+                end_date="2025-06-01",
+            )
+
+    def test_date_span_limit_rejected(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("VIBE_TRADING_MAX_BACKTEST_DATE_DAYS", "30")
+
+        with pytest.raises(Exception, match="date range"):
+            BacktestConfigSchema(
+                codes=["AAPL.US"],
+                start_date="2025-01-01",
+                end_date="2025-03-01",
+            )
+
+
+class TestBacktestDataLimits:
+    def test_rows_per_symbol_limit_rejected(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("VIBE_TRADING_MAX_BACKTEST_ROWS_PER_SYMBOL", "2")
+        dates = pd.date_range("2025-01-01", periods=3, freq="D")
+        data_map = {"AAPL.US": pd.DataFrame({"close": [1.0, 2.0, 3.0]}, index=dates)}
+
+        with pytest.raises(ValueError, match="exceeding limit 2"):
+            _enforce_data_limits(data_map)
+
+    def test_total_rows_limit_rejected(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("VIBE_TRADING_MAX_BACKTEST_ROWS_PER_SYMBOL", "10")
+        monkeypatch.setenv("VIBE_TRADING_MAX_BACKTEST_TOTAL_ROWS", "4")
+        dates = pd.date_range("2025-01-01", periods=3, freq="D")
+        data_map = {
+            "A": pd.DataFrame({"close": [1.0, 2.0, 3.0]}, index=dates),
+            "B": pd.DataFrame({"close": [1.0, 2.0, 3.0]}, index=dates),
+        }
+
+        with pytest.raises(ValueError, match="total rows"):
+            _enforce_data_limits(data_map)
+
 
 
 class TestDateRangeValidation:

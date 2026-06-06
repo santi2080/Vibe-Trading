@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -20,12 +22,22 @@ from typing import Any
 import yaml
 
 from backtest.strategies.comparison import StrategyComparator
+from src.tools.path_utils import safe_run_dir
 
 _VARIANTS = {
     "MTES+SuperTrend": "composite",
     "MTESv3-only": "mtes_only",
     "SuperTrend-only": "supertrend_only",
 }
+
+_COMPARE_TIMEOUT_ENV = "VIBE_TRADING_COMPARE_TIMEOUT_SECONDS"
+_COMPARE_OUTPUT_LIMIT_ENV = "VIBE_TRADING_COMPARE_OUTPUT_LIMIT"
+_DEFAULT_COMPARE_TIMEOUT_SECONDS = 300
+_DEFAULT_COMPARE_OUTPUT_LIMIT = 2000
+_SECRET_PATTERNS = [
+    re.compile(r"(?i)\b(api[_-]?key|token|secret|password)\s*=\s*([^\s]+)"),
+    re.compile(r"(?i)\bBearer\s+([A-Za-z0-9._~+/=-]+)"),
+]
 
 
 def _agent_root() -> Path:
@@ -47,6 +59,62 @@ def _load_config(config_path: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def _env_int(name: str, default: int) -> int:
+    """Return a positive integer environment setting or its default."""
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def _compare_timeout_seconds(value: int | float | None = None) -> float:
+    """Return the subprocess timeout for each comparison variant."""
+    if value is not None and value > 0:
+        return float(value)
+    return float(_env_int(_COMPARE_TIMEOUT_ENV, _DEFAULT_COMPARE_TIMEOUT_SECONDS))
+
+
+def _output_limit() -> int:
+    """Return the maximum characters exposed per subprocess stream."""
+    return _env_int(_COMPARE_OUTPUT_LIMIT_ENV, _DEFAULT_COMPARE_OUTPUT_LIMIT)
+
+
+def _redact_output(text: str | bytes | None) -> str:
+    """Redact common secret patterns from subprocess output."""
+    if text is None:
+        return ""
+    if isinstance(text, bytes):
+        text = text.decode("utf-8", errors="replace")
+    redacted = str(text)
+    for pattern in _SECRET_PATTERNS:
+        if "Bearer" in pattern.pattern:
+            redacted = pattern.sub("Bearer [REDACTED]", redacted)
+        else:
+            redacted = pattern.sub(lambda m: f"{m.group(1)}=[REDACTED]", redacted)
+    return redacted
+
+
+def _truncate_output(text: str, limit: int | None = None) -> str:
+    """Return bounded diagnostic output, keeping the most recent tail."""
+    limit = _output_limit() if limit is None else limit
+    if len(text) <= limit:
+        return text
+    omitted = len(text) - limit
+    return f"[truncated {omitted} chars]\n{text[-limit:]}"
+
+
+def _format_subprocess_output(stdout: str | bytes | None, stderr: str | bytes | None) -> str:
+    """Return redacted, truncated stdout/stderr for exceptions."""
+    safe_stdout = _truncate_output(_redact_output(stdout))
+    safe_stderr = _truncate_output(_redact_output(stderr))
+    return f"STDOUT:\n{safe_stdout}\nSTDERR:\n{safe_stderr}"
+
+
+
 def _base_backtest_config(config: dict[str, Any], variant: str) -> dict[str, Any]:
     """Return runner-compatible config for a strategy variant."""
     run_config = dict(config)
@@ -60,7 +128,7 @@ def _base_backtest_config(config: dict[str, Any], variant: str) -> dict[str, Any
 def _prepare_run_dir(run_root: Path, label: str, config: dict[str, Any]) -> Path:
     """Create a safe run_dir with config.json and code/signal_engine.py."""
     safe_label = label.lower().replace("+", "_").replace("-", "_").replace(" ", "_")
-    run_dir = run_root / safe_label
+    run_dir = safe_run_dir(str(run_root / safe_label))
     code_dir = run_dir / "code"
     code_dir.mkdir(parents=True, exist_ok=True)
 
@@ -74,33 +142,52 @@ def _prepare_run_dir(run_root: Path, label: str, config: dict[str, Any]) -> Path
     return run_dir
 
 
-def _run_variant(label: str, variant: str, config: dict[str, Any], run_root: Path) -> Path:
+def _run_variant(
+    label: str,
+    variant: str,
+    config: dict[str, Any],
+    run_root: Path,
+    timeout_seconds: float | None = None,
+) -> Path:
     """Run one strategy variant and return its run directory."""
     run_config = _base_backtest_config(config, variant)
     run_dir = _prepare_run_dir(run_root, label, run_config)
 
+    timeout = _compare_timeout_seconds(timeout_seconds)
     cmd = [sys.executable, "-m", "backtest.runner", str(run_dir)]
-    result = subprocess.run(
-        cmd,
-        cwd=_agent_root(),
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    if result.returncode != 0:
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=_agent_root(),
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        output = _format_subprocess_output(exc.stdout, exc.stderr)
         raise RuntimeError(
-            f"Backtest variant {label!r} failed with exit code {result.returncode}\n"
-            f"STDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+            f"Backtest variant {label!r} timed out after {timeout:g}s\n{output}"
+        ) from exc
+    if result.returncode != 0:
+        output = _format_subprocess_output(result.stdout, result.stderr)
+        raise RuntimeError(
+            f"Backtest variant {label!r} failed with exit code {result.returncode}\n{output}"
         )
     return run_dir
 
 
-def run_comparison(config_path: Path, run_root: Path | None = None) -> str:
+def run_comparison(
+    config_path: Path,
+    run_root: Path | None = None,
+    timeout_seconds: float | None = None,
+) -> str:
     """Run composite vs single-source comparisons and return markdown report.
 
     Args:
         config_path: YAML/JSON config path.
         run_root: Optional output root. Defaults to ``agent/runs/composite_compare``.
+        timeout_seconds: Optional per-variant subprocess timeout.
 
     Returns:
         Markdown comparison report.
@@ -110,12 +197,13 @@ def run_comparison(config_path: Path, run_root: Path | None = None) -> str:
     if not config:
         raise ValueError(f"Empty or invalid config: {config_path}")
 
-    run_root = Path(run_root) if run_root is not None else _agent_root() / "runs" / "composite_compare"
+    default_root = _agent_root() / "runs" / "composite_compare"
+    run_root = safe_run_dir(str(run_root if run_root is not None else default_root))
     run_root.mkdir(parents=True, exist_ok=True)
 
     run_dirs: list[tuple[str, Path]] = []
     for label, variant in _VARIANTS.items():
-        run_dirs.append((label, _run_variant(label, variant, config, run_root)))
+        run_dirs.append((label, _run_variant(label, variant, config, run_root, timeout_seconds)))
 
     comparator = StrategyComparator()
     for label, run_dir in run_dirs:
@@ -144,9 +232,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", required=True, type=Path, help="Path to YAML/JSON config")
     parser.add_argument("--run-root", type=Path, default=None, help="Optional output run root")
+    parser.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=None,
+        help="Per-variant subprocess timeout (default: env or 300 seconds)",
+    )
     args = parser.parse_args(argv)
 
-    report = run_comparison(args.config, args.run_root)
+    report = run_comparison(args.config, args.run_root, args.timeout_seconds)
     print(report)
     return 0
 

@@ -8,9 +8,11 @@ Usage: ``python -m backtest.runner <run_dir>``
 """
 
 import ast
+import hashlib
 import importlib.util
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -48,6 +50,44 @@ _VALID_INTERVALS = {"1m", "5m", "15m", "30m", "1H", "4H", "1D"}
 _VALID_ENGINES = {"daily", "options"}
 _VALID_SOURCES = {"tushare", "okx", "yfinance", "akshare", "ccxt", "auto"}
 
+_TRUSTED_SIGNAL_ENGINE_HASHES_ENV = "VIBE_TRADING_TRUSTED_SIGNAL_ENGINE_SHA256"
+_MAX_BACKTEST_CODES_ENV = "VIBE_TRADING_MAX_BACKTEST_CODES"
+_MAX_BACKTEST_DATE_DAYS_ENV = "VIBE_TRADING_MAX_BACKTEST_DATE_DAYS"
+_MAX_BACKTEST_ROWS_PER_SYMBOL_ENV = "VIBE_TRADING_MAX_BACKTEST_ROWS_PER_SYMBOL"
+_MAX_BACKTEST_TOTAL_ROWS_ENV = "VIBE_TRADING_MAX_BACKTEST_TOTAL_ROWS"
+_DEFAULT_MAX_BACKTEST_CODES = 100
+_DEFAULT_MAX_BACKTEST_DATE_DAYS = 3650
+_DEFAULT_MAX_BACKTEST_ROWS_PER_SYMBOL = 50_000
+_DEFAULT_MAX_BACKTEST_TOTAL_ROWS = 250_000
+
+
+def _env_int(name: str, default: int) -> int:
+    """Return a positive integer environment setting or its default."""
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def _max_backtest_codes() -> int:
+    return _env_int(_MAX_BACKTEST_CODES_ENV, _DEFAULT_MAX_BACKTEST_CODES)
+
+
+def _max_backtest_date_days() -> int:
+    return _env_int(_MAX_BACKTEST_DATE_DAYS_ENV, _DEFAULT_MAX_BACKTEST_DATE_DAYS)
+
+
+def _max_backtest_rows_per_symbol() -> int:
+    return _env_int(_MAX_BACKTEST_ROWS_PER_SYMBOL_ENV, _DEFAULT_MAX_BACKTEST_ROWS_PER_SYMBOL)
+
+
+def _max_backtest_total_rows() -> int:
+    return _env_int(_MAX_BACKTEST_TOTAL_ROWS_ENV, _DEFAULT_MAX_BACKTEST_TOTAL_ROWS)
+
 
 class BacktestConfigSchema(BaseModel):
     """Validates backtest config.json before execution."""
@@ -69,6 +109,12 @@ class BacktestConfigSchema(BaseModel):
             raise ValueError("codes must be a non-empty list")
         if any(not c.strip() for c in v):
             raise ValueError("codes must not contain empty strings")
+        max_codes = _max_backtest_codes()
+        if len(v) > max_codes:
+            raise ValueError(
+                f"codes length ({len(v)}) exceeds limit {max_codes}. "
+                f"Set {_MAX_BACKTEST_CODES_ENV} to adjust this limit."
+            )
         return v
 
     @field_validator("start_date", "end_date")
@@ -118,12 +164,81 @@ class BacktestConfigSchema(BaseModel):
 
     @model_validator(mode="after")
     def start_before_end(self) -> "BacktestConfigSchema":
-        if pd.Timestamp(self.start_date) > pd.Timestamp(self.end_date):
+        start = pd.Timestamp(self.start_date)
+        end = pd.Timestamp(self.end_date)
+        if start > end:
             raise ValueError(
                 f"start_date ({self.start_date}) must be <= end_date ({self.end_date})"
             )
+        max_days = _max_backtest_date_days()
+        span_days = int((end - start).days)
+        if span_days > max_days:
+            raise ValueError(
+                f"date range ({span_days} days) exceeds limit {max_days}. "
+                f"Set {_MAX_BACKTEST_DATE_DAYS_ENV} to adjust this limit."
+            )
         return self
 
+
+def _sha256_file(path: Path) -> str:
+    """Return the SHA-256 hex digest for a file."""
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _trusted_signal_engine_hashes() -> set[str]:
+    """Return trusted signal-engine SHA-256 hashes.
+
+    The packaged composite signal-engine template is trusted by default. Operators
+    can approve additional generated templates by setting a comma-separated list
+    in ``VIBE_TRADING_TRUSTED_SIGNAL_ENGINE_SHA256``.
+    """
+    hashes: set[str] = set()
+    packaged = Path(__file__).resolve().parent / "configs" / "signal_engine.py"
+    if packaged.exists():
+        hashes.add(_sha256_file(packaged))
+
+    raw = os.getenv(_TRUSTED_SIGNAL_ENGINE_HASHES_ENV, "")
+    for item in raw.split(","):
+        item = item.strip().lower()
+        if item:
+            hashes.add(item)
+    return hashes
+
+
+def _verify_trusted_signal_engine(file_path: Path) -> None:
+    """Raise if ``file_path`` is not an operator-approved signal engine."""
+    digest = _sha256_file(file_path)
+    if digest not in _trusted_signal_engine_hashes():
+        raise ValueError(
+            "Untrusted signal_engine.py: SHA-256 "
+            f"{digest} is not approved. Copy the packaged template or set "
+            f"{_TRUSTED_SIGNAL_ENGINE_HASHES_ENV} to approve this exact file."
+        )
+
+
+def _enforce_data_limits(data_map: Dict[str, pd.DataFrame]) -> None:
+    """Reject oversized backtest datasets before signal generation."""
+    max_rows_per_symbol = _max_backtest_rows_per_symbol()
+    max_total_rows = _max_backtest_total_rows()
+    total_rows = 0
+    for symbol, df in data_map.items():
+        rows = len(df)
+        if rows > max_rows_per_symbol:
+            raise ValueError(
+                f"data for {symbol!r} has {rows} rows, exceeding limit "
+                f"{max_rows_per_symbol}. Set {_MAX_BACKTEST_ROWS_PER_SYMBOL_ENV} "
+                "to adjust this limit."
+            )
+        total_rows += rows
+    if total_rows > max_total_rows:
+        raise ValueError(
+            f"backtest data has {total_rows} total rows, exceeding limit {max_total_rows}. "
+            f"Set {_MAX_BACKTEST_TOTAL_ROWS_ENV} to adjust this limit."
+        )
 
 def _load_module_from_file(file_path: Path, module_name: str):
     """Load a Python module from a file path via importlib.
@@ -396,6 +511,12 @@ def main(run_dir: Path) -> None:
         print(json.dumps({"error": "code/signal_engine.py not found"}))
         sys.exit(1)
 
+    try:
+        _verify_trusted_signal_engine(signal_path)
+    except ValueError as exc:
+        print(json.dumps({"error": str(exc)}))
+        sys.exit(1)
+
     signal_module = _load_module_from_file(signal_path, "signal_engine")
     engine_cls = getattr(signal_module, "SignalEngine", None)
     if engine_cls is None:
@@ -440,6 +561,12 @@ def main(run_dir: Path) -> None:
                     break
     if not data_map:
         print(json.dumps({"error": "No data fetched"}))
+        sys.exit(1)
+
+    try:
+        _enforce_data_limits(data_map)
+    except ValueError as exc:
+        print(json.dumps({"error": str(exc)}))
         sys.exit(1)
 
     if source == "auto":

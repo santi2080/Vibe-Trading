@@ -9,14 +9,40 @@ Architecture:
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Dict, List
 
 import pandas as pd
 
+from backtest.csv_safety import safe_to_csv
 from backtest.signals import KeyNodeSignalRecorder
 from src.indicators.standard import atr as compute_atr
 from src.strategies.composite.trend_composite import CompositeTrendStrategy
+from src.tools.path_utils import safe_run_dir
+
+_MAX_PER_SOURCE_SIGNAL_RECORDS_ENV = "VIBE_TRADING_MAX_PER_SOURCE_SIGNAL_RECORDS"
+_DEFAULT_MAX_PER_SOURCE_SIGNAL_RECORDS = 100_000
+
+
+def _env_int(name: str, default: int) -> int:
+    """Return a positive integer environment setting or its default."""
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def _max_per_source_signal_records() -> int:
+    """Return the maximum stored per-source signal artifact records."""
+    return _env_int(
+        _MAX_PER_SOURCE_SIGNAL_RECORDS_ENV,
+        _DEFAULT_MAX_PER_SOURCE_SIGNAL_RECORDS,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -196,6 +222,8 @@ class CompositeBacktestSignalEngine:
         self._position_mgr.reset()
         self._recorder.reset()
         self._per_source_signals: Dict[str, List[dict]] = {}
+        self._per_source_record_count = 0
+        self._per_source_record_limit = _max_per_source_signal_records()
 
         result_map: Dict[str, pd.Series] = {}
 
@@ -260,7 +288,9 @@ class CompositeBacktestSignalEngine:
                     self._recorder.record(symbol, signal, action, atr_trailing_stop=atr_stop)
 
                     for src_name, src_result in signal.source_results.items():
-                        self._per_source_signals.setdefault(src_name, []).append(src_result)
+                        if self._per_source_record_count < self._per_source_record_limit:
+                            self._per_source_signals.setdefault(src_name, []).append(src_result)
+                            self._per_source_record_count += 1
                 else:
                     next_direction = current_direction
                     if current_direction != 0:
@@ -384,9 +414,7 @@ class CompositeEngine:
         Returns:
             Metrics dictionary from BaseEngine.
         """
-        from pathlib import Path as PathType
-
-        run_dir = Path(run_dir)
+        run_dir = safe_run_dir(str(run_dir))
         run_dir.mkdir(parents=True, exist_ok=True)
 
         # Create fresh signal engine for each backtest run
@@ -423,7 +451,7 @@ class CompositeEngine:
         recorder = self._signal_engine.get_recorder()
         kn_df = recorder.to_dataframe()
         if not kn_df.empty:
-            kn_df.to_csv(out / "signals_key_nodes.csv", index=False)
+            safe_to_csv(kn_df, out / "signals_key_nodes.csv", index=False)
 
         # Per-source raw signals JSON
         per_source = self._signal_engine.get_per_source_signals()

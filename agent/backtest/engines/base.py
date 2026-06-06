@@ -20,6 +20,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 
+from backtest.csv_safety import safe_csv_filename, safe_to_csv
 from backtest.loaders.tushare_fundamentals import (
     TushareFundamentalProvider,
     enrich_price_frames_with_fundamentals,
@@ -88,7 +89,7 @@ def _write_signal_engine_artifacts(run_dir: Path, signal_engine: Any) -> None:
                 "reason": getattr(item, "reason", ""),
                 "atr_trailing_stop": getattr(item, "atr_trailing_stop", None),
             })
-        pd.DataFrame(rows).to_csv(out / "signals_key_nodes.csv", index=False)
+        safe_to_csv(pd.DataFrame(rows), out / "signals_key_nodes.csv", index=False)
 
     per_source = getattr(output, "per_source_signals", {}) or {}
     (out / "signals_per_source.json").write_text(
@@ -677,7 +678,7 @@ class BaseEngine(ABC):
 
         # OHLCV per symbol
         for code, df in data_map.items():
-            df.to_csv(out / f"ohlcv_{code}.csv")
+            safe_to_csv(df, out / safe_csv_filename("ohlcv_", code))
 
         # Equity curve
         port_ret = equity_series.pct_change().fillna(0.0)
@@ -691,11 +692,11 @@ class BaseEngine(ABC):
             "active_ret": port_ret - bench_ret.reindex(dates).fillna(0.0),
         }, index=dates)
         eq_df.index.name = "timestamp"
-        eq_df.to_csv(out / "equity.csv")
+        safe_to_csv(eq_df, out / "equity.csv")
 
         # Position weights (target, for compatibility)
         target_pos.index.name = "timestamp"
-        target_pos.to_csv(out / "positions.csv")
+        safe_to_csv(target_pos, out / "positions.csv")
 
         # Trades (compatible format)
         trade_rows = []
@@ -730,11 +731,11 @@ class BaseEngine(ABC):
             })
 
         trade_cols = ["timestamp", "code", "side", "price", "qty", "reason", "pnl", "holding_days", "return_pct"]
-        pd.DataFrame(trade_rows or [], columns=trade_cols).to_csv(out / "trades.csv", index=False)
+        safe_to_csv(pd.DataFrame(trade_rows or [], columns=trade_cols), out / "trades.csv", index=False)
 
         # Metrics
         flat_metrics = {k: v for k, v in metrics.items() if not isinstance(v, dict)}
-        pd.DataFrame([flat_metrics]).to_csv(out / "metrics.csv", index=False)
+        safe_to_csv(pd.DataFrame([flat_metrics]), out / "metrics.csv", index=False)
 
     # ── Helpers ──
 
