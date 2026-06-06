@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: composite-strategy-backtest
-status: planning
-last_updated: "2026-06-06T01:36:08.703Z"
-last_activity: 2026-06-06
+status: Defining requirements
+last_updated: "2026-06-06T02:38:03.598Z"
+last_activity: 2026-06-06 — Milestone v2.1 started
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 3
+  completed_phases: 3
+  total_plans: 10
+  completed_plans: 10
+  percent: 100
 ---
 
 # State
