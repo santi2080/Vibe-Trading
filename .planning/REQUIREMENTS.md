@@ -1,15 +1,56 @@
-# Requirements
+# Requirements: Vibe-Trading v2.1
 
-## REQ-001: Watchlist 本地数据完整性门禁
+**Defined:** 2026-06-06
+**Core Value:** 验证 MTES v3 + SuperTrend 复合策略效果
 
-当用户查询某个 watchlist 的本地数据信息，系统必须先检查该 watchlist 下每个证券的本地缓存数据完整性，再允许进入策略回测。
+## v2.1 Requirements
 
-**Why:** 回测依赖本地数据质量；若关键周期缺失或近期断档，策略结果会失真。
+### Backtest Infrastructure
 
-**Acceptance criteria:**
-- 支持读取现有 watchlist CSV，识别 symbol、name、market、timeframes。
-- 对每个证券展示各周期本地数据状态：文件是否存在、起止时间、数据条数、最新数据距今时间、最大断档。
-- 默认以 `1d` 和 `1h` 作为阻断级关键周期；关键周期缺失、为空、字段不完整或近期过期时阻断回测。
-- 默认采用偏严格固定宽限窗口：`1d > 2 days`、`1h > 6 hours`、`4h > 12 hours` 判为近期缺失或过期。
-- 输出必须同时支持人工表格和机器可读 JSON。
-- JSON 必须包含整体 gate 状态、是否可回测、阻断问题数量、警告数量和逐证券逐周期明细。
+- [ ] **BKST-01**: 回测脚本支持 CompositeTrendStrategy 作为策略源
+- [ ] **BKST-02**: 回测支持 MTES v3 + SuperTrend 组合配置
+- [ ] **BKST-03**: 回测输出包含各策略源的独立信号和组合信号
+
+### Performance Metrics
+
+- [ ] **METR-01**: 计算组合策略 vs 单一策略的收益率对比
+- [ ] **METR-02**: 计算胜率、夏普比率、最大回撤等指标
+- [ ] **METR-03**: 输出每种策略源的独立表现
+
+### Data Coverage
+
+- [ ] **DATA-01**: 使用近 2 年数据 (2024-2026) 进行回测
+- [ ] **DATA-02**: 覆盖 watchlist 中的主要品种（期货/ETF）
+- [ ] **DATA-03**: 支持 1D 和 4H 时间周期
+
+### Analysis & Reporting
+
+- [ ] **RPT-01**: 生成组合策略 vs 单一策略对比报告
+- [ ] **RPT-02**: 识别最佳策略组合配置
+- [ ] **RPT-03**: 记录数据质量和完整性检查
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| BKST-01 | Phase 1 | Pending |
+| BKST-02 | Phase 1 | Pending |
+| BKST-03 | Phase 1 | Pending |
+| METR-01 | Phase 2 | Pending |
+| METR-02 | Phase 2 | Pending |
+| METR-03 | Phase 2 | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| RPT-01 | Phase 3 | Pending |
+| RPT-02 | Phase 3 | Pending |
+| RPT-03 | Phase 3 | Pending |
+
+**Coverage:**
+- v1 requirements: 12 total
+- Mapped to phases: 12
+- Unmapped: 0 ✓
+
+---
+*Requirements defined: 2026-06-06*
+*Last updated: 2026-06-06 after v2.1 initial definition*
