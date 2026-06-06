@@ -20,6 +20,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 
+from backtest.csv_safety import safe_csv_filename, safe_to_csv
 from backtest.loaders.tushare_fundamentals import (
     TushareFundamentalProvider,
     enrich_price_frames_with_fundamentals,
@@ -48,6 +49,53 @@ def _run_card_data_sources(config: Dict[str, Any], loader: Any) -> List[str]:
 
     source = config.get("source")
     return [str(source)] if source else []
+
+
+def _write_signal_engine_artifacts(run_dir: Path, signal_engine: Any) -> None:
+    """Write optional signal artifacts when a signal engine exposes them.
+
+    Composite backtests expose ``get_signal_output()`` with key-node signals
+    and per-source breakdowns. Existing signal engines do not implement this
+    hook, so this function is intentionally best-effort and no-op by default.
+    """
+    get_signal_output = getattr(signal_engine, "get_signal_output", None)
+    if not callable(get_signal_output):
+        return
+
+    try:
+        output = get_signal_output()
+    except Exception as exc:
+        logger.warning("Failed to collect signal artifacts: %s", exc)
+        return
+
+    if output is None:
+        return
+
+    out = run_dir / "artifacts"
+    out.mkdir(parents=True, exist_ok=True)
+
+    key_nodes = getattr(output, "key_nodes", []) or []
+    if key_nodes:
+        rows = []
+        for item in key_nodes:
+            rows.append({
+                "timestamp": getattr(item, "timestamp", None),
+                "symbol": getattr(item, "symbol", ""),
+                "direction": getattr(item, "direction", ""),
+                "readiness": getattr(item, "readiness", ""),
+                "signal_score": getattr(item, "signal_score", 0.0),
+                "components": getattr(item, "components", {}),
+                "entry_action": getattr(item, "entry_action", ""),
+                "reason": getattr(item, "reason", ""),
+                "atr_trailing_stop": getattr(item, "atr_trailing_stop", None),
+            })
+        safe_to_csv(pd.DataFrame(rows), out / "signals_key_nodes.csv", index=False)
+
+    per_source = getattr(output, "per_source_signals", {}) or {}
+    (out / "signals_per_source.json").write_text(
+        json.dumps(per_source, indent=2, ensure_ascii=False, default=str),
+        encoding="utf-8",
+    )
 
 
 # ─── Market detection (lightweight, for signal alignment only) ───
@@ -420,6 +468,7 @@ class BaseEngine(ABC):
             run_dir, data_map, dates, equity_series, bench_equity, bench_ret,
             target_pos, m, valid_codes,
         )
+        _write_signal_engine_artifacts(run_dir, signal_engine)
 
         # 9. Trust Layer run card
         from backtest.run_card import write_run_card
@@ -629,7 +678,7 @@ class BaseEngine(ABC):
 
         # OHLCV per symbol
         for code, df in data_map.items():
-            df.to_csv(out / f"ohlcv_{code}.csv")
+            safe_to_csv(df, out / safe_csv_filename("ohlcv_", code))
 
         # Equity curve
         port_ret = equity_series.pct_change().fillna(0.0)
@@ -643,11 +692,11 @@ class BaseEngine(ABC):
             "active_ret": port_ret - bench_ret.reindex(dates).fillna(0.0),
         }, index=dates)
         eq_df.index.name = "timestamp"
-        eq_df.to_csv(out / "equity.csv")
+        safe_to_csv(eq_df, out / "equity.csv")
 
         # Position weights (target, for compatibility)
         target_pos.index.name = "timestamp"
-        target_pos.to_csv(out / "positions.csv")
+        safe_to_csv(target_pos, out / "positions.csv")
 
         # Trades (compatible format)
         trade_rows = []
@@ -682,11 +731,11 @@ class BaseEngine(ABC):
             })
 
         trade_cols = ["timestamp", "code", "side", "price", "qty", "reason", "pnl", "holding_days", "return_pct"]
-        pd.DataFrame(trade_rows or [], columns=trade_cols).to_csv(out / "trades.csv", index=False)
+        safe_to_csv(pd.DataFrame(trade_rows or [], columns=trade_cols), out / "trades.csv", index=False)
 
         # Metrics
         flat_metrics = {k: v for k, v in metrics.items() if not isinstance(v, dict)}
-        pd.DataFrame([flat_metrics]).to_csv(out / "metrics.csv", index=False)
+        safe_to_csv(pd.DataFrame([flat_metrics]), out / "metrics.csv", index=False)
 
     # ── Helpers ──
 

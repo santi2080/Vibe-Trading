@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 import uuid
 
 import pytest
 
-from backtest.runner import _load_module_from_file
+from backtest.runner import (
+    _load_module_from_file,
+    _sha256_file,
+    _verify_trusted_signal_engine,
+)
 
 
 def _module_name() -> str:
@@ -64,22 +69,39 @@ def test_signal_engine_rejects_class_level_execution(tmp_path) -> None:
     assert not artifact.exists()
 
 
-def test_signal_engine_allows_minimal_valid_strategy(tmp_path) -> None:
+
+
+def test_packaged_signal_engine_template_is_trusted() -> None:
+    template = Path(__file__).resolve().parents[1] / "backtest" / "configs" / "signal_engine.py"
+
+    _verify_trusted_signal_engine(template)
+
+
+def test_untrusted_ast_safe_signal_engine_is_rejected(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("VIBE_TRADING_TRUSTED_SIGNAL_ENGINE_SHA256", raising=False)
     signal_file = tmp_path / "signal_engine.py"
     signal_file.write_text(
         "\n".join(
             [
                 '"""Generated signal engine."""',
-                "THRESHOLD = 3",
                 "class SignalEngine:",
-                "    lookback = 20",
                 "    def generate(self, *args, **kwargs):",
-                "        return []",
+                "        return {}",
             ]
         ),
         encoding="utf-8",
     )
 
-    module = _load_module_from_file(signal_file, _module_name())
+    with pytest.raises(ValueError, match="Untrusted signal_engine.py"):
+        _verify_trusted_signal_engine(signal_file)
 
-    assert module.SignalEngine().generate() == []
+
+def test_extra_trusted_signal_engine_hash_is_accepted(tmp_path, monkeypatch) -> None:
+    signal_file = tmp_path / "signal_engine.py"
+    signal_file.write_text(
+        "class SignalEngine:\n    def generate(self, *args, **kwargs):\n        return {}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("VIBE_TRADING_TRUSTED_SIGNAL_ENGINE_SHA256", _sha256_file(signal_file))
+
+    _verify_trusted_signal_engine(signal_file)

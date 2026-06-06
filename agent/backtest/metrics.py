@@ -229,6 +229,64 @@ def calc_metrics(
     }
 
 
+def per_source_stats(signals_per_source: Dict[str, List[dict]]) -> Dict[str, Dict[str, Any]]:
+    """Compute per-strategy-source signal statistics (METR-03).
+
+    Args:
+        signals_per_source: Mapping of source name to serialized TrendResult dictionaries.
+
+    Returns:
+        Mapping of source name to signal count, average score, direction split,
+        and readiness percentage.
+    """
+    result: Dict[str, Dict[str, Any]] = {}
+    for source, signals in signals_per_source.items():
+        if not signals:
+            continue
+
+        dirs = [str(signal.get("direction", "NEUTRAL")) for signal in signals]
+        scores = [float(signal.get("signed_score", signal.get("signal_score", 0)) or 0) for signal in signals]
+        readies = [str(signal.get("readiness", "UNKNOWN")) for signal in signals]
+        count = len(signals)
+
+        result[source] = {
+            "signal_count": count,
+            "avg_score": round(sum(scores) / count, 2),
+            "bullish_pct": round(dirs.count("BULL") / count, 3),
+            "bearish_pct": round(dirs.count("BEAR") / count, 3),
+            "neutral_pct": round(dirs.count("NEUTRAL") / count, 3),
+            "readiness_ready_pct": round(readies.count("READY") / count, 3),
+        }
+    return result
+
+
+def equity_gap_check(equity_series: pd.Series) -> Dict[str, Any]:
+    """Detect lightweight data-quality issues from equity curve gaps (RPT-03).
+
+    The helper flags long stretches of unchanged equity as a proxy for missing
+    or inactive data. It intentionally stays lightweight so it can run on
+    artifacts during report generation.
+    """
+    if len(equity_series) < 2:
+        return {"gaps": 0, "max_gap_days": 0, "quality": "insufficient_data"}
+
+    rets = equity_series.pct_change().dropna()
+    total_days = len(rets)
+    if total_days == 0:
+        return {"gaps": 0, "max_gap_days": 0, "quality": "insufficient_data"}
+
+    zero_days = int((rets == 0).sum())
+    gap_ratio = zero_days / total_days
+    quality = "good" if gap_ratio < 0.5 else "degraded"
+
+    return {
+        "total_days": total_days,
+        "zero_return_days": zero_days,
+        "gap_ratio": round(gap_ratio, 4),
+        "quality": quality,
+    }
+
+
 def _empty_metrics(initial_cash: float) -> Dict[str, Any]:
     """Return zero-valued metrics when no data is available."""
     return {
