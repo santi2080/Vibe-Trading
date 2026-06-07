@@ -50,7 +50,7 @@ Vibe-Trading is a multi-agent trading analysis system that combines trend evalua
 
 ### Active
 
-- [ ] Daily Scan Report Loop (v2.2 candidate)
+- [ ] v2.2 Daily Scan Report Loop — local-data-first one-command scan, mandatory data-health gate, CompositeTrendStrategy/TradingSignal semantics, deterministic artifacts, and Markdown report.
 
 ### Out of Scope
 
@@ -83,4 +83,4 @@ Vibe-Trading is a multi-agent trading analysis system that combines trend evalua
 - No completed composite vs single strategy comparison report.
 
 ---
-*Last updated: 2026-06-07 after v2.1 milestone close*
+*Last updated: 2026-06-08 after v2.2 milestone initialization*

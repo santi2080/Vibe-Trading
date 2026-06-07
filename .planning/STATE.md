@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: daily-scan-report-loop
 status: planning
-last_updated: "2026-06-07T23:01:46.948Z"
-last_activity: 2026-06-07
+last_updated: "2026-06-08T00:00:00.000Z"
+last_activity: 2026-06-08 -- v2.2 roadmap created
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,22 +17,22 @@ progress:
 
 ## Current Focus
 
-v2.1 已归档（empirical evidence blocked closure accepted by user on 2026-06-07）。
+v2.2 daily-scan-report-loop 已完成新里程碑初始化：research、requirements、roadmap 已创建。
 
 ## Project Reference
 
-See: `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/milestones/v2.1-ROADMAP.md`, `.planning/milestones/v2.1-REQUIREMENTS.md`
+See: `.planning/PROJECT.md`, `.planning/REQUIREMENTS.md`, `.planning/ROADMAP.md`
 
 ## Next Steps
 
-v2.2 Daily Scan Report Loop planning — `/gsd:new-milestone`
+Phase 11 Daily Scan Foundation & Run Plan — `/gsd:discuss-phase 11` 或 `/gsd:plan-phase 11`
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 11 — Daily Scan Foundation & Run Plan
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-07 — Milestone v2.2 started
+Status: Ready for phase discussion/planning
+Last activity: 2026-06-08 — Milestone v2.2 roadmap created
 
 ## Accumulated Context
 

@@ -79,25 +79,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STK-01 | TBD | Pending |
-| CLI-01 | TBD | Pending |
-| CLI-02 | TBD | Pending |
-| WLS-01 | TBD | Pending |
-| WLS-02 | TBD | Pending |
-| GATE-01 | TBD | Pending |
-| GATE-02 | TBD | Pending |
-| SIG-01 | TBD | Pending |
-| SIG-02 | TBD | Pending |
-| ART-01 | TBD | Pending |
-| RPT-01 | TBD | Pending |
-| RPT-02 | TBD | Pending |
-| TST-01 | TBD | Pending |
+| STK-01 | Phase 11 | Pending |
+| CLI-01 | Phase 11 | Pending |
+| CLI-02 | Phase 11 | Pending |
+| WLS-01 | Phase 11 | Pending |
+| WLS-02 | Phase 11 | Pending |
+| GATE-01 | Phase 12 | Pending |
+| GATE-02 | Phase 12 | Pending |
+| SIG-01 | Phase 13 | Pending |
+| SIG-02 | Phase 13 | Pending |
+| ART-01 | Phase 14 | Pending |
+| RPT-01 | Phase 14 | Pending |
+| RPT-02 | Phase 14 | Pending |
+| TST-01 | Phase 15 | Pending |
 
 **Coverage:**
 - v2.2 requirements: 13 total
-- Mapped to phases: 0
-- Unmapped: 13 ⚠️
+- Mapped to phases: 13
+- Unmapped: 0 ✓
+- Duplicate mappings: 0 ✓
 
 ---
 *Requirements defined: 2026-06-08*  
-*Last updated: 2026-06-08 after v2.2 requirements definition*
+*Last updated: 2026-06-08 after v2.2 roadmap creation*
