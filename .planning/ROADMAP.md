@@ -48,7 +48,7 @@
 |-------|-----------|-------|--------|----------|
 | 01-08 | v2.0 | 23/23 | Complete | 2026-06-06 |
 | 09 | v2.1 | 4/4 | Complete    | 2026-06-06 |
-| 10 | v2.1 | 5/5 | Complete (blocked evidence) | 2026-06-07 |
+| 10 | v2.1 | 6/5 | Complete   | 2026-06-07 |
 | 11 | v2.2 candidate | — | Explored | — |
 
 ## Backlog
@@ -66,7 +66,7 @@
 
 **Depends on:** Phase 09
 
-**Plans:** 5/5 plans executed
+**Plans:** 6/5 plans complete
 
 **Success criteria:**
 1. A reproducible composite-vs-single empirical run is available for the intended 2024-2026 period or any unavailable coverage is explicitly documented.
