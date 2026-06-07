@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
-milestone_name: composite-strategy-backtest
-status: archived_blocked
-last_updated: "2026-06-07T00:00:00.000Z"
-last_activity: 2026-06-07 -- v2.1 milestone archived (empirical evidence blocked closure accepted)
+milestone: v2.2
+milestone_name: daily-scan-report-loop
+status: planning
+last_updated: "2026-06-07T23:01:46.948Z"
+last_activity: 2026-06-07
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 15
-  completed_plans: 15
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State
@@ -29,15 +29,17 @@ v2.2 Daily Scan Report Loop planning — `/gsd:new-milestone`
 
 ## Current Position
 
-- v2.1: ARCHIVED (empirical evidence blocked)
-- v2.2: candidate explored, ready for formal milestone definition
-- Phase 11: explored, awaiting /gsd:new-milestone
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-07 — Milestone v2.2 started
 
 ## Accumulated Context
 
 ### v2.1 Closure Decision
 
 User accepted blocked closure on 2026-06-07:
+
 - 8/12 requirements blocked (no verified 2024-2026 empirical metrics)
 - 4/12 requirements verified (BKST-01/02/03, RPT-03)
 - Infrastructure fully delivered and validated
