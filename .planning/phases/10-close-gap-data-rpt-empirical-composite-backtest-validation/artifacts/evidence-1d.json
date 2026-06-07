@@ -1,0 +1,109 @@
+{
+  "timeframe": "1D",
+  "status": "blocked",
+  "status_reason": "The 1D empirical comparison was attempted, but Phase 10 readiness evidence reports can_backtest=false and the actual run command was blocked by the Phase 09 safe_run_dir boundary for .planning artifact run roots.",
+  "config_path": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/configs/composite-empirical-1d.yaml",
+  "run_root": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/runs/1d",
+  "run_status_path": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/runs/1d/run-status.json",
+  "source": "yfinance",
+  "engine": "daily",
+  "date_range": {
+    "start": "2024-01-01",
+    "end": "2026-01-01"
+  },
+  "symbols_attempted": [
+    "GC=F",
+    "SI=F",
+    "CL=F"
+  ],
+  "eligible_symbols": [],
+  "excluded_symbols_count": 43,
+  "data_sources": [
+    {
+      "name": "us_futures",
+      "gate_status": "FAIL",
+      "can_backtest": false,
+      "blocking_failures": 16,
+      "warnings": 8,
+      "total_checks": 24,
+      "source_artifact": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/data-readiness-us-futures.json"
+    },
+    {
+      "name": "etf",
+      "gate_status": "FAIL",
+      "can_backtest": false,
+      "blocking_failures": 70,
+      "warnings": 35,
+      "total_checks": 105,
+      "source_artifact": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/data-readiness-etf.json"
+    }
+  ],
+  "command_exit_code": 1,
+  "command_status": "partial_or_blocked",
+  "blockers": [
+    {
+      "type": "data_readiness",
+      "message": "US futures and ETF readiness gates both report can_backtest=false; required local data files are missing.",
+      "sources": [
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/data-readiness-us-futures.json",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/data-readiness-etf.json"
+      ]
+    },
+    {
+      "type": "safe_run_dir",
+      "message": "safe_run_dir rejected .planning/.../artifacts/runs/1d as outside allowed run roots; VIBE_TRADING_ALLOWED_RUN_ROOTS would be required to authorize this run root.",
+      "source": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/runs/1d/run-status.json"
+    }
+  ],
+  "variants": {
+    "MTES+SuperTrend": {
+      "run_card_path": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/runs/1d/mtes_supertrend/run_card.json",
+      "run_card_exists": false,
+      "metrics": {},
+      "missing_metrics": [
+        "total_return",
+        "win_rate",
+        "sharpe_ratio",
+        "max_drawdown",
+        "trade_count"
+      ],
+      "raw_metrics_keys": []
+    },
+    "MTESv3-only": {
+      "run_card_path": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/runs/1d/mtesv3_only/run_card.json",
+      "run_card_exists": false,
+      "metrics": {},
+      "missing_metrics": [
+        "total_return",
+        "win_rate",
+        "sharpe_ratio",
+        "max_drawdown",
+        "trade_count"
+      ],
+      "raw_metrics_keys": []
+    },
+    "SuperTrend-only": {
+      "run_card_path": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/runs/1d/supertrend_only/run_card.json",
+      "run_card_exists": false,
+      "metrics": {},
+      "missing_metrics": [
+        "total_return",
+        "win_rate",
+        "sharpe_ratio",
+        "max_drawdown",
+        "trade_count"
+      ],
+      "raw_metrics_keys": []
+    }
+  },
+  "artifact_checks": {
+    "comparison_report_md": false,
+    "artifacts/signals_key_nodes.csv": false,
+    "artifacts/signals_per_source.json": false
+  },
+  "limitations": [
+    "No 1D empirical metrics were produced because readiness failed and the configured .planning run root was not authorized by safe_run_dir.",
+    "Metrics are intentionally recorded as missing rather than recalculated, inferred, or invented.",
+    "No credentials were written and no strategy parameters were changed."
+  ]
+}
