@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v2.0** — composite-strategy-signal-layer (shipped 2026-06-06)
-- ✅ **v2.1** — composite-strategy-backtest (complete, pending archive)
+- ⚠ **v2.1** — composite-strategy-backtest (implementation complete; empirical evidence blocked, archive requires decision)
 - 🌱 **v2.2 candidate** — daily-scan-report-loop (explored 2026-06-07)
 
 ## Current Milestone: v2.1
@@ -48,7 +48,7 @@
 |-------|-----------|-------|--------|----------|
 | 01-08 | v2.0 | 23/23 | Complete | 2026-06-06 |
 | 09 | v2.1 | 4/4 | Complete    | 2026-06-06 |
-| 10 | v2.1 | 4/5 | In Progress|  |
+| 10 | v2.1 | 5/5 | Complete (blocked evidence) | 2026-06-07 |
 | 11 | v2.2 candidate | — | Explored | — |
 
 ## Backlog
@@ -66,7 +66,7 @@
 
 **Depends on:** Phase 09
 
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans executed
 
 **Success criteria:**
 1. A reproducible composite-vs-single empirical run is available for the intended 2024-2026 period or any unavailable coverage is explicitly documented.
@@ -75,6 +75,8 @@
 4. A Markdown empirical report records strategy comparison, best configuration, and data quality/completeness notes.
 5. `REQUIREMENTS.md`, `STATE.md`, and v2.1 archive readiness agree on what is verified, partial, or blocked.
 
+**Phase 10 closure status:** Complete with blocked empirical evidence. `final-evidence-index.json` reports `overall_status: blocked`; v2.1 archive requires user acceptance of blocked closure or a follow-up remediation phase.
+
 **Out of scope:**
 - New strategy logic
 - Daily scan report productization
@@ -82,7 +84,11 @@
 - Live or paper trading execution
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 10 to break down)
+- [x] 10-01: empirical inputs, readiness artifacts, manifest, configs
+- [x] 10-02: 1D empirical attempt and blocked evidence inventory
+- [x] 10-03: 4H attempted/blocked evidence inventory
+- [x] 10-04: final empirical report and evidence index
+- [x] 10-05: requirement/state/roadmap/UAT/SUMMARY closure docs
 
 ### Phase 11: Daily Scan Report Loop
 
@@ -121,4 +127,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-06-07 after Daily Scan Report exploration*
+*Last updated: 2026-06-07 after Phase 10 execution (overall_status: blocked)*
