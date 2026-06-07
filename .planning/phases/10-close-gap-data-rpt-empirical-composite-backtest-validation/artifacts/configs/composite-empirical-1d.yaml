@@ -1,0 +1,39 @@
+# Phase 10 empirical composite strategy backtest configuration — 1D
+#
+# Derived from agent/backtest/configs/composite_backtest.yaml without strategy tuning.
+# Intended command:
+#   PYTHONPATH=agent python -m backtest.composite_backtest_compare --config .planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/configs/composite-empirical-1d.yaml --run-root .planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/runs/1d --timeout-seconds 300
+
+codes:
+  - "GC=F"
+  - "SI=F"
+  - "CL=F"
+
+start_date: "2024-01-01"
+end_date: "2026-01-01"
+interval: "1D"
+source: "yfinance"
+engine: "daily"
+initial_cash: 1000000
+commission: 0.001
+
+mtes_config:
+  fast_ema: 12
+  slow_ema: 26
+  adx_period: 14
+  adx_threshold: 25.0
+  min_bull_ema_gap: 0.5
+  min_bear_ema_gap: -0.5
+  min_valid_confidence: 0.30
+
+supertrend_config:
+  st_period: 10
+  st_multiplier: 3.0
+  adx_period: 14
+  adx_threshold: 25.0
+
+atr_multiplier: 2.0
+atr_period: 14
+
+emit_key_nodes: true
+compare_single: true

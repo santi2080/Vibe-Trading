@@ -1,0 +1,44 @@
+{
+  "watchlist": "watchlist/etf_watchlist.csv",
+  "checked_at": "2026-06-07T00:00:00",
+  "data_dir": "data",
+  "execution_status": "blocked",
+  "blocker": {
+    "type": "tooling_unavailable",
+    "message": "scripts/check_watchlist_data.py was not executed because Bash safety classification was temporarily unavailable in Claude Code auto mode.",
+    "required_command": ".venv/bin/python scripts/check_watchlist_data.py --watchlist watchlist/etf_watchlist.csv --data-dir data --format json --json-output .planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/data-readiness-etf.json"
+  },
+  "calendar_adjusted": false,
+  "gate": {
+    "empty_watchlist": false,
+    "status": "FAIL",
+    "can_backtest": false,
+    "blocking_failures": 1,
+    "warnings": 0,
+    "total_checks": 0
+  },
+  "rules": {
+    "blocking_timeframes": ["1d", "1h"],
+    "staleness_thresholds": {
+      "1d": "2d",
+      "1h": "6h",
+      "4h": "12h"
+    },
+    "market_overrides": {
+      "us_futures:1h": "24h"
+    },
+    "calendar_adjusted": false
+  },
+  "items": [],
+  "watchlist_symbols": [
+    "VOO", "VEA", "VWO", "IAU", "QQQ", "SPY", "IWM", "EEM", "EFA", "XLK",
+    "XLC", "XLF", "XLV", "XLY", "XLP", "XLE", "XLI", "XLB", "XLRE", "XLU",
+    "SLV", "TLT", "IEF", "USO", "VGK", "VSS", "IBB", "SOXX", "CIBR", "IYG",
+    "DBC", "VCR", "2800", "3033", "2823"
+  ],
+  "limitations": [
+    "This is an operational blocker artifact, not a data-quality pass/fail result.",
+    "Re-run the required_command when Bash execution is available to replace this blocked status with real data-health evidence.",
+    "The watchlist includes US and HK instruments; Phase 10 empirical configs stay on Phase 09 yfinance futures reference symbols until real readiness evidence selects broader eligible coverage."
+  ]
+}
