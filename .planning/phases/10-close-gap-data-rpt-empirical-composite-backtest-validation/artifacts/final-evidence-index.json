@@ -1,0 +1,168 @@
+{
+  "phase": "10-close-gap-data-rpt-empirical-composite-backtest-validation",
+  "created_at": "2026-06-07",
+  "overall_status": "blocked",
+  "status_semantics": {
+    "verified": "All required empirical evidence exists and passed checks.",
+    "partial": "Some empirical evidence exists but coverage is incomplete.",
+    "blocked": "A blocker prevents empirical closure; source artifacts explain why."
+  },
+  "requirements": {
+    "DATA-01": {
+      "status": "blocked",
+      "evidence": [
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/empirical-run-manifest.json",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/evidence-1d.json",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/evidence-4h.json"
+      ],
+      "notes": "2024-2026 range is fixed and attempted, but no eligible local data coverage produced verified metrics."
+    },
+    "DATA-02": {
+      "status": "blocked",
+      "evidence": [
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/data-readiness-us-futures.json",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/data-readiness-etf.json",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/empirical-run-manifest.json"
+      ],
+      "notes": "Watchlist coverage was checked, but readiness gates returned can_backtest=false and eligible_symbols is empty."
+    },
+    "DATA-03": {
+      "status": "blocked",
+      "evidence": [
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/configs/composite-empirical-1d.yaml",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/configs/composite-empirical-4h.yaml",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/evidence-1d.json",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/evidence-4h.json"
+      ],
+      "notes": "1D and 4H were both represented as attempted evidence; both remain blocked by readiness/run-root limitations."
+    },
+    "RPT-01": {
+      "status": "blocked",
+      "evidence": [
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/10-EMPIRICAL-REPORT.md",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/evidence-1d.json",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/evidence-4h.json"
+      ],
+      "notes": "Final report contains a strategy comparison section, but it is a blocked-evidence comparison rather than verified metric comparison."
+    },
+    "RPT-02": {
+      "status": "blocked",
+      "evidence": [
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/10-EMPIRICAL-REPORT.md"
+      ],
+      "notes": "Best Configuration section states no best configuration can be selected without verified metrics; no global rank or heuristic was computed."
+    },
+    "RPT-03": {
+      "status": "verified",
+      "evidence": [
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/10-EMPIRICAL-REPORT.md",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/data-readiness-us-futures.json",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/data-readiness-etf.json",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/evidence-1d.json",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/evidence-4h.json"
+      ],
+      "notes": "Data quality and completeness status is explicitly recorded with source readiness gates and blockers."
+    },
+    "METR-01": {
+      "status": "blocked",
+      "evidence": [
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/10-EMPIRICAL-REPORT.md",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/evidence-1d.json",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/evidence-4h.json"
+      ],
+      "notes": "Return comparison metrics are missing under blocked status; no values were invented."
+    },
+    "METR-02": {
+      "status": "blocked",
+      "evidence": [
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/10-EMPIRICAL-REPORT.md",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/evidence-1d.json",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/evidence-4h.json"
+      ],
+      "notes": "Win rate, Sharpe ratio, and max drawdown are missing under blocked status; no values were invented."
+    },
+    "METR-03": {
+      "status": "blocked",
+      "evidence": [
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/10-EMPIRICAL-REPORT.md",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/evidence-1d.json",
+        ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/evidence-4h.json"
+      ],
+      "notes": "Per-source performance artifacts were not emitted by a verified empirical run; artifact checks are recorded in evidence JSON."
+    }
+  },
+  "timeframes": {
+    "1D": {
+      "status": "blocked",
+      "evidence": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/evidence-1d.json",
+      "run_status": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/runs/1d/run-status.json"
+    },
+    "4H": {
+      "status": "blocked",
+      "evidence": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/evidence-4h.json",
+      "run_status": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/runs/4h/run-status.json"
+    }
+  },
+  "source_audit": [
+    {
+      "source": "GOAL",
+      "path": ".planning/ROADMAP.md",
+      "status": "covered",
+      "notes": "Phase 10 goal requires reproducible empirical run or documented unavailable coverage."
+    },
+    {
+      "source": "REQ",
+      "path": ".planning/REQUIREMENTS.md",
+      "status": "covered",
+      "notes": "DATA/RPT/METR closure requirements mapped in this index."
+    },
+    {
+      "source": "RESEARCH",
+      "path": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/10-RESEARCH.md",
+      "status": "covered",
+      "notes": "Phase 10 research artifact checked for closure context."
+    },
+    {
+      "source": "PATTERNS",
+      "path": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/10-PATTERNS.md",
+      "status": "covered",
+      "notes": "Phase 10 pattern artifact checked for implementation constraints."
+    },
+    {
+      "source": "VALIDATION",
+      "path": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/10-VALIDATION.md",
+      "status": "covered",
+      "notes": "Phase 10 validation artifact checked for plan quality context."
+    },
+    {
+      "source": "CONTEXT",
+      "path": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/10-CONTEXT.md",
+      "status": "source_missing",
+      "notes": "No dedicated Phase 10 CONTEXT.md exists; closure context comes from roadmap, requirements, Phase 09 summaries/security, and Phase 10 plans."
+    },
+    {
+      "source": "SECURITY",
+      "path": ".planning/phases/09-composite-strategy-backtest/09-SECURITY.md",
+      "status": "covered",
+      "notes": "Phase 09 security controls carried forward and referenced in report."
+    }
+  ],
+  "report": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/10-EMPIRICAL-REPORT.md",
+  "manifest": ".planning/phases/10-close-gap-data-rpt-empirical-composite-backtest-validation/artifacts/empirical-run-manifest.json",
+  "data_readiness_summary": {
+    "us_futures": {
+      "status": "FAIL",
+      "can_backtest": false,
+      "blocking_failures": 16,
+      "warnings": 8,
+      "total_checks": 24
+    },
+    "etf": {
+      "status": "FAIL",
+      "can_backtest": false,
+      "blocking_failures": 70,
+      "warnings": 35,
+      "total_checks": 105
+    }
+  }
+}
