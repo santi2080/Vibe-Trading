@@ -2,53 +2,47 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: composite-strategy-backtest
-status: archived_blocked
+status: closure_needed
 last_updated: "2026-06-07T00:00:00.000Z"
-last_activity: 2026-06-07 -- v2.1 milestone archived (empirical evidence blocked closure accepted)
+last_activity: 2026-06-07 -- Phase 10 retained and renamed as v2.1 empirical evidence closure
 progress:
   total_phases: 4
-  completed_phases: 4
-  total_plans: 15
-  completed_plans: 15
-  percent: 100
+  completed_phases: 3
+  total_plans: 10
+  completed_plans: 10
+  percent: 75
 ---
 
 # State
 
 ## Current Focus
 
-v2.1 已归档（empirical evidence blocked closure accepted by user on 2026-06-07）。
+v2.1 is **implementation-complete but evidence-closure needed**.
+
+Phase 09 verified the composite backtest infrastructure, signal artifacts, metrics helpers, reporting infrastructure, UAT, and security gate. Phase 10 is retained as a narrow closure phase to produce or document reproducible empirical composite-vs-single backtest evidence before archiving v2.1.
 
 ## Project Reference
 
-See: `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/milestones/v2.1-ROADMAP.md`, `.planning/milestones/v2.1-REQUIREMENTS.md`
+See: `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/REQUIREMENTS.md`, and `.planning/phases/09-composite-strategy-backtest/`.
 
 ## Next Steps
 
-v2.2 Daily Scan Report Loop planning — `/gsd:new-milestone`
+Plan the closure phase with: `/gsd:plan-phase 10`
+
+Then execute Phase 10 and update requirement traceability before running `/gsd:complete-milestone`.
 
 ## Current Position
 
-- v2.1: ARCHIVED (empirical evidence blocked)
-- v2.2: candidate explored, ready for formal milestone definition
-- Phase 11: explored, awaiting /gsd:new-milestone
+Phase: 10
+Plan: 0/0 planned
+Status: Needs planning
+Last activity: 2026-06-07 -- Phase 10 retained and renamed to Empirical Composite Backtest Evidence Closure
 
 ## Accumulated Context
 
-### v2.1 Closure Decision
+### Roadmap Evolution
 
-User accepted blocked closure on 2026-06-07:
-- 8/12 requirements blocked (no verified 2024-2026 empirical metrics)
-- 4/12 requirements verified (BKST-01/02/03, RPT-03)
-- Infrastructure fully delivered and validated
-- Empirical metrics blocked by local data availability and run-root authorization
-
-### Key Artifacts from v2.1
-
-- `agent/backtest/engines/composite_engine.py` — CompositeBacktestSignalEngine + PositionManager
-- `agent/backtest/signals.py` — KeyNodeSignal, CompositeSignalOutput
-- `agent/backtest/composite_backtest_compare.py` — three-way comparison orchestrator
-- `agent/backtest/reporting/composite_report.py` — report generation + data quality checks
-- `agent/backtest/metrics.py` — per_source_stats, equity_gap_check, calc_metrics
-- `.planning/milestones/v2.1-ROADMAP.md` — milestone archive
-- `.planning/milestones/v2.1-REQUIREMENTS.md` — requirements archive
+- Phase 09 completed composite backtest infrastructure and passed UAT/security verification.
+- Phase 10 retained and renamed: Empirical Composite Backtest Evidence Closure.
+- Phase 10 should close DATA/RPT empirical evidence gaps and synchronize `REQUIREMENTS.md`, `STATE.md`, and archive readiness.
+- Phase 11 / v2.2 candidate explored: Daily Scan Report Loop for productized daily Markdown reports after v2.1 closure.
