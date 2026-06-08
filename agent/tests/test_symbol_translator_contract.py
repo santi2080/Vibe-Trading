@@ -87,10 +87,10 @@ class TestCanonicalNormalization:
 class TestVendorTranslations:
     """SYM-02: Supported vendor mappings return exact expected symbols."""
 
-    # A-share stock -> AKShare Sina format (sh/sz prefix)
     @pytest.mark.parametrize(
         "canonical,market,vendor,expected",
         [
+            # A-share stock -> AKShare Sina format (sh/sz prefix)
             ("600036.SH", Market.CN_STOCK, DataVendor.AKSHARE, "sh600036"),
             ("000001.SZ", Market.CN_STOCK, DataVendor.AKSHARE, "sz000001"),
             ("830946.BJ", Market.CN_STOCK, DataVendor.AKSHARE, "bj830946"),
@@ -128,8 +128,6 @@ class TestVendorTranslations:
             # CN futures main continuous -> AKShare (uppercase)
             ("rb0", Market.CN_FUTURES, DataVendor.AKSHARE, "RB0"),
             ("al0", Market.CN_FUTURES, DataVendor.AKSHARE, "AL0"),
-            # CN futures -> Tushare (unsupported — marked explicit)
-            ("rb0", Market.CN_FUTURES, DataVendor.TUSHARE, "rb0"),
             # Crypto -> OKX (hyphen pass-through)
             ("BTC-USDT", Market.US_STOCK, DataVendor.OKX, "BTC-USDT"),
             # Crypto -> CCXT (slash vendor)
@@ -165,10 +163,9 @@ class TestUnsupportedCombinations:
             ("IF2406", Market.CN_FUTURES, DataVendor.TUSHARE),
             # US equity -> TqSdk (TqSdk is CN futures only)
             ("AAPL.US", Market.US_STOCK, DataVendor.TQSDK),
+            ("TSLA.US", Market.US_STOCK, DataVendor.TQSDK),
             # Crypto -> Tushare (no crypto endpoint)
             ("BTC-USDT", Market.US_STOCK, DataVendor.TUSHARE),
-            # US equity -> TqSdk
-            ("TSLA.US", Market.US_STOCK, DataVendor.TQSDK),
         ],
     )
     def test_unsupported_combos_raise_or_return_explicit(
@@ -245,20 +242,7 @@ class TestHybridFetcherTranslationBoundary:
             from agent.backtest.loaders.hybrid_fetcher import HybridDataFetcher
             return HybridDataFetcher()
 
-    @pytest.fixture
-    def mock_router(self, fetcher):
-        with patch.object(fetcher.router, "route_symbol") as mock:
-            # Route both symbols to AKShare
-            mock.side_effect = lambda s: (
-                {"600036.SH": ("a_share", "akshare"), "AAPL.US": ("us_equity", "yfinance")}.get(
-                    s, ("a_share", "akshare")
-                )
-            )
-            yield mock
-
-    def test_pool_fetch_called_with_vendor_symbols(
-        self, fetcher, mock_router
-    ) -> None:
+    def test_pool_fetch_called_with_vendor_symbols(self, fetcher) -> None:
         """pool.fetch must be called with translated vendor symbols, not canonical."""
         mock_df = pd.DataFrame({
             "open": [100.0],
@@ -268,19 +252,31 @@ class TestHybridFetcherTranslationBoundary:
             "volume": [1000.0],
         })
 
-        with patch.object(fetcher.pool, "fetch") as mock_fetch:
-            with patch.object(fetcher.router, "check_available_sources") as mock_avail:
-                mock_avail.return_value = {
-                    MagicMock(**{"value": "akshare"}): True,
-                    MagicMock(**{"value": "yfinance"}): True,
-                }
-                # Simulate loader returning vendor-keyed data
-                mock_fetch.return_value = {
-                    "sh600036": mock_df,  # Vendor key from AKShare
-                    "AAPL": mock_df,        # Vendor key from yfinance
-                }
+        from agent.backtest.loaders.hybrid_fetcher import MarketType, DataSource
 
-                results = fetcher.fetch(["600036.SH", "AAPL.US"], "2024-01-01", "2024-01-10")
+        with patch.object(fetcher.router, "route_symbol") as mock_route:
+            with patch.object(fetcher.router, "check_available_sources") as mock_avail:
+                with patch.object(fetcher.pool, "fetch") as mock_fetch:
+                    # Route: A-share -> AKShare, US equity -> YFINANCE
+                    def route_side_effect(symbol):
+                        if symbol == "600036.SH":
+                            return (MarketType.A_SHARE, DataSource.AKSHARE)
+                        elif symbol == "AAPL.US":
+                            return (MarketType.US_EQUITY, DataSource.YFINANCE)
+                        return (MarketType.A_SHARE, DataSource.AKSHARE)
+                    mock_route.side_effect = route_side_effect
+
+                    mock_avail.return_value = {
+                        DataSource.AKSHARE: True,
+                        DataSource.YFINANCE: True,
+                    }
+                    # Simulate loader returning vendor-keyed data
+                    mock_fetch.return_value = {
+                        "sh600036": mock_df,  # Vendor key from AKShare
+                        "AAPL": mock_df,      # Vendor key from yfinance
+                    }
+
+                    results = fetcher.fetch(["600036.SH", "AAPL.US"], "2024-01-01", "2024-01-10")
 
         # Caller-facing result keys must be canonical, not vendor
         assert "600036.SH" in results, (
@@ -300,13 +296,16 @@ class TestHybridFetcherTranslationBoundary:
             "close": [410.0],
         }, index=pd.to_datetime(["2024-01-01"]))
 
+        from agent.backtest.loaders.hybrid_fetcher import MarketType, DataSource
+
         with patch.object(fetcher.router, "route_symbol") as mock_route:
             with patch.object(fetcher.router, "check_available_sources") as mock_avail:
                 with patch.object(fetcher.pool, "fetch") as mock_fetch:
-                    mock_route.return_value = ("hk_equity", MagicMock(value="akshare"))
-                    mock_avail.return_value = {MagicMock(value="akshare"): True}
-                    # Loader returns data keyed by whatever symbol it received
-                    mock_fetch.return_value = {"00700": mock_df}  # loader saw 00700
+                    # Route to AKShare
+                    mock_route.return_value = (MarketType.HK_EQUITY, DataSource.AKSHARE)
+                    mock_avail.return_value = {DataSource.AKSHARE: True}
+                    # Loader returns data keyed by AKShare vendor symbol (00700)
+                    mock_fetch.return_value = {"00700": mock_df}
 
                     results = fetcher.fetch(["0700.HK"], "2024-01-01", "2024-01-10")
 
@@ -321,16 +320,18 @@ class TestHybridFetcherTranslationBoundary:
     def test_fallback_retries_with_own_vendor_symbols(self, fetcher) -> None:
         """Fallback source must use its own vendor translation, not primary vendor."""
         mock_df = pd.DataFrame({"close": [100.0]})
+        from agent.backtest.loaders.hybrid_fetcher import MarketType, DataSource
+
         with patch.object(fetcher.router, "route_symbol") as mock_route:
             with patch.object(fetcher.router, "check_available_sources") as mock_avail:
                 with patch.object(fetcher.pool, "fetch") as mock_fetch:
-                    mock_route.return_value = ("a_share", MagicMock(value="akshare"))
+                    mock_route.return_value = (MarketType.A_SHARE, DataSource.AKSHARE)
                     # Both AKShare and Tushare available
                     mock_avail.return_value = {
-                        MagicMock(value="akshare"): True,
-                        MagicMock(value="tushare"): True,
+                        DataSource.AKSHARE: True,
+                        DataSource.TUSHARE: True,
                     }
-                    # First call returns empty, second call returns data
+                    # First call returns empty, second call returns data with canonical key
                     mock_fetch.side_effect = [
                         {},  # AKShare empty
                         {"600036.SH": mock_df},  # Tushare returns data (canonical key)
@@ -339,7 +340,9 @@ class TestHybridFetcherTranslationBoundary:
                     results = fetcher.fetch(["600036.SH"], "2024-01-01", "2024-01-10")
 
         # Result must have canonical key
-        assert "600036.SH" in results
+        assert "600036.SH" in results, (
+            f"Result must have canonical key '600036.SH', got keys: {list(results.keys())}"
+        )
 
 
 # ---------------------------------------------------------------------------
