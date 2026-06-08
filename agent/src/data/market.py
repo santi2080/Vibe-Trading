@@ -7,9 +7,9 @@ from enum import Enum, auto
 
 
 class Market(Enum):
-    """市场枚举"""
+    """市场枚举 (Phase 11 canonical)"""
 
-    US_STOCK = auto()  # 美股
+    US_STOCK = auto()  # 美股 / 加密货币 / 外汇（通过不同 vendor）
     US_FUTURES = auto()  # 美国期货
     US_ETF = auto()  # 美国ETF
     CN_STOCK = auto()  # A股

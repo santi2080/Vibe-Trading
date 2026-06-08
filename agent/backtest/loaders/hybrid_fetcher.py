@@ -128,6 +128,7 @@ class SymbolRouter:
     PATTERNS = {
         MarketType.CRYPTO: [
             r"^.+/USDT$",             # BTC/USDT, ETH/USDT
+            r"^[A-Z]+-USDT$",        # BTC-USDT, ETH-USDT (hyphen canonical)
             r"^(BTC|ETH)$",           # BTC, ETH (bare common symbols)
         ],
         MarketType.US_EQUITY: [
@@ -138,7 +139,8 @@ class SymbolRouter:
             r"^\d{6}\.(SH|SZ|BJ)$",  # 600519.SH, 000001.SZ, 830946.BJ
         ],
         MarketType.HK_EQUITY: [
-            r"^\d{5}\.HK$",          # 00700.HK
+            r"^\d{5}\.HK$",          # 00700.HK (5-digit)
+            r"^\d{4}\.HK$",          # 0700.HK (4-digit, normalized to 5-digit canonical)
         ],
         MarketType.CN_FUTURES: [
             r"^[a-z]+\d*$",           # rb0, al0, au0, si0
@@ -178,6 +180,8 @@ class SymbolRouter:
         DataSource.TUSHARE: SrcDataVendor.TUSHARE,
         DataSource.TQSDK: SrcDataVendor.TQSDK,
         DataSource.DATABENTO: SrcDataVendor.DATABENTO,
+        DataSource.OKX: SrcDataVendor.OKX,
+        DataSource.CCXT: SrcDataVendor.CCXT,
     }
 
     def __init__(self):
@@ -560,9 +564,15 @@ class HybridDataFetcher:
         # Store interval for freshness checking
         self._last_interval = interval
 
-        # Group symbols by market
+        # Normalize all symbols to canonical form first
+        from agent.src.data.symbol_translator import SymbolTranslator
+        canonical_symbols = [
+            SymbolTranslator.normalize_canonical_symbol(s) for s in symbols
+        ]
+
+        # Group symbols by market (using canonical symbols)
         by_market: Dict[MarketType, List[str]] = {}
-        for symbol in symbols:
+        for symbol in canonical_symbols:
             market, _ = self.router.route_symbol(symbol)
             by_market.setdefault(market, []).append(symbol)
 
@@ -581,19 +591,45 @@ class HybridDataFetcher:
             for source in sources_to_try[:self.max_sources_per_symbol]:
                 fetch_start = time.time()
                 try:
-                    raw = self.pool.fetch(source, market_symbols, start_date, end_date, interval)
+                    # Build vendor symbol maps for this source
+                    canonical_to_vendor: Dict[str, str] = {}
+                    vendor_to_canonical: Dict[str, str] = {}
+                    for canonical in market_symbols:
+                        # Get vendor symbol via translator
+                        result = SymbolTranslator.translate(
+                            canonical,
+                            self.router.SOURCE_TO_VENDOR.get(source, None),
+                            self._map_market_type_to_market(market)
+                        )
+                        if result.supported:
+                            canonical_to_vendor[canonical] = result.vendor_symbol
+                            if result.vendor_symbol:
+                                vendor_to_canonical[result.vendor_symbol] = canonical
+
+                    # Translate to vendor symbols
+                    vendor_symbols = list(canonical_to_vendor.values())
+
+                    # Call pool.fetch with vendor symbols
+                    raw = self.pool.fetch(source, vendor_symbols, start_date, end_date, interval)
                     latency_ms = (time.time() - fetch_start) * 1000
 
-                    for symbol in market_symbols:
-                        df = raw.get(symbol)
+                    # Process results: remap vendor keys to canonical keys
+                    for canonical in market_symbols:
+                        vendor_symbol = canonical_to_vendor.get(canonical)
+                        # Try vendor key first, then fallback to canonical key (for direct loaders)
+                        df = None
+                        if vendor_symbol and vendor_symbol in raw:
+                            df = raw.get(vendor_symbol)
+                        if df is None and canonical in raw:
+                            df = raw.get(canonical)
                         result = FetchResult(
-                            symbol=symbol,
+                            symbol=canonical,
                             df=df,
                             source=source.value if df is not None and not df.empty else None,
                             latency_ms=latency_ms,
                         )
 
-                        all_results.setdefault(symbol, {})[source] = result
+                        all_results.setdefault(canonical, {})[source] = result
 
                         if df is not None and not df.empty:
                             stats.success += 1
@@ -621,6 +657,23 @@ class HybridDataFetcher:
 
         # Filter out None results
         return {k: v for k, v in merged.items() if v is not None}
+
+    def _map_market_type_to_market(self, market_type: MarketType) -> Market:
+        """Map MarketType enum to Market enum for symbol translation."""
+        from agent.src.data.market import Market
+
+        market_map = {
+            MarketType.A_SHARE: Market.CN_STOCK,
+            MarketType.US_EQUITY: Market.US_STOCK,
+            MarketType.HK_EQUITY: Market.HK_STOCK,
+            MarketType.CN_FUTURES: Market.CN_FUTURES,
+            MarketType.US_FUTURES: Market.US_FUTURES,
+            MarketType.CRYPTO: Market.US_STOCK,
+            MarketType.FUND: Market.CN_ETF,
+            MarketType.FOREX: Market.US_STOCK,
+            MarketType.MACRO: Market.US_STOCK,
+        }
+        return market_map.get(market_type, Market.US_STOCK)
 
     def fetch_one(
         self,
