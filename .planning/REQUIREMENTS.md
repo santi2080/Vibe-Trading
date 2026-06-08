@@ -7,6 +7,12 @@
 
 Requirements for the daily-scan-report-loop milestone. v2.2 is data-pipeline-first: local-data-first scan, mandatory data-health gate, `CompositeTrendStrategy` / `TradingSignal` semantics, structured artifacts, and Markdown reporting.
 
+### Symbol Format Contract
+
+- [ ] **SYM-01**: Project defines one Canonical Symbol Format for user-facing inputs, watchlists, backtest configs, local cache keys, and daily scan plans across A-shares/ETFs, US equities, HK equities, US futures, CN futures, crypto, and forex.
+- [ ] **SYM-02**: Data-source boundaries translate canonical symbols into vendor-specific formats for Tushare, AKShare, yfinance, TqSdk, OKX, CCXT, and Databento where supported, while returning canonical symbols to callers.
+- [ ] **SYM-03**: Tests verify canonical-to-vendor mapping contracts, unsupported vendor/market combinations, fallback routing behavior, unresolved-symbol behavior, and compatibility with the local-data-first scan plan.
+
 ### Stack
 
 - [ ] **STK-01**: Project declares an explicit Parquet engine dependency (`pyarrow`) if missing so daily scan Parquet I/O is reliable.
@@ -79,26 +85,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STK-01 | Phase 11 | Pending |
-| CLI-01 | Phase 11 | Pending |
-| CLI-02 | Phase 11 | Pending |
-| WLS-01 | Phase 11 | Pending |
-| WLS-02 | Phase 11 | Pending |
-| GATE-01 | Phase 12 | Pending |
-| GATE-02 | Phase 12 | Pending |
-| SIG-01 | Phase 13 | Pending |
-| SIG-02 | Phase 13 | Pending |
-| ART-01 | Phase 14 | Pending |
-| RPT-01 | Phase 14 | Pending |
-| RPT-02 | Phase 14 | Pending |
-| TST-01 | Phase 15 | Pending |
+| SYM-01 | Phase 11 | Pending |
+| SYM-02 | Phase 11 | Pending |
+| SYM-03 | Phase 11 | Pending |
+| STK-01 | Phase 12 | Pending |
+| CLI-01 | Phase 12 | Pending |
+| CLI-02 | Phase 12 | Pending |
+| WLS-01 | Phase 12 | Pending |
+| WLS-02 | Phase 12 | Pending |
+| GATE-01 | Phase 13 | Pending |
+| GATE-02 | Phase 13 | Pending |
+| SIG-01 | Phase 14 | Pending |
+| SIG-02 | Phase 14 | Pending |
+| ART-01 | Phase 15 | Pending |
+| RPT-01 | Phase 15 | Pending |
+| RPT-02 | Phase 15 | Pending |
+| TST-01 | Phase 16 | Pending |
 
 **Coverage:**
-- v2.2 requirements: 13 total
-- Mapped to phases: 13
+- v2.2 requirements: 16 total
+- Mapped to phases: 16
 - Unmapped: 0 ✓
 - Duplicate mappings: 0 ✓
 
 ---
 *Requirements defined: 2026-06-08*  
-*Last updated: 2026-06-08 after v2.2 roadmap creation*
+*Last updated: 2026-06-08 after symbol-format prerequisite insertion*

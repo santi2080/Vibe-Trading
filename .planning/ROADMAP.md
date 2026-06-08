@@ -37,20 +37,36 @@
 
 ### 🌱 v2.2: Daily Scan Report Loop
 
-- [ ] Phase 11: Daily Scan Foundation & Run Plan (0/0 plans) — not started
-- [ ] Phase 12: Data Health Gated Scan Control (0/0 plans) — not started
-- [ ] Phase 13: Composite Signal Scan Buckets (0/0 plans) — not started
-- [ ] Phase 14: Deterministic Artifacts & Markdown Report (0/0 plans) — not started
-- [ ] Phase 15: Daily Scan Verification Closure (0/0 plans) — not started
+- [ ] Phase 11: Symbol Format Mapping Contract & Data Source Translation Optimization (0/0 plans) — not started
+- [ ] Phase 12: Daily Scan Foundation & Run Plan (0/0 plans) — not started
+- [ ] Phase 13: Data Health Gated Scan Control (0/0 plans) — not started
+- [ ] Phase 14: Composite Signal Scan Buckets (0/0 plans) — not started
+- [ ] Phase 15: Deterministic Artifacts & Markdown Report (0/0 plans) — not started
+- [ ] Phase 16: Daily Scan Verification Closure (0/0 plans) — not started
 
 **Goal:** Productize the daily scan workflow with a reliable local-data-first pipeline that can support one-command watchlist scanning and Markdown reporting.
 
 ## Phase Details
 
-### Phase 11: Daily Scan Foundation & Run Plan
+### Phase 11: Symbol Format Mapping Contract & Data Source Translation Optimization
+
+**Goal:** User and codebase share one Canonical Symbol Format, and every data-source boundary maps that canonical symbol into the vendor-specific format without changing user-facing keys.  
+**Depends on:** Phase 10 / v2.1 shipped foundations  
+**Requirements:** SYM-01, SYM-02, SYM-03
+
+**Success Criteria:**
+1. Canonical Symbol Format is explicitly defined and tested for A-shares/ETFs, US equities, HK equities, US futures, CN futures, crypto, and forex.
+2. `SymbolTranslator` maps canonical symbols into Tushare, AKShare, yfinance, TqSdk, OKX, CCXT, and Databento formats where supported, with unsupported combinations staying explicit rather than silently mangled.
+3. Fetch/routing boundaries call vendors with vendor-format symbols but return canonical symbols to callers, preserving fallback and unresolved-symbol behavior.
+4. Loader-specific duplicate conversion logic is either delegated to the canonical translator or retained only as tested compatibility shims.
+5. Focused tests cover canonical-to-vendor contracts, routing/fallback preservation, and compatibility with the local-data-first daily scan plan.
+
+**Plans:** TBD
+
+### Phase 12: Daily Scan Foundation & Run Plan
 
 **Goal:** User can start a local-data-first daily scan and receive validated run intent before analysis begins.  
-**Depends on:** Phase 10 / v2.1 shipped foundations  
+**Depends on:** Phase 11  
 **Requirements:** STK-01, CLI-01, CLI-02, WLS-01, WLS-02
 
 **Success Criteria:**
@@ -62,10 +78,10 @@
 
 **Plans:** TBD
 
-### Phase 12: Data Health Gated Scan Control
+### Phase 13: Data Health Gated Scan Control
 
 **Goal:** User can trust that data readiness blocks or caveats the scan before strategy work.  
-**Depends on:** Phase 11  
+**Depends on:** Phase 12  
 **Requirements:** GATE-01, GATE-02
 
 **Success Criteria:**
@@ -76,10 +92,10 @@
 
 **Plans:** TBD
 
-### Phase 13: Composite Signal Scan Buckets
+### Phase 14: Composite Signal Scan Buckets
 
 **Goal:** User can see every watchlist symbol classified through CompositeTrendStrategy / TradingSignal semantics.  
-**Depends on:** Phase 12  
+**Depends on:** Phase 13  
 **Requirements:** SIG-01, SIG-02
 
 **Success Criteria:**
@@ -90,10 +106,10 @@
 
 **Plans:** TBD
 
-### Phase 14: Deterministic Artifacts & Markdown Report
+### Phase 15: Deterministic Artifacts & Markdown Report
 
 **Goal:** User gets stable machine-readable artifacts and a human-readable Markdown report without unverified claims.  
-**Depends on:** Phase 13  
+**Depends on:** Phase 14  
 **Requirements:** ART-01, RPT-01, RPT-02
 
 **Success Criteria:**
@@ -104,10 +120,10 @@
 
 **Plans:** TBD
 
-### Phase 15: Daily Scan Verification Closure
+### Phase 16: Daily Scan Verification Closure
 
 **Goal:** User can verify the daily scan loop with tests covering gate, artifacts, report, safety, and CLI behavior.  
-**Depends on:** Phase 14  
+**Depends on:** Phase 15  
 **Requirements:** TST-01
 
 **Success Criteria:**
@@ -130,39 +146,44 @@
 | 13 | v2.2 | 0/0 | Not started | — |
 | 14 | v2.2 | 0/0 | Not started | — |
 | 15 | v2.2 | 0/0 | Not started | — |
+| 16 | v2.2 | 0/0 | Not started | — |
 
 ## Coverage
 
 | Requirement | Phase |
 |-------------|-------|
-| STK-01 | Phase 11 |
-| CLI-01 | Phase 11 |
-| CLI-02 | Phase 11 |
-| WLS-01 | Phase 11 |
-| WLS-02 | Phase 11 |
-| GATE-01 | Phase 12 |
-| GATE-02 | Phase 12 |
-| SIG-01 | Phase 13 |
-| SIG-02 | Phase 13 |
-| ART-01 | Phase 14 |
-| RPT-01 | Phase 14 |
-| RPT-02 | Phase 14 |
-| TST-01 | Phase 15 |
+| SYM-01 | Phase 11 |
+| SYM-02 | Phase 11 |
+| SYM-03 | Phase 11 |
+| STK-01 | Phase 12 |
+| CLI-01 | Phase 12 |
+| CLI-02 | Phase 12 |
+| WLS-01 | Phase 12 |
+| WLS-02 | Phase 12 |
+| GATE-01 | Phase 13 |
+| GATE-02 | Phase 13 |
+| SIG-01 | Phase 14 |
+| SIG-02 | Phase 14 |
+| ART-01 | Phase 15 |
+| RPT-01 | Phase 15 |
+| RPT-02 | Phase 15 |
+| TST-01 | Phase 16 |
 
-**Coverage:** 13/13 v2.2 requirements mapped exactly once.
+**Coverage:** 16/16 v2.2 requirements mapped exactly once.
 
 ## Scope Guardrails
 
 v2.2 remains local-data-first and data-pipeline-first.
 
 **Included:**
+- Canonical Symbol Format contract and tested data-source translation boundary
 - local-data-first one-command daily scan
 - watchlist validation and normalized run plan
 - mandatory data-health gate
 - `CompositeTrendStrategy` / `TradingSignal` scan semantics
 - bucket/reason-code assignment for every symbol
 - deterministic JSON artifacts and Markdown report
-- tests for gate behavior, bucket coverage, artifact/report consistency, path safety, and CLI semantics
+- tests for symbol translation, gate behavior, bucket coverage, artifact/report consistency, path safety, and CLI semantics
 
 **Deferred:**
 - remote refresh modes
@@ -181,4 +202,4 @@ v2.2 remains local-data-first and data-pipeline-first.
 
 ---
 
-*Last updated: 2026-06-08 for v2.2 daily-scan-report-loop roadmap*
+*Last updated: 2026-06-08 for v2.2 symbol-format prerequisite insertion*

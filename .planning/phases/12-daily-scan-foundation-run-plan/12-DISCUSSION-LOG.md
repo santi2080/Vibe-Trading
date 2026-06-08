@@ -1,10 +1,10 @@
-# Phase 11: Daily Scan Foundation & Run Plan - Discussion Log
+# Phase 12: Daily Scan Foundation & Run Plan - Discussion Log
 
 > **Audit trail only.** Do not use as input to planning, research, or execution agents.
 > Decisions are captured in CONTEXT.md — this log preserves the alternatives considered.
 
 **Date:** 2026-06-08
-**Phase:** 11-Daily Scan Foundation & Run Plan
+**Phase:** 12-Daily Scan Foundation & Run Plan
 **Areas discussed:** Recommended defaults delegated to Claude
 
 ---
@@ -21,14 +21,20 @@
 
 **User's choice:** “我看不懂，都按你推荐方案实施”
 
-**Notes:** Claude therefore locked the recommended defaults in `11-CONTEXT.md`: repo-level script first, local-data-first, minimal stable flags, normalized `run_plan.json`, safe deterministic output directory, strict required validation, optional metadata warnings, explicit `pyarrow`, no new frameworks/stacks.
+**Notes:** Claude therefore locked the recommended defaults in `12-CONTEXT.md`: repo-level script first, local-data-first, minimal stable flags, normalized `run_plan.json`, safe deterministic output directory, strict required validation, optional metadata warnings, explicit `pyarrow`, no new frameworks/stacks.
+
+---
+
+## Phase Shift Note
+
+This phase was originally Phase 11. On 2026-06-08, user requested a prerequisite “数据源格式映射功能优化” phase. Claude inserted `Phase 11: Symbol Format Mapping Contract & Data Source Translation Optimization`, shifting this phase to Phase 12.
 
 ---
 
 ## Claude's Discretion
 
-- Command shape and run-plan schema may be designed by Claude/planner within the constraints captured in `11-CONTEXT.md`.
-- Planner should avoid re-asking user about Phase 11 implementation choices unless a real blocker appears.
+- Command shape and run-plan schema may be designed by Claude/planner within the constraints captured in `12-CONTEXT.md`.
+- Planner should avoid re-asking user about Phase 12 implementation choices unless a real blocker appears.
 
 ## Deferred Ideas
 
