@@ -37,7 +37,7 @@
 
 ### 🌱 v2.2: Daily Scan Report Loop
 
-- [ ] Phase 11: Symbol Format Mapping Contract & Data Source Translation Optimization (0/0 plans) — not started
+- [x] Phase 11: Symbol Format Mapping Contract & Data Source Translation Optimization (0/0 plans) — not started (completed 2026-06-08)
 - [ ] Phase 12: Daily Scan Foundation & Run Plan (0/0 plans) — not started
 - [ ] Phase 13: Data Health Gated Scan Control (0/0 plans) — not started
 - [ ] Phase 14: Composite Signal Scan Buckets (0/0 plans) — not started
@@ -61,7 +61,7 @@
 4. Loader-specific duplicate conversion logic is either delegated to the canonical translator or retained only as tested compatibility shims.
 5. Focused tests cover canonical-to-vendor contracts, routing/fallback preservation, and compatibility with the local-data-first daily scan plan.
 
-**Plans:** TBD
+**Plans:** 1/1 plans complete
 
 ### Phase 12: Daily Scan Foundation & Run Plan
 
@@ -141,7 +141,7 @@
 | 01-08 | v2.0 | 23/23 | Complete | 2026-06-06 |
 | 09 | v2.1 | 4/4 | Complete | 2026-06-06 |
 | 10 | v2.1 | 5/5 | Complete (blocked evidence) | 2026-06-07 |
-| 11 | v2.2 | 0/0 | Not started | — |
+| 11 | v2.2 | 1/1 | Complete    | 2026-06-08 |
 | 12 | v2.2 | 0/0 | Not started | — |
 | 13 | v2.2 | 0/0 | Not started | — |
 | 14 | v2.2 | 0/0 | Not started | — |

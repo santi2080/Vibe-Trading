@@ -9,9 +9,9 @@ Requirements for the daily-scan-report-loop milestone. v2.2 is data-pipeline-fir
 
 ### Symbol Format Contract
 
-- [ ] **SYM-01**: Project defines one Canonical Symbol Format for user-facing inputs, watchlists, backtest configs, local cache keys, and daily scan plans across A-shares/ETFs, US equities, HK equities, US futures, CN futures, crypto, and forex.
-- [ ] **SYM-02**: Data-source boundaries translate canonical symbols into vendor-specific formats for Tushare, AKShare, yfinance, TqSdk, OKX, CCXT, and Databento where supported, while returning canonical symbols to callers.
-- [ ] **SYM-03**: Tests verify canonical-to-vendor mapping contracts, unsupported vendor/market combinations, fallback routing behavior, unresolved-symbol behavior, and compatibility with the local-data-first scan plan.
+- [x] **SYM-01**: Project defines one Canonical Symbol Format for user-facing inputs, watchlists, backtest configs, local cache keys, and daily scan plans across A-shares/ETFs, US equities, HK equities, US futures, CN futures, crypto, and forex.
+- [x] **SYM-02**: Data-source boundaries translate canonical symbols into vendor-specific formats for Tushare, AKShare, yfinance, TqSdk, OKX, CCXT, and Databento where supported, while returning canonical symbols to callers.
+- [x] **SYM-03**: Tests verify canonical-to-vendor mapping contracts, unsupported vendor/market combinations, fallback routing behavior, unresolved-symbol behavior, and compatibility with the local-data-first scan plan.
 
 ### Stack
 
@@ -85,9 +85,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SYM-01 | Phase 11 | Pending |
-| SYM-02 | Phase 11 | Pending |
-| SYM-03 | Phase 11 | Pending |
+| SYM-01 | Phase 11 | Complete |
+| SYM-02 | Phase 11 | Complete |
+| SYM-03 | Phase 11 | Complete |
 | STK-01 | Phase 12 | Pending |
 | CLI-01 | Phase 12 | Pending |
 | CLI-02 | Phase 12 | Pending |
