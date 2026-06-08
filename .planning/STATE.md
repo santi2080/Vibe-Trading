@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: daily-scan-report-loop
 status: planning
-last_updated: "2026-06-08T00:00:00.000Z"
-last_activity: 2026-06-08 -- v2.2 roadmap created
+last_updated: "2026-06-08T10:22:06.300Z"
+last_activity: 2026-06-08 — Milestone v2.2 roadmap created
 progress:
   total_phases: 5
   completed_phases: 0
