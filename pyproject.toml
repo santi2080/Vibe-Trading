@@ -98,6 +98,7 @@ dev = [
     "pytest-cov>=4.0",
     "pytest-socket>=0.7.0",
 ]
+parquet = ["pyarrow>=10.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["agent/tests"]
