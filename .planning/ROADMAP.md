@@ -30,15 +30,15 @@
 - [x] Phase 10: Empirical Composite Backtest Evidence Closure (5/5 plans) — completed 2026-06-07
   - Data readiness checks, 1D/4H evidence; overall_status: blocked
 
-**Known gaps:** 8/12 requirements blocked (no verified 2024-2026 empirical metrics); 4/12 verified (BKST-01/02/03, RPT-03).  
+**Known gaps:** 8/12 requirements blocked (no verified 2024-2026 empirical metrics); 4/12 verified (BKST-01/02/03, RPT-03).
 **See:** `.planning/milestones/v2.1-ROADMAP.md`, `.planning/milestones/v2.1-REQUIREMENTS.md`
 
 </details>
 
 ### 🌱 v2.2: Daily Scan Report Loop
 
-- [x] Phase 11: Symbol Format Mapping Contract & Data Source Translation Optimization (0/0 plans) — not started (completed 2026-06-08)
-- [ ] Phase 12: Daily Scan Foundation & Run Plan (0/0 plans) — not started
+- [x] Phase 11: Symbol Format Mapping Contract & Data Source Translation Optimization (1/1 plans) — completed 2026-06-08
+- [ ] Phase 12: Daily Scan Foundation & Run Plan (1/1 plans) — pending
 - [ ] Phase 13: Data Health Gated Scan Control (0/0 plans) — not started
 - [ ] Phase 14: Composite Signal Scan Buckets (0/0 plans) — not started
 - [ ] Phase 15: Deterministic Artifacts & Markdown Report (0/0 plans) — not started
@@ -50,8 +50,8 @@
 
 ### Phase 11: Symbol Format Mapping Contract & Data Source Translation Optimization
 
-**Goal:** User and codebase share one Canonical Symbol Format, and every data-source boundary maps that canonical symbol into the vendor-specific format without changing user-facing keys.  
-**Depends on:** Phase 10 / v2.1 shipped foundations  
+**Goal:** User and codebase share one Canonical Symbol Format, and every data-source boundary maps that canonical symbol into the vendor-specific format without changing user-facing keys.
+**Depends on:** Phase 10 / v2.1 shipped foundations
 **Requirements:** SYM-01, SYM-02, SYM-03
 
 **Success Criteria:**
@@ -65,8 +65,8 @@
 
 ### Phase 12: Daily Scan Foundation & Run Plan
 
-**Goal:** User can start a local-data-first daily scan and receive validated run intent before analysis begins.  
-**Depends on:** Phase 11  
+**Goal:** User can start a local-data-first daily scan and receive validated run intent before analysis begins.
+**Depends on:** Phase 11
 **Requirements:** STK-01, CLI-01, CLI-02, WLS-01, WLS-02
 
 **Success Criteria:**
@@ -76,12 +76,12 @@
 4. The scan uses only local data inputs in v2.2; no remote provider fetch is triggered by the default daily scan command.
 5. Parquet read/write support is dependable because the project explicitly declares the required Parquet engine dependency.
 
-**Plans:** TBD
+**Plans:** 1/1 plans complete
 
 ### Phase 13: Data Health Gated Scan Control
 
-**Goal:** User can trust that data readiness blocks or caveats the scan before strategy work.  
-**Depends on:** Phase 12  
+**Goal:** User can trust that data readiness blocks or caveats the scan before strategy work.
+**Depends on:** Phase 12
 **Requirements:** GATE-01, GATE-02
 
 **Success Criteria:**
@@ -94,8 +94,8 @@
 
 ### Phase 14: Composite Signal Scan Buckets
 
-**Goal:** User can see every watchlist symbol classified through CompositeTrendStrategy / TradingSignal semantics.  
-**Depends on:** Phase 13  
+**Goal:** User can see every watchlist symbol classified through CompositeTrendStrategy / TradingSignal semantics.
+**Depends on:** Phase 13
 **Requirements:** SIG-01, SIG-02
 
 **Success Criteria:**
@@ -108,22 +108,22 @@
 
 ### Phase 15: Deterministic Artifacts & Markdown Report
 
-**Goal:** User gets stable machine-readable artifacts and a human-readable Markdown report without unverified claims.  
-**Depends on:** Phase 14  
+**Goal:** User gets stable machine-readable artifacts and a human-readable Markdown report without unverified claims.
+**Depends on:** Phase 14
 **Requirements:** ART-01, RPT-01, RPT-02
 
 **Success Criteria:**
 1. Each scan run writes `manifest.json`, `data_health.json`, `scan_results.json`, and `report.md` into a safe deterministic run directory.
 2. User can open `report.md` and see data health, candidates, watch symbols, risk/excluded symbols, skipped/failed symbols, caveats, and links to artifacts.
 3. Markdown report counts and sections are rendered from the JSON artifacts rather than separate ad-hoc report state.
-4. The report avoids unverified ranking, performance metrics, “best configuration” claims, and trading execution advice.
+4. The report avoids unverified ranking, performance metrics, "best configuration" claims, and trading execution advice.
 
 **Plans:** TBD
 
 ### Phase 16: Daily Scan Verification Closure
 
-**Goal:** User can verify the daily scan loop with tests covering gate, artifacts, report, safety, and CLI behavior.  
-**Depends on:** Phase 15  
+**Goal:** User can verify the daily scan loop with tests covering gate, artifacts, report, safety, and CLI behavior.
+**Depends on:** Phase 15
 **Requirements:** TST-01
 
 **Success Criteria:**
@@ -141,8 +141,8 @@
 | 01-08 | v2.0 | 23/23 | Complete | 2026-06-06 |
 | 09 | v2.1 | 4/4 | Complete | 2026-06-06 |
 | 10 | v2.1 | 5/5 | Complete (blocked evidence) | 2026-06-07 |
-| 11 | v2.2 | 1/1 | Complete    | 2026-06-08 |
-| 12 | v2.2 | 0/0 | Not started | — |
+| 11 | v2.2 | 1/1 | Complete | 2026-06-08 |
+| 12 | v2.2 | 1/1 | Planned | — |
 | 13 | v2.2 | 0/0 | Not started | — |
 | 14 | v2.2 | 0/0 | Not started | — |
 | 15 | v2.2 | 0/0 | Not started | — |
@@ -202,4 +202,4 @@ v2.2 remains local-data-first and data-pipeline-first.
 
 ---
 
-*Last updated: 2026-06-08 for v2.2 symbol-format prerequisite insertion*
+*Last updated: 2026-06-09 for Phase 12 plan*
