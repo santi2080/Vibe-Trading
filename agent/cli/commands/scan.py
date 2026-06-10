@@ -27,6 +27,7 @@ from src.data.scan_validators import validate_watchlist
 from src.data.watchlist_data_health import check_watchlist_data
 from src.data.scan_signal_buckets import run_signal_scan
 from src.data.scan_reporting import run_reporting
+from src.data.data_refresh import run_data_refresh, RefreshReport
 
 
 def _run_data_gate(
@@ -203,6 +204,14 @@ console = Console()
     default=False,
     help="Validate watchlist and show plan without running the data-health gate or analysis.",
 )
+@click.option(
+    "--refresh",
+    is_flag=True,
+    default=False,
+    help="Fetch stale/missing parquet data before running the data-health gate. "
+         "Only valid with --run. Uses yfinance for US futures, appropriate loaders for other markets. "
+         "Refresh failures are non-blocking.",
+)
 def scan(
     watchlist: str,
     data_dir: str,
@@ -211,6 +220,7 @@ def scan(
     format: str,
     run: bool,
     dry_run: bool,
+    refresh: bool,
 ) -> None:
     """Daily scan: preview scan plan or execute locally-data-only scan.
 
@@ -222,6 +232,13 @@ def scan(
     data-health gate before any strategy analysis. FAIL blocks the scan; WARN continues
     with caveats. In v2.2, the run mode is local-data-first; remote fetch is not triggered.
 
+    **Refresh mode (--run --refresh):** Before the data-health gate, fetch stale or missing
+    parquet data from remote sources. Only fetches data that is older than the staleness
+    threshold (see --now). Refresh failures are non-blocking; the gate runs with whatever
+    data is available. yfinance is used for US futures and US equities; other markets use
+    the HybridDataFetcher pipeline. Provider 429 (rate-limit) errors trigger exponential
+    backoff and retry.
+
     Examples:
 
         python -m agent.cli scan -w watchlist/us_futures_watchlist.csv
@@ -231,6 +248,8 @@ def scan(
         python -m agent.cli scan -w watchlist.csv --output ./my-output --run
 
         python -m agent.cli scan -w watchlist.csv --run --dry-run  # validate only
+
+        python -m agent.cli scan -w watchlist.csv --run --refresh  # fetch stale data first
     """
 
     # Parse scan date
@@ -327,6 +346,29 @@ def scan(
                 border_style="blue",
             ))
         else:
+            # RF-01: Run data refresh before the health gate if --refresh is set
+            refresh_report: RefreshReport | None = None
+            if refresh:
+                from src.data.data_refresh import run_data_refresh
+                try:
+                    refresh_report = run_data_refresh(
+                        watchlist_path=watchlist,
+                        data_dir=data_dir,
+                        scan_date_str=scan_date.isoformat(),
+                        console_output=True,
+                    )
+                    refresh_json_path = output_dir / "data_refresh.json"
+                    with open(refresh_json_path, "w") as fh:
+                        import json
+                        json.dump(refresh_report.to_dict(), fh, indent=2, default=str)
+                    console.print(
+                        f"[dim]Refresh report saved to {refresh_json_path}[/dim]"
+                    )
+                except Exception as exc:
+                    console.print(
+                        f"\n[yellow]Refresh warning:[/yellow] {exc} — continuing without refresh"
+                    )
+
             _run_data_gate(
                 watchlist=watchlist,
                 data_dir=data_dir,
