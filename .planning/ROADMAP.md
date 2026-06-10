@@ -253,7 +253,8 @@ v2.2 remains local-data-first and data-pipeline-first.
 4. China futures session (09:00-10:15, 10:30-11:30, 13:30-15:00) defined and tested.
 5. Timezone conversion support for all markets.
 
-**Plans:** 0/1 plans pending
+**Plans:** 1/1 plans
+- [x] 18-01-PLAN.md - Timezone-aware sessions, MarketSessionStatus enum, session-aware freshness
 
 ### Phase 19: Holiday Calendar Integration
 
