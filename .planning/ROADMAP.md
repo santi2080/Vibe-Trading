@@ -39,7 +39,7 @@
 
 - [x] Phase 11: Symbol Format Mapping Contract & Data Source Translation Optimization (1/1 plans) — completed 2026-06-08
 - [ ] Phase 12: Daily Scan Foundation & Run Plan (1/1 plans) — pending
-- [ ] Phase 13: Data Health Gated Scan Control (0/0 plans) — not started
+- [x] Phase 13: Data Health Gated Scan Control (0/0 plans) — not started (completed 2026-06-10)
 - [ ] Phase 14: Composite Signal Scan Buckets (0/0 plans) — not started
 - [ ] Phase 15: Deterministic Artifacts & Markdown Report (0/0 plans) — not started
 - [ ] Phase 16: Daily Scan Verification Closure (0/0 plans) — not started
@@ -90,7 +90,7 @@
 3. A data-health `WARN` run can continue, but the report and artifacts clearly expose the caveats.
 4. User can distinguish `PASS`, `WARN`, and `FAIL` scan outcomes without reading logs.
 
-**Plans:** TBD
+**Plans:** 1/1 plans complete
 
 ### Phase 14: Composite Signal Scan Buckets
 
@@ -143,7 +143,7 @@
 | 10 | v2.1 | 5/5 | Complete (blocked evidence) | 2026-06-07 |
 | 11 | v2.2 | 1/1 | Complete | 2026-06-08 |
 | 12 | v2.2 | 1/1 | Planned | — |
-| 13 | v2.2 | 0/0 | Not started | — |
+| 13 | v2.2 | 1/1 | Complete   | 2026-06-10 |
 | 14 | v2.2 | 0/0 | Not started | — |
 | 15 | v2.2 | 0/0 | Not started | — |
 | 16 | v2.2 | 0/0 | Not started | — |

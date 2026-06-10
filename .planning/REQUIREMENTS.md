@@ -88,11 +88,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SYM-01 | Phase 11 | Complete |
 | SYM-02 | Phase 11 | Complete |
 | SYM-03 | Phase 11 | Complete |
-| STK-01 | Phase 12 | Pending |
-| CLI-01 | Phase 12 | Pending |
-| CLI-02 | Phase 12 | Pending |
-| WLS-01 | Phase 12 | Pending |
-| WLS-02 | Phase 12 | Pending |
+| STK-01 | Phase 12 | Complete |
+| CLI-01 | Phase 12 | Complete |
+| CLI-02 | Phase 12 | Complete |
+| WLS-01 | Phase 12 | Complete |
+| WLS-02 | Phase 12 | Complete |
 | GATE-01 | Phase 13 | Pending |
 | GATE-02 | Phase 13 | Pending |
 | SIG-01 | Phase 14 | Pending |
