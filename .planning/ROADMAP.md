@@ -5,6 +5,7 @@
 - ✅ **v2.0** — composite-strategy-signal-layer (shipped 2026-06-06)
 - ✅ **v2.1** — composite-strategy-backtest (shipped 2026-06-07; empirical evidence blocked)
 - ✅ **v2.2** — daily-scan-report-loop (shipped 2026-06-10)
+- 🌱 **v2.3** — remote-refresh-scan-loop (Phase 17 in progress)
 
 ## Phases
 
@@ -134,6 +135,21 @@
 
 **Plans:** 1/1 plans complete
 
+### Phase 17: Remote Refresh Scan Loop
+
+**Goal:** User can run `scan --run --refresh` to auto-fetch stale/missing parquet data before the health gate, then proceed with scan.
+**Depends on:** Phase 16 (daily scan loop)
+**Requirements:** RF-01, RF-02, RF-03, RF-04, RF-05
+
+**Success Criteria:**
+1. `scan --run --refresh` fetches stale data, runs health gate, then scan.
+2. Data freshness is checked per-symbol before fetch (avoid unnecessary API calls).
+3. Provider 429 errors are handled gracefully with retry logic.
+4. `--refresh` is optional; scan without it behaves identically to v2.2.
+5. Tests cover: refresh triggered, refresh skipped (data fresh), refresh failure handling.
+
+**Plans:** 1/1 plans complete
+
 ## Progress
 
 | Phase | Milestone | Plans | Status | Completed |
@@ -147,6 +163,7 @@
 | 14 | v2.2 | 1/1 | Complete | 2026-06-10 |
 | 15 | v2.2 | 1/1 | Complete | 2026-06-10 |
 | 16 | v2.2 | 1/1 | Complete | 2026-06-10 |
+| 17 | v2.3 | 1/1 | Complete | 2026-06-10 |
 
 ## Coverage
 
@@ -168,12 +185,27 @@
 | RPT-01 | Phase 15 |
 | RPT-02 | Phase 15 |
 | TST-01 | Phase 16 |
+| RF-01 | Phase 17 |
+| RF-02 | Phase 17 |
+| RF-03 | Phase 17 |
+| RF-04 | Phase 17 |
+| RF-05 | Phase 17 |
 
-**Coverage:** 16/16 v2.2 requirements mapped exactly once.
+**Coverage:** 16/16 v2.2 requirements mapped exactly once; 5/5 v2.3 requirements mapped exactly once.
 
 ## Scope Guardrails
 
 v2.2 remains local-data-first and data-pipeline-first.
+
+**v2.3 (Phase 17):** Adds optional remote refresh before scan gate.
+
+**Included:**
+- `--refresh` flag for auto-fetch of stale/missing data before health gate
+- Incremental refresh: only fetches data older than staleness threshold
+- yfinance for US futures/equities, HybridDataFetcher for other markets
+- 429 rate-limit handling with exponential backoff
+- Non-blocking refresh failures (gate runs with available data)
+- Same parquet paths as local-data-first scan
 
 **Included:**
 - Canonical Symbol Format contract and tested data-source translation boundary
