@@ -1,8 +1,8 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.4
-milestone_name: next-milestone
-status: backlog
+milestone_name: exchange-calendar-awareness
+status: planning
 last_updated: "2026-06-11T00:00:00Z"
 progress:
   total_phases: 0
@@ -16,48 +16,34 @@ progress:
 
 ## Current Focus
 
-v2.3 remote-refresh-scan-loop: ✅ **SHIPPED 2026-06-11** — Phase 17 PR #6 merged.
+v2.4 exchange-calendar-awareness: **PLANNING** — Defining requirements.
 
-## v2.3 Summary
+## Milestone Summary
 
-- Phase 17: Remote Refresh Scan Loop ✅ SHIPPED 2026-06-11
-- Requirements RF-01 through RF-05: all implemented
-- `--refresh` flag added to scan command: auto-fetches stale/missing data before health gate
-- 33 focused tests (test_data_refresh.py)
-- Non-blocking: refresh failures do not stop the scan
-- PR #6 merged to main
+v2.3 shipped (2026-06-11): Remote refresh scan loop with `--refresh` flag.
 
-## Phase 16 Summary (v2.2)
+**Goal:** Make data freshness detection aware of exchange trading sessions.
 
-- Phase 16: Daily Scan Verification Closure ✅ COMPLETE
-- TST-01 requirement: all covered
-- 17 new tests (test_scan_verification.py)
-- All 64 scan pipeline tests pass (gate + signal + reporting + verification)
+**Target features:**
+- Exchange trading session definitions (A-shares, US, HK, futures)
+- Holiday calendar awareness
+- Session-aware freshness detection (pre-market, regular, after-hours)
+- Smart refresh that respects trading hours
 
-## v2.2 Full Milestone Summary
+## Requirements
 
-| Phase | Name | Status | Key Deliverable |
-|-------|------|--------|----------------|
-| 11 | Symbol Format Mapping | ✅ | Canonical symbol contract + translator |
-| 12 | Daily Scan Foundation | ✅ | CLI + watchlist validation + scan plan |
-| 13 | Data Health Gate | ✅ | FAIL/WARN/PASS semantics |
-| 14 | Composite Signal Scan | ✅ | 5-bucket classification (SIG-01, SIG-02) |
-| 15 | Artifacts & Report | ✅ | manifest.json + report.md (ART-01, RPT-01, RPT-02) |
-| 16 | Verification Closure | ✅ | 64 tests (TST-01) |
-
-**Requirements:** 16/16 fulfilled (SYM-01/02/03, STK-01, CLI-01/02, WLS-01/02, GATE-01/02, SIG-01/02, ART-01, RPT-01/02, TST-01)
+Requirements definition in progress.
 
 ## Next Steps
 
-- Push feature/symbol-format-mapping-optimization branch and create PR
-- Review merged PR #4 (feature/phase-09-composite-backtest)
-- Consider v2.2 milestone closeout PR
+- Define scoped requirements (REQ-IDs)
+- Create phased roadmap
+- Start Phase 01 planning
 
 ## Deferred (per Scope Guardrails)
 
-- Exchange-calendar/session-aware freshness (Phase future)
-- Daily delta against prior scans (Phase future)
-- Empirically validated ranking (Phase future)
+- Daily delta against prior scans
+- Empirically validated ranking
 - Dashboard or web UI
 - Notifications or scheduling
 - Live/paper trading execution

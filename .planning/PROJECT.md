@@ -4,18 +4,19 @@
 
 ## Current State
 
-**v2.1 shipped (2026-06-07):** Composite strategy backtest infrastructure delivered with empirical evidence blocked. Full milestone details at `.planning/milestones/v2.1-ROADMAP.md` and `.planning/milestones/v2.1-REQUIREMENTS.md`.
+**v2.3 shipped (2026-06-11):** Remote refresh scan loop with `--refresh` flag for auto-fetching stale/missing data. Full milestone details at `.planning/milestones/v2.3-ROADMAP.md`.
 
-**Current focus:** v2.2 — Daily Scan Report Loop
+**Current focus:** v2.4 — Exchange Calendar Awareness
 
-## Current Milestone: v2.2 daily-scan-report-loop
+## Current Milestone: v2.4 exchange-calendar-awareness
 
-**Goal:** Productize the daily scan workflow with a reliable data pipeline that can support one-command watchlist scanning and Markdown reporting.
+**Goal:** Make data freshness detection aware of exchange trading sessions, avoiding unnecessary refreshes outside trading hours.
 
 **Target features:**
-- Watchlist-driven daily scan data pipeline
-- Data freshness, health, and fallback handling before report generation
-- Structured scan artifacts that can feed a future Markdown report loop
+- Exchange trading session definitions (A-shares, US, HK, futures)
+- Holiday calendar awareness
+- Session-aware freshness detection (pre-market, regular, after-hours)
+- Smart refresh that respects trading hours
 
 ## What This Is
 
@@ -50,7 +51,29 @@ Vibe-Trading is a multi-agent trading analysis system that combines trend evalua
 
 ### Active
 
-- [ ] v2.2 Daily Scan Report Loop — local-data-first one-command scan, mandatory data-health gate, CompositeTrendStrategy/TradingSignal semantics, deterministic artifacts, and Markdown report.
+- [ ] v2.4 Exchange Calendar Awareness — session-aware freshness detection, holiday calendar, smart refresh respecting trading hours
+
+### Out of Scope
+
+- Live or paper trading execution (pending empirical validation)
+- Automated parameter optimization (pending empirical validation)
+
+## Evolution
+
+**After v2.2 → v2.3:**
+- v2.2 Daily Scan Report Loop fully shipped (Phases 11-16).
+- v2.3 Remote Refresh Scan Loop shipped with `--refresh` flag (Phase 17).
+- v2.4 direction: Exchange Calendar Awareness for smarter refresh.
+
+**After v2.1 → v2.2:**
+- Daily scan pipeline productized with local-data-first approach.
+- Data health gate and Markdown reporting complete.
+- Remote refresh capability added in v2.3.
+
+**v2.1 known gaps:**
+- No verified 2024-2026 1D/4H empirical return/win-rate/Sharpe/drawdown metrics.
+- No reproducible best-configuration artifact.
+- No completed composite vs single strategy comparison report.
 
 ### Out of Scope
 
@@ -83,4 +106,4 @@ Vibe-Trading is a multi-agent trading analysis system that combines trend evalua
 - No completed composite vs single strategy comparison report.
 
 ---
-*Last updated: 2026-06-08 after v2.2 milestone initialization*
+*Last updated: 2026-06-11 after v2.4 milestone initialization*

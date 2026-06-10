@@ -6,6 +6,7 @@
 - ✅ **v2.1** — composite-strategy-backtest (shipped 2026-06-07; empirical evidence blocked)
 - ✅ **v2.2** — daily-scan-report-loop (shipped 2026-06-10)
 - ✅ **v2.3** — remote-refresh-scan-loop (shipped 2026-06-11)
+- 🌱 **v2.4** — exchange-calendar-awareness (planning)
 
 ## Phases
 
@@ -218,7 +219,6 @@ v2.2 remains local-data-first and data-pipeline-first.
 - tests for symbol translation, gate behavior, bucket coverage, artifact/report consistency, path safety, and CLI semantics
 
 **Deferred:**
-- remote refresh modes
 - exchange-calendar/session-aware freshness
 - daily delta against prior scans
 - empirically validated ranking
@@ -226,6 +226,76 @@ v2.2 remains local-data-first and data-pipeline-first.
 - notifications or scheduling
 - live/paper trading execution
 - trading advice or buy/sell execution language
+
+### 🌱 v2.4: Exchange Calendar Awareness
+
+- [ ] Phase 18: Exchange Session Definitions (1/1 plans) — planning
+- [ ] Phase 19: Holiday Calendar Integration (1/1 plans) — planning
+- [ ] Phase 20: Session-Aware Freshness Detection (1/1 plans) — planning
+- [ ] Phase 21: Smart Refresh Strategy (1/1 plans) — planning
+
+**Goal:** Make data freshness detection aware of exchange trading sessions, avoiding unnecessary refreshes outside trading hours.
+
+**Requirements:** CAL-01, CAL-02, CAL-03, CAL-04
+
+## Phase Details
+
+### Phase 18: Exchange Session Definitions
+
+**Goal:** Define trading session rules for each market type.
+**Depends on:** Phase 17 / v2.3 shipped
+**Requirements:** CAL-01
+
+**Success Criteria:**
+1. A-share session (09:30-11:30, 13:00-15:00, Asia/Shanghai) defined and tested.
+2. US equity session (09:30-16:00, America/New_York) defined and tested.
+3. US futures session (23:00-17:00 CME, America/Chicago) defined and tested.
+4. China futures session (09:00-10:15, 10:30-11:30, 13:30-15:00) defined and tested.
+5. Timezone conversion support for all markets.
+
+**Plans:** 0/1 plans pending
+
+### Phase 19: Holiday Calendar Integration
+
+**Goal:** Integrate holiday calendars for each market to detect non-trading days.
+**Depends on:** Phase 18
+**Requirements:** CAL-02
+
+**Success Criteria:**
+1. A-share holiday calendar (CNY, National Day, Labor Day) implemented.
+2. US market holiday calendar (Thanksgiving, Christmas, etc.) implemented.
+3. Holiday lookup function returns whether a date is a trading day.
+4. Holiday calendars are extensible for future additions.
+
+**Plans:** 0/1 plans pending
+
+### Phase 20: Session-Aware Freshness Detection
+
+**Goal:** Replace simple staleness checks with session-aware freshness detection.
+**Depends on:** Phase 19
+**Requirements:** CAL-03
+
+**Success Criteria:**
+1. Freshness check returns session-aware status (fresh/stale/session-closed).
+2. Pre-market/regular-hours/after-hours status distinction works.
+3. Non-trading hours data is not marked as stale.
+4. Session-aware freshness report available for scan results.
+
+**Plans:** 0/1 plans pending
+
+### Phase 21: Smart Refresh Strategy
+
+**Goal:** Refresh decisions respect trading sessions to avoid unnecessary API calls.
+**Depends on:** Phase 20
+**Requirements:** CAL-04
+
+**Success Criteria:**
+1. Refresh triggered only when session warrants update.
+2. Intraday session triggers mandatory refresh.
+3. Post-session refresh is optional/conditional.
+4. Non-trading hours skip refresh with logged reason.
+
+**Plans:** 0/1 plans pending
 
 ## Backlog
 
