@@ -23,7 +23,7 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "agent"))
 
-from backtest.loaders.hybrid_fetcher import HybridDataFetcher
+from agent.backtest.loaders.hybrid_fetcher import HybridDataFetcher
 
 
 # 品种配置
