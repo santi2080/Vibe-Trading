@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: daily-scan-report-loop
 status: in_progress
-last_updated: "2026-06-10T00:51:51.475Z"
+last_updated: "2026-06-10T04:32:36.188Z"
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 3
-  completed_plans: 2
-  percent: 33
+  completed_plans: 3
+  percent: 50
 ---
 
 # State
