@@ -10,7 +10,7 @@ from typing import Any
 from src.tools.watchlist_tool import _resolve_watchlist_path
 
 # Reuse market/timeframe constants from data health module.
-from src.data.watchlist_data_health import MARKET_DIRS, TIMEFRAME_ALIASES
+from src.data.watchlist_data_health import MARKET_DIRS, TIMEFRAME_ALIASES, normalize_timeframe
 
 
 # --- Issue model -----------------------------------------------------------
@@ -153,17 +153,22 @@ def validate_watchlist(
                         f"Supported: {', '.join(sorted(SUPPORTED_MARKETS))}",
             ))
 
-    # 3d. Unsupported timeframe (check each timeframe in the comma-separated list)
+    # 3d. Unsupported timeframe (check each timeframe; supports comma, dash, slash, pipe)
     for idx, row in enumerate(rows, start=1):
         tf_raw = (row.get("timeframes") or "").strip()
         if tf_raw:
-            for tf in tf_raw.split(","):
-                tf = tf.strip()
-                if tf and tf not in TIMEFRAME_ALIASES and tf not in {"1d", "1h", "4h", "1w"}:
+            # Split on common separators (matches parse_timeframes in watchlist_data_health.py)
+            raw_parts = tf_raw.replace("/", "-").replace("|", "-").split("-")
+            for raw_part in raw_parts:
+                raw_part = raw_part.strip()
+                if not raw_part:
+                    continue
+                normalized = normalize_timeframe(raw_part)
+                if normalized not in TIMEFRAME_ALIASES and normalized not in {"1d", "1h", "4h", "1w"}:
                     issues.append(ValidationIssue(
                         row_index=idx, field="timeframes", symbol=row.get("symbol"),
                         severity="warning",
-                        message=f"Unsupported timeframe '{tf}'. "
+                        message=f"Unsupported timeframe '{raw_part}'. "
                                 f"Supported: 1d, 1h, 4h, 1w (and aliases d1, h1, h4, w1, etc.)",
                     ))
                     break  # one warning per row per field

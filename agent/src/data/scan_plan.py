@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .watchlist import WatchlistReader
-from .watchlist_data_health import normalize_timeframe, resolve_cache_file
+from .watchlist_data_health import normalize_timeframe, parse_timeframes, resolve_cache_file
 
 
 # --- Plan model -----------------------------------------------------------
@@ -100,14 +100,8 @@ def build_scan_plan(
         market = (row.get("market") or "").strip()
         tf_raw = (row.get("timeframes") or "").strip()
 
-        # Normalize timeframes
-        timeframes: list[str] = []
-        warnings: list[str] = []
-        for tf in tf_raw.split(","):
-            tf = tf.strip()
-            if tf:
-                normalized = normalize_timeframe(tf)
-                timeframes.append(normalized)
+        # Normalize timeframes using the existing parser (handles comma, dash, slash, pipe separators)
+        timeframes = parse_timeframes(tf_raw)
 
         # Resolve cache paths (one per timeframe)
         cache_paths: list[Path] = []
@@ -127,7 +121,7 @@ def build_scan_plan(
             timeframes=timeframes,
             cache_paths=cache_paths,
             output_path=symbol_output,
-            validation_issues=warnings,
+            validation_issues=[],
         ))
 
     return ScanPlan(

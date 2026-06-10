@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import sys
-from datetime import date
+import json
+from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
 
@@ -24,6 +24,89 @@ except ImportError:
 
 from src.data.scan_plan import build_scan_plan, format_plan_table, format_plan_json
 from src.data.scan_validators import validate_watchlist
+from src.data.watchlist_data_health import check_watchlist_data
+
+
+def _run_data_gate(
+    watchlist: str,
+    data_dir: str,
+    output_dir: Path,
+    format: str,
+    scan_date: date,
+    console: Console,
+) -> None:
+    """Run the data-health gate and handle PASS/WARN/FAIL outcomes.
+
+    Writes data_health.json to output_dir and exits on FAIL.
+    """
+    try:
+        scan_dt = datetime.combine(scan_date, datetime.min.time())
+    except Exception:
+        scan_dt = datetime.now()
+
+    report = check_watchlist_data(watchlist, data_dir, scan_dt)
+
+    # Always write data_health.json
+    health_json_path = output_dir / "data_health.json"
+    health_json_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(health_json_path, "w") as fh:
+        json.dump(report.to_dict(), fh, indent=2, default=str)
+
+    gate_dict = report.to_dict()["gate"]
+
+    if format == "json":
+        # For JSON mode, we already printed plan. Now print gate status.
+        # Re-print full output with gate included.
+        pass  # Gate is already in data_health.json
+    else:
+        from src.data.watchlist_data_health import format_report_table
+
+        console.print()
+        console.print(format_report_table(report))
+
+    status = gate_dict["status"]
+    can_backtest = gate_dict["can_backtest"]
+    blocking_failures = gate_dict["blocking_failures"]
+    warnings = gate_dict["warnings"]
+
+    if not can_backtest:
+        # FAIL: abort the scan
+        msg = (
+            f"[bold red]Data health check FAILED[/bold red] — "
+            f"{blocking_failures} blocking issue(s). "
+            f"Blocking scan. See [dim]{health_json_path}[/dim]"
+        )
+        console.print()
+        console.print(Panel(
+            Text.from_markup(msg),
+            title="Daily Scan Run — BLOCKED",
+            border_style="red",
+        ))
+        raise SystemExit(1)
+
+    if warnings > 0:
+        msg = (
+            f"[yellow]Data health check WARNING[/yellow] — "
+            f"{warnings} caveat(s). "
+            f"Scan continues with caveats. See [dim]{health_json_path}[/dim]"
+        )
+        console.print()
+        console.print(Panel(
+            Text.from_markup(msg),
+            title="Daily Scan Run — WARNING",
+            border_style="yellow",
+        ))
+
+    # PASS: continue
+    console.print(Panel(
+        Text.from_markup(
+            f"[bold green]Data health check PASSED[/bold green] — "
+            f"{gate_dict['total_checks']} check(s).\n"
+            f"[dim]Full signal scan + reporting is implemented in Phases 14–15.[/dim]"
+        ),
+        title="Daily Scan Run",
+        border_style="green",
+    ))
 
 
 console = Console()
@@ -69,6 +152,12 @@ console = Console()
     default=False,
     help="Execute the scan. Without this flag, only the plan is shown (--plan mode).",
 )
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Validate watchlist and show plan without running the data-health gate or analysis.",
+)
 def scan(
     watchlist: str,
     data_dir: str,
@@ -76,6 +165,7 @@ def scan(
     now: Optional[str],
     format: str,
     run: bool,
+    dry_run: bool,
 ) -> None:
     """Daily scan: preview scan plan or execute locally-data-only scan.
 
@@ -83,8 +173,9 @@ def scan(
     showing each symbol, market, required timeframes, cache paths, and intended output
     paths — without triggering any remote data fetch.
 
-    **Run mode (--run):** Execute the scan using only local parquet data. In v2.2, the
-    run mode is local-data-first; remote provider fetch is not triggered.
+    **Run mode (--run):** Execute the scan using only local parquet data. Runs the
+    data-health gate before any strategy analysis. FAIL blocks the scan; WARN continues
+    with caveats. In v2.2, the run mode is local-data-first; remote fetch is not triggered.
 
     Examples:
 
@@ -93,8 +184,9 @@ def scan(
         python -m agent.cli scan -w my_watchlist.csv --format json
 
         python -m agent.cli scan -w watchlist.csv --output ./my-output --run
+
+        python -m agent.cli scan -w watchlist.csv --run --dry-run  # validate only
     """
-    mode = "run" if run else "plan"
 
     # Parse scan date
     scan_date: date
@@ -156,7 +248,14 @@ def scan(
 
     # --- Phase 3: Output -----------------------------------------------
     if format == "json":
-        console.print(format_plan_json(plan))
+        output_data = plan.to_dict()
+        # Add gate status preview in JSON plan mode
+        output_data["gate_status_preview"] = {
+            "note": "Gate runs on --run. Use --watchlist-data-check to preview.",
+            "blocking_timeframes": ["1d", "1h"],
+            "staleness_thresholds": {"1d": "2d", "1h": "6h", "4h": "12h"},
+        }
+        console.print(json.dumps(output_data, indent=2, default=str))
     else:
         console.print(format_plan_table(plan))
 
@@ -172,15 +271,25 @@ def scan(
         )
         console.print(panel)
     else:
-        console.print(Panel(
-            Text.from_markup(
-                f"[bold green]Run mode[/bold green] — local-data-first scan.\n"
-                f"[dim]v2.2: No remote data fetch is triggered by this command.\n"
-                f"Full signal scan + reporting is implemented in Phases 13–15.[/dim]"
-            ),
-            title="Daily Scan Run",
-            border_style="green",
-        ))
+        # --- Phase 4: Data Health Gate (run mode only) -----------------
+        if dry_run:
+            console.print(Panel(
+                Text.from_markup(
+                    "[bold]Dry-run mode[/bold] — gate and analysis skipped.\n"
+                    "[dim]Validation passed. Use --run without --dry-run to execute.[/dim]"
+                ),
+                title="Daily Scan Run (Dry-Run)",
+                border_style="blue",
+            ))
+        else:
+            _run_data_gate(
+                watchlist=watchlist,
+                data_dir=data_dir,
+                output_dir=output_dir,
+                format=format,
+                scan_date=scan_date,
+                console=console,
+            )
 
 
 # Module-level entry point so this can also be invoked as:
