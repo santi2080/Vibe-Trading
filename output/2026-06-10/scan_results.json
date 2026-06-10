@@ -1,0 +1,1255 @@
+{
+  "scan_info": {
+    "watchlist": "watchlist/us_futures_watchlist.csv",
+    "watchlist_name": "us_futures_watchlist.csv",
+    "data_dir": "/Users/iagent/projects/vibe-trading/data",
+    "output_dir": "output/2026-06-10",
+    "scan_date": "2026-06-10",
+    "strategy": "CompositeTrendStrategy",
+    "total_symbols": 8
+  },
+  "buckets_summary": {
+    "failed": 0,
+    "skipped": 0,
+    "actionable": 5,
+    "watch": 2,
+    "risk_excluded": 1,
+    "total": 8
+  },
+  "buckets": {
+    "actionable": [
+      {
+        "symbol": "GC=F",
+        "name": "\u9ec4\u91d1",
+        "market": "US_FUTURES",
+        "bucket": "actionable",
+        "bucket_reason": "BEAR trend, confidence=0.89, score=-83.3",
+        "trading_signal": {
+          "direction": "BEAR",
+          "status": "VALID",
+          "readiness": "READY",
+          "signal_score": -83.31903316868363,
+          "confidence": 0.8866903316868364,
+          "components": {
+            "confidence": 83.13806633736728,
+            "adx": 35.92677487661474,
+            "persistence": 85.0,
+            "supertrend_direction": -100.0,
+            "trend_magic_direction": -100.0,
+            "final_score": -83.5,
+            "trend_confidence": 83.5,
+            "final_confidence": 94.19999999999999,
+            "divergence_penalty": -20.0
+          },
+          "reasons": [
+            "enhanced_supertrend: BEAR",
+            "mtes_v3_trend: BEAR"
+          ],
+          "warnings": [],
+          "source_results": {
+            "enhanced_supertrend": {
+              "direction": "BEAR",
+              "confidence": 0.8313806633736728,
+              "signed_score": -83.13806633736728,
+              "status": "VALID",
+              "strength_rating": "STRONG",
+              "readiness": "READY",
+              "regime": "TRENDING",
+              "passed_prefilter": null,
+              "explanation": "enhanced_supertrend: direction=BEAR, confidence=0.83, strength=STRONG, readiness=READY",
+              "components": {
+                "confidence": 83.13806633736728,
+                "adx": 35.92677487651273,
+                "persistence": 85.0,
+                "supertrend_direction": -100.0,
+                "trend_magic_direction": -100.0
+              },
+              "warnings": [],
+              "metadata": {
+                "source": "enhanced_supertrend",
+                "trend": "\u4e0b\u8dcc",
+                "adx": 35.92677487651273,
+                "supertrend_direction": -1,
+                "trend_magic_direction": -1,
+                "bars_since_flip": 85
+              }
+            },
+            "mtes_v3_trend": {
+              "direction": "BEAR",
+              "confidence": 0.942,
+              "signed_score": -83.5,
+              "status": "VALID",
+              "strength_rating": "STRONG",
+              "readiness": "READY",
+              "regime": "TRENDING",
+              "passed_prefilter": true,
+              "explanation": "mtes_v3_trend: direction=BEAR, confidence=0.94, strength=STRONG, readiness=READY",
+              "components": {
+                "final_score": -83.5,
+                "trend_confidence": 83.5,
+                "final_confidence": 94.19999999999999,
+                "adx": 35.92677487661474,
+                "divergence_penalty": -20.0
+              },
+              "warnings": [],
+              "metadata": {
+                "source": "mtes_v3",
+                "mtf_trend": {
+                  "direction": "BEAR",
+                  "confidence": 0.835,
+                  "signals": {
+                    "ichimoku": {
+                      "direction": "BEAR",
+                      "confidence": 0.8,
+                      "price_above_cloud": "False",
+                      "tenkan_above_kijun": "False",
+                      "cloud_bullish": "False",
+                      "chikou_above_price": "False",
+                      "weight": 0.5,
+                      "weighted_score": {
+                        "bull": 0.0,
+                        "bear": 0.8
+                      }
+                    },
+                    "ema": {
+                      "direction": "BEAR",
+                      "confidence": 0.44999999999999996,
+                      "price_above_ema": "False",
+                      "ema_bullish": "False",
+                      "slope": "DOWN",
+                      "weight": 0.3,
+                      "weighted_score": {
+                        "bull": 0.0,
+                        "bear": 0.44999999999999996
+                      }
+                    },
+                    "smc": {
+                      "direction": "NEUTRAL",
+                      "confidence": 0.15,
+                      "bos_confirmed": false,
+                      "mss_confirmed": false,
+                      "last_swing_high": 4783.4,
+                      "last_swing_low": 4395.6,
+                      "weight": 0.2,
+                      "note": "SMC \u4ec5\u63d0\u4f9b\u4ef7\u4f4d\u53c2\u8003\uff0c\u4e0d\u4e3b\u5bfc\u65b9\u5411\u5224\u65ad"
+                    },
+                    "elder": {
+                      "direction": "BEAR",
+                      "rsi": 21.84382124910678,
+                      "layer2_pullback": false,
+                      "layer3_trigger": "READY"
+                    },
+                    "votes": {
+                      "BULL": 0.04,
+                      "BEAR": 0.575,
+                      "ICHIMOKU_WEIGHT": 0.5,
+                      "EMA_WEIGHT": 0.3,
+                      "SMC_WEIGHT": 0.2
+                    }
+                  }
+                },
+                "strength": {
+                  "rating": "STRONG",
+                  "adx_value": 35.92677487661474,
+                  "divergence": true,
+                  "regime": "TRENDING"
+                },
+                "entry": {
+                  "signal": "SHORT",
+                  "entry_price": 2061.2,
+                  "stop_loss": 2090.5285714285715,
+                  "reason": "FVG bearish"
+                },
+                "passed_prefilter": true
+              }
+            }
+          },
+          "metadata": {
+            "strategy": "scan_composite"
+          }
+        },
+        "error": null
+      },
+      {
+        "symbol": "SI=F",
+        "name": "\u767d\u94f6",
+        "market": "US_FUTURES",
+        "bucket": "actionable",
+        "bucket_reason": "BEAR trend, confidence=0.90, score=-85.0",
+        "trading_signal": {
+          "direction": "BEAR",
+          "status": "VALID",
+          "readiness": "READY",
+          "signal_score": -85.02537066021321,
+          "confidence": 0.9037537066021321,
+          "components": {
+            "confidence": 86.55074132042641,
+            "adx": 37.206527995250376,
+            "persistence": 16.0,
+            "supertrend_direction": -100.0,
+            "trend_magic_direction": -100.0,
+            "final_score": -83.5,
+            "trend_confidence": 83.5,
+            "final_confidence": 94.19999999999999,
+            "divergence_penalty": -20.0
+          },
+          "reasons": [
+            "enhanced_supertrend: BEAR",
+            "mtes_v3_trend: BEAR"
+          ],
+          "warnings": [],
+          "source_results": {
+            "enhanced_supertrend": {
+              "direction": "BEAR",
+              "confidence": 0.8655074132042642,
+              "signed_score": -86.55074132042641,
+              "status": "VALID",
+              "strength_rating": "STRONG",
+              "readiness": "READY",
+              "regime": "TRENDING",
+              "passed_prefilter": null,
+              "explanation": "enhanced_supertrend: direction=BEAR, confidence=0.87, strength=STRONG, readiness=READY",
+              "components": {
+                "confidence": 86.55074132042641,
+                "adx": 37.2065279951599,
+                "persistence": 16.0,
+                "supertrend_direction": -100.0,
+                "trend_magic_direction": -100.0
+              },
+              "warnings": [],
+              "metadata": {
+                "source": "enhanced_supertrend",
+                "trend": "\u4e0b\u8dcc",
+                "adx": 37.2065279951599,
+                "supertrend_direction": -1,
+                "trend_magic_direction": -1,
+                "bars_since_flip": 16
+              }
+            },
+            "mtes_v3_trend": {
+              "direction": "BEAR",
+              "confidence": 0.942,
+              "signed_score": -83.5,
+              "status": "VALID",
+              "strength_rating": "STRONG",
+              "readiness": "READY",
+              "regime": "TRENDING",
+              "passed_prefilter": true,
+              "explanation": "mtes_v3_trend: direction=BEAR, confidence=0.94, strength=STRONG, readiness=READY",
+              "components": {
+                "final_score": -83.5,
+                "trend_confidence": 83.5,
+                "final_confidence": 94.19999999999999,
+                "adx": 37.206527995250376,
+                "divergence_penalty": -20.0
+              },
+              "warnings": [],
+              "metadata": {
+                "source": "mtes_v3",
+                "mtf_trend": {
+                  "direction": "BEAR",
+                  "confidence": 0.835,
+                  "signals": {
+                    "ichimoku": {
+                      "direction": "BEAR",
+                      "confidence": 0.8,
+                      "price_above_cloud": "False",
+                      "tenkan_above_kijun": "False",
+                      "cloud_bullish": "False",
+                      "chikou_above_price": "False",
+                      "weight": 0.5,
+                      "weighted_score": {
+                        "bull": 0.0,
+                        "bear": 0.8
+                      }
+                    },
+                    "ema": {
+                      "direction": "BEAR",
+                      "confidence": 0.44999999999999996,
+                      "price_above_ema": "False",
+                      "ema_bullish": "False",
+                      "slope": "DOWN",
+                      "weight": 0.3,
+                      "weighted_score": {
+                        "bull": 0.0,
+                        "bear": 0.44999999999999996
+                      }
+                    },
+                    "smc": {
+                      "direction": "NEUTRAL",
+                      "confidence": 0.15,
+                      "bos_confirmed": false,
+                      "mss_confirmed": false,
+                      "last_swing_high": 90.105,
+                      "last_swing_low": 72.0,
+                      "weight": 0.2,
+                      "note": "SMC \u4ec5\u63d0\u4f9b\u4ef7\u4f4d\u53c2\u8003\uff0c\u4e0d\u4e3b\u5bfc\u65b9\u5411\u5224\u65ad"
+                    },
+                    "elder": {
+                      "direction": "BEAR",
+                      "rsi": 20.948295929128122,
+                      "layer2_pullback": false,
+                      "layer3_trigger": "READY"
+                    },
+                    "votes": {
+                      "BULL": 0.04,
+                      "BEAR": 0.575,
+                      "ICHIMOKU_WEIGHT": 0.5,
+                      "EMA_WEIGHT": 0.3,
+                      "SMC_WEIGHT": 0.2
+                    }
+                  }
+                },
+                "strength": {
+                  "rating": "STRONG",
+                  "adx_value": 37.206527995250376,
+                  "divergence": true,
+                  "regime": "TRENDING"
+                },
+                "entry": {
+                  "signal": "SHORT",
+                  "entry_price": 23.567500000000003,
+                  "stop_loss": 25.0025,
+                  "reason": "FVG bearish"
+                },
+                "passed_prefilter": true
+              }
+            }
+          },
+          "metadata": {
+            "strategy": "scan_composite"
+          }
+        },
+        "error": null
+      },
+      {
+        "symbol": "CL=F",
+        "name": "WTI\u539f\u6cb9",
+        "market": "US_FUTURES",
+        "bucket": "actionable",
+        "bucket_reason": "BEAR trend, confidence=0.76, score=-75.4",
+        "trading_signal": {
+          "direction": "BEAR",
+          "status": "VALID",
+          "readiness": "READY",
+          "signal_score": -75.4265988080798,
+          "confidence": 0.7577659880807981,
+          "components": {
+            "confidence": 67.3531976161596,
+            "adx": 30.00744910613309,
+            "persistence": 32.0,
+            "supertrend_direction": -100.0,
+            "trend_magic_direction": -100.0,
+            "final_score": -83.5,
+            "trend_confidence": 83.5,
+            "final_confidence": 84.2,
+            "divergence_penalty": 0.0
+          },
+          "reasons": [
+            "enhanced_supertrend: BEAR",
+            "mtes_v3_trend: BEAR"
+          ],
+          "warnings": [],
+          "source_results": {
+            "enhanced_supertrend": {
+              "direction": "BEAR",
+              "confidence": 0.6735319761615961,
+              "signed_score": -67.3531976161596,
+              "status": "VALID",
+              "strength_rating": "READY",
+              "readiness": "READY",
+              "regime": "TRENDING",
+              "passed_prefilter": null,
+              "explanation": "enhanced_supertrend: direction=BEAR, confidence=0.67, strength=READY, readiness=READY",
+              "components": {
+                "confidence": 67.3531976161596,
+                "adx": 30.007449106059855,
+                "persistence": 32.0,
+                "supertrend_direction": -100.0,
+                "trend_magic_direction": -100.0
+              },
+              "warnings": [],
+              "metadata": {
+                "source": "enhanced_supertrend",
+                "trend": "\u4e0b\u8dcc",
+                "adx": 30.007449106059855,
+                "supertrend_direction": -1,
+                "trend_magic_direction": -1,
+                "bars_since_flip": 32
+              }
+            },
+            "mtes_v3_trend": {
+              "direction": "BEAR",
+              "confidence": 0.842,
+              "signed_score": -83.5,
+              "status": "VALID",
+              "strength_rating": "STRONG",
+              "readiness": "READY",
+              "regime": "TRENDING",
+              "passed_prefilter": true,
+              "explanation": "mtes_v3_trend: direction=BEAR, confidence=0.84, strength=STRONG, readiness=READY",
+              "components": {
+                "final_score": -83.5,
+                "trend_confidence": 83.5,
+                "final_confidence": 84.2,
+                "adx": 30.00744910613309,
+                "divergence_penalty": 0.0
+              },
+              "warnings": [],
+              "metadata": {
+                "source": "mtes_v3",
+                "mtf_trend": {
+                  "direction": "BEAR",
+                  "confidence": 0.835,
+                  "signals": {
+                    "ichimoku": {
+                      "direction": "BEAR",
+                      "confidence": 0.8,
+                      "price_above_cloud": "False",
+                      "tenkan_above_kijun": "False",
+                      "cloud_bullish": "True",
+                      "chikou_above_price": "False",
+                      "weight": 0.5,
+                      "weighted_score": {
+                        "bull": 0.0,
+                        "bear": 0.8
+                      }
+                    },
+                    "ema": {
+                      "direction": "BEAR",
+                      "confidence": 0.44999999999999996,
+                      "price_above_ema": "False",
+                      "ema_bullish": "False",
+                      "slope": "DOWN",
+                      "weight": 0.3,
+                      "weighted_score": {
+                        "bull": 0.0,
+                        "bear": 0.44999999999999996
+                      }
+                    },
+                    "smc": {
+                      "direction": "NEUTRAL",
+                      "confidence": 0.15,
+                      "bos_confirmed": false,
+                      "mss_confirmed": false,
+                      "last_swing_high": 105.21,
+                      "last_swing_low": 88.66,
+                      "weight": 0.2,
+                      "note": "SMC \u4ec5\u63d0\u4f9b\u4ef7\u4f4d\u53c2\u8003\uff0c\u4e0d\u4e3b\u5bfc\u65b9\u5411\u5224\u65ad"
+                    },
+                    "elder": {
+                      "direction": "BULL",
+                      "rsi": 39.37881487440921,
+                      "layer2_pullback": false,
+                      "layer3_trigger": "READY"
+                    },
+                    "votes": {
+                      "BULL": 0.04,
+                      "BEAR": 0.575,
+                      "ICHIMOKU_WEIGHT": 0.5,
+                      "EMA_WEIGHT": 0.3,
+                      "SMC_WEIGHT": 0.2
+                    }
+                  }
+                },
+                "strength": {
+                  "rating": "STRONG",
+                  "adx_value": 30.00744910613309,
+                  "divergence": false,
+                  "regime": "TRENDING"
+                },
+                "entry": {
+                  "signal": "WAIT",
+                  "entry_price": null,
+                  "stop_loss": null,
+                  "reason": null
+                },
+                "passed_prefilter": true
+              }
+            }
+          },
+          "metadata": {
+            "strategy": "scan_composite"
+          }
+        },
+        "error": null
+      },
+      {
+        "symbol": "ZC=F",
+        "name": "\u7389\u7c73",
+        "market": "US_FUTURES",
+        "bucket": "actionable",
+        "bucket_reason": "BEAR trend, confidence=0.76, score=-66.3",
+        "trading_signal": {
+          "direction": "BEAR",
+          "status": "VALID",
+          "readiness": "READY",
+          "signal_score": -66.27578133001616,
+          "confidence": 0.7607578133001616,
+          "components": {
+            "confidence": 62.551562660032324,
+            "adx": 28.206835997568938,
+            "persistence": 6.0,
+            "supertrend_direction": -100.0,
+            "trend_magic_direction": -100.0,
+            "final_score": -70.0,
+            "trend_confidence": 87.5,
+            "final_confidence": 89.60000000000001,
+            "divergence_penalty": -20.0
+          },
+          "reasons": [
+            "enhanced_supertrend: BEAR",
+            "mtes_v3_trend: BEAR"
+          ],
+          "warnings": [],
+          "source_results": {
+            "enhanced_supertrend": {
+              "direction": "BEAR",
+              "confidence": 0.6255156266003232,
+              "signed_score": -62.551562660032324,
+              "status": "VALID",
+              "strength_rating": "READY",
+              "readiness": "READY",
+              "regime": "TRENDING",
+              "passed_prefilter": null,
+              "explanation": "enhanced_supertrend: direction=BEAR, confidence=0.63, strength=READY, readiness=READY",
+              "components": {
+                "confidence": 62.551562660032324,
+                "adx": 28.20683599751212,
+                "persistence": 6.0,
+                "supertrend_direction": -100.0,
+                "trend_magic_direction": -100.0
+              },
+              "warnings": [],
+              "metadata": {
+                "source": "enhanced_supertrend",
+                "trend": "\u4e0b\u8dcc",
+                "adx": 28.20683599751212,
+                "supertrend_direction": -1,
+                "trend_magic_direction": -1,
+                "bars_since_flip": 6
+              }
+            },
+            "mtes_v3_trend": {
+              "direction": "BEAR",
+              "confidence": 0.896,
+              "signed_score": -70.0,
+              "status": "VALID",
+              "strength_rating": "READY",
+              "readiness": "READY",
+              "regime": "TRENDING",
+              "passed_prefilter": true,
+              "explanation": "mtes_v3_trend: direction=BEAR, confidence=0.90, strength=READY, readiness=READY",
+              "components": {
+                "final_score": -70.0,
+                "trend_confidence": 87.5,
+                "final_confidence": 89.60000000000001,
+                "adx": 28.206835997568938,
+                "divergence_penalty": -20.0
+              },
+              "warnings": [],
+              "metadata": {
+                "source": "mtes_v3",
+                "mtf_trend": {
+                  "direction": "BEAR",
+                  "confidence": 0.875,
+                  "signals": {
+                    "ichimoku": {
+                      "direction": "BEAR",
+                      "confidence": 0.8,
+                      "price_above_cloud": "False",
+                      "tenkan_above_kijun": "False",
+                      "cloud_bullish": "True",
+                      "chikou_above_price": "False",
+                      "weight": 0.5,
+                      "weighted_score": {
+                        "bull": 0.0,
+                        "bear": 0.8
+                      }
+                    },
+                    "ema": {
+                      "direction": "BEAR",
+                      "confidence": 0.44999999999999996,
+                      "price_above_ema": "False",
+                      "ema_bullish": "False",
+                      "slope": "DOWN",
+                      "weight": 0.3,
+                      "weighted_score": {
+                        "bull": 0.0,
+                        "bear": 0.44999999999999996
+                      }
+                    },
+                    "smc": {
+                      "direction": "BEAR",
+                      "confidence": 0.4,
+                      "bos_confirmed": false,
+                      "mss_confirmed": true,
+                      "last_swing_high": 481.75,
+                      "last_swing_low": 438.0,
+                      "weight": 0.2,
+                      "note": "SMC \u4ec5\u63d0\u4f9b\u4ef7\u4f4d\u53c2\u8003\uff0c\u4e0d\u4e3b\u5bfc\u65b9\u5411\u5224\u65ad"
+                    },
+                    "elder": {
+                      "direction": "BULL",
+                      "rsi": 20.624582878859144,
+                      "layer2_pullback": true,
+                      "layer3_trigger": "READY"
+                    },
+                    "votes": {
+                      "BULL": 0.0,
+                      "BEAR": 0.615,
+                      "ICHIMOKU_WEIGHT": 0.5,
+                      "EMA_WEIGHT": 0.3,
+                      "SMC_WEIGHT": 0.2
+                    }
+                  }
+                },
+                "strength": {
+                  "rating": "READY",
+                  "adx_value": 28.206835997568938,
+                  "divergence": true,
+                  "regime": "TRENDING"
+                },
+                "entry": {
+                  "signal": "SHORT",
+                  "entry_price": 463.0,
+                  "stop_loss": 468.10714285714283,
+                  "reason": "FVG bearish"
+                },
+                "passed_prefilter": true
+              }
+            }
+          },
+          "metadata": {
+            "strategy": "scan_composite"
+          }
+        },
+        "error": null
+      },
+      {
+        "symbol": "ZS=F",
+        "name": "\u5927\u8c46",
+        "market": "US_FUTURES",
+        "bucket": "actionable",
+        "bucket_reason": "BEAR trend, confidence=0.83, score=-77.9",
+        "trading_signal": {
+          "direction": "BEAR",
+          "status": "VALID",
+          "readiness": "READY",
+          "signal_score": -77.91995819243621,
+          "confidence": 0.8326995819243621,
+          "components": {
+            "confidence": 72.33991638487242,
+            "adx": 31.877468644393556,
+            "persistence": 6.0,
+            "supertrend_direction": -100.0,
+            "trend_magic_direction": -100.0,
+            "final_score": -83.5,
+            "trend_confidence": 83.5,
+            "final_confidence": 94.19999999999999,
+            "divergence_penalty": -20.0
+          },
+          "reasons": [
+            "enhanced_supertrend: BEAR",
+            "mtes_v3_trend: BEAR"
+          ],
+          "warnings": [],
+          "source_results": {
+            "enhanced_supertrend": {
+              "direction": "BEAR",
+              "confidence": 0.7233991638487243,
+              "signed_score": -72.33991638487242,
+              "status": "VALID",
+              "strength_rating": "STRONG",
+              "readiness": "READY",
+              "regime": "TRENDING",
+              "passed_prefilter": null,
+              "explanation": "enhanced_supertrend: direction=BEAR, confidence=0.72, strength=STRONG, readiness=READY",
+              "components": {
+                "confidence": 72.33991638487242,
+                "adx": 31.877468644327163,
+                "persistence": 6.0,
+                "supertrend_direction": -100.0,
+                "trend_magic_direction": -100.0
+              },
+              "warnings": [],
+              "metadata": {
+                "source": "enhanced_supertrend",
+                "trend": "\u4e0b\u8dcc",
+                "adx": 31.877468644327163,
+                "supertrend_direction": -1,
+                "trend_magic_direction": -1,
+                "bars_since_flip": 6
+              }
+            },
+            "mtes_v3_trend": {
+              "direction": "BEAR",
+              "confidence": 0.942,
+              "signed_score": -83.5,
+              "status": "VALID",
+              "strength_rating": "STRONG",
+              "readiness": "READY",
+              "regime": "TRENDING",
+              "passed_prefilter": true,
+              "explanation": "mtes_v3_trend: direction=BEAR, confidence=0.94, strength=STRONG, readiness=READY",
+              "components": {
+                "final_score": -83.5,
+                "trend_confidence": 83.5,
+                "final_confidence": 94.19999999999999,
+                "adx": 31.877468644393556,
+                "divergence_penalty": -20.0
+              },
+              "warnings": [],
+              "metadata": {
+                "source": "mtes_v3",
+                "mtf_trend": {
+                  "direction": "BEAR",
+                  "confidence": 0.835,
+                  "signals": {
+                    "ichimoku": {
+                      "direction": "BEAR",
+                      "confidence": 0.8,
+                      "price_above_cloud": "False",
+                      "tenkan_above_kijun": "False",
+                      "cloud_bullish": "False",
+                      "chikou_above_price": "False",
+                      "weight": 0.5,
+                      "weighted_score": {
+                        "bull": 0.0,
+                        "bear": 0.8
+                      }
+                    },
+                    "ema": {
+                      "direction": "BEAR",
+                      "confidence": 0.44999999999999996,
+                      "price_above_ema": "False",
+                      "ema_bullish": "False",
+                      "slope": "DOWN",
+                      "weight": 0.3,
+                      "weighted_score": {
+                        "bull": 0.0,
+                        "bear": 0.44999999999999996
+                      }
+                    },
+                    "smc": {
+                      "direction": "NEUTRAL",
+                      "confidence": 0.15,
+                      "bos_confirmed": false,
+                      "mss_confirmed": false,
+                      "last_swing_high": 1222.0,
+                      "last_swing_low": 1151.5,
+                      "weight": 0.2,
+                      "note": "SMC \u4ec5\u63d0\u4f9b\u4ef7\u4f4d\u53c2\u8003\uff0c\u4e0d\u4e3b\u5bfc\u65b9\u5411\u5224\u65ad"
+                    },
+                    "elder": {
+                      "direction": "BEAR",
+                      "rsi": 16.184888018972075,
+                      "layer2_pullback": false,
+                      "layer3_trigger": "READY"
+                    },
+                    "votes": {
+                      "BULL": 0.04,
+                      "BEAR": 0.575,
+                      "ICHIMOKU_WEIGHT": 0.5,
+                      "EMA_WEIGHT": 0.3,
+                      "SMC_WEIGHT": 0.2
+                    }
+                  }
+                },
+                "strength": {
+                  "rating": "STRONG",
+                  "adx_value": 31.877468644393556,
+                  "divergence": true,
+                  "regime": "TRENDING"
+                },
+                "entry": {
+                  "signal": "SHORT",
+                  "entry_price": 1264.625,
+                  "stop_loss": 1275.267857142857,
+                  "reason": "FVG bearish"
+                },
+                "passed_prefilter": true
+              }
+            }
+          },
+          "metadata": {
+            "strategy": "scan_composite"
+          }
+        },
+        "error": null
+      }
+    ],
+    "watch": [
+      {
+        "symbol": "ES=F",
+        "name": "\u6807\u666e500",
+        "market": "US_FUTURES",
+        "bucket": "watch",
+        "bucket_reason": "no directional trend (NEUTRAL)",
+        "trading_signal": {
+          "direction": "NEUTRAL",
+          "status": "VALID",
+          "readiness": "READY",
+          "signal_score": 3.22946434456518,
+          "confidence": 0.7832053565543482,
+          "components": {
+            "confidence": 65.94107131086965,
+            "adx": 29.477901741654414,
+            "persistence": 4.0,
+            "supertrend_direction": -100.0,
+            "trend_magic_direction": -100.0,
+            "final_score": 72.4,
+            "trend_confidence": 90.5,
+            "final_confidence": 90.7,
+            "divergence_penalty": -20.0
+          },
+          "reasons": [
+            "enhanced_supertrend: BEAR",
+            "mtes_v3_trend: BULL"
+          ],
+          "warnings": [],
+          "source_results": {
+            "enhanced_supertrend": {
+              "direction": "BEAR",
+              "confidence": 0.6594107131086965,
+              "signed_score": -65.94107131086965,
+              "status": "VALID",
+              "strength_rating": "READY",
+              "readiness": "READY",
+              "regime": "TRENDING",
+              "passed_prefilter": null,
+              "explanation": "enhanced_supertrend: direction=BEAR, confidence=0.66, strength=READY, readiness=READY",
+              "components": {
+                "confidence": 65.94107131086965,
+                "adx": 29.47790174157612,
+                "persistence": 4.0,
+                "supertrend_direction": -100.0,
+                "trend_magic_direction": -100.0
+              },
+              "warnings": [],
+              "metadata": {
+                "source": "enhanced_supertrend",
+                "trend": "\u4e0b\u8dcc",
+                "adx": 29.47790174157612,
+                "supertrend_direction": -1,
+                "trend_magic_direction": -1,
+                "bars_since_flip": 4
+              }
+            },
+            "mtes_v3_trend": {
+              "direction": "BULL",
+              "confidence": 0.907,
+              "signed_score": 72.4,
+              "status": "VALID",
+              "strength_rating": "READY",
+              "readiness": "READY",
+              "regime": "TRENDING",
+              "passed_prefilter": true,
+              "explanation": "mtes_v3_trend: direction=BULL, confidence=0.91, strength=READY, readiness=READY",
+              "components": {
+                "final_score": 72.4,
+                "trend_confidence": 90.5,
+                "final_confidence": 90.7,
+                "adx": 29.477901741654414,
+                "divergence_penalty": -20.0
+              },
+              "warnings": [],
+              "metadata": {
+                "source": "mtes_v3",
+                "mtf_trend": {
+                  "direction": "BULL",
+                  "confidence": 0.905,
+                  "signals": {
+                    "ichimoku": {
+                      "direction": "BULL",
+                      "confidence": 0.8,
+                      "price_above_cloud": "True",
+                      "tenkan_above_kijun": "False",
+                      "cloud_bullish": "True",
+                      "chikou_above_price": "True",
+                      "weight": 0.5,
+                      "weighted_score": {
+                        "bull": 0.8,
+                        "bear": 0.0
+                      }
+                    },
+                    "ema": {
+                      "direction": "BULL",
+                      "confidence": 0.55,
+                      "price_above_ema": "False",
+                      "ema_bullish": "True",
+                      "slope": "FLAT",
+                      "weight": 0.3,
+                      "weighted_score": {
+                        "bull": 0.55,
+                        "bear": 0.0
+                      }
+                    },
+                    "smc": {
+                      "direction": "BULL",
+                      "confidence": 0.4,
+                      "bos_confirmed": true,
+                      "mss_confirmed": false,
+                      "last_swing_high": 7632.25,
+                      "last_swing_low": 7354.25,
+                      "weight": 0.2,
+                      "note": "SMC \u4ec5\u63d0\u4f9b\u4ef7\u4f4d\u53c2\u8003\uff0c\u4e0d\u4e3b\u5bfc\u65b9\u5411\u5224\u65ad"
+                    },
+                    "elder": {
+                      "direction": "BEAR",
+                      "rsi": 33.881245865505875,
+                      "layer2_pullback": false,
+                      "layer3_trigger": "READY"
+                    },
+                    "votes": {
+                      "BULL": 0.645,
+                      "BEAR": 0.0,
+                      "ICHIMOKU_WEIGHT": 0.5,
+                      "EMA_WEIGHT": 0.3,
+                      "SMC_WEIGHT": 0.2
+                    }
+                  }
+                },
+                "strength": {
+                  "rating": "READY",
+                  "adx_value": 29.477901741654414,
+                  "divergence": true,
+                  "regime": "TRENDING"
+                },
+                "entry": {
+                  "signal": "LONG",
+                  "entry_price": 7355.25,
+                  "stop_loss": 7219.75,
+                  "reason": "RSI oversold"
+                },
+                "passed_prefilter": true
+              }
+            }
+          },
+          "metadata": {
+            "strategy": "scan_composite"
+          }
+        },
+        "error": null
+      },
+      {
+        "symbol": "NQ=F",
+        "name": "\u7eb3\u65af\u8fbe\u514b100",
+        "market": "US_FUTURES",
+        "bucket": "watch",
+        "bucket_reason": "no directional trend (NEUTRAL)",
+        "trading_signal": {
+          "direction": "NEUTRAL",
+          "status": "VALID",
+          "readiness": "WAIT",
+          "signal_score": 23.75,
+          "confidence": 0.6865,
+          "components": {
+            "confidence": 54.0,
+            "adx": 22.9552171170183,
+            "persistence": 4.0,
+            "supertrend_direction": -100.0,
+            "trend_magic_direction": -100.0,
+            "final_score": 47.5,
+            "trend_confidence": 95.0,
+            "final_confidence": 83.3,
+            "divergence_penalty": -20.0
+          },
+          "reasons": [
+            "mtes_v3_trend: BULL"
+          ],
+          "warnings": [],
+          "source_results": {
+            "enhanced_supertrend": {
+              "direction": "NEUTRAL",
+              "confidence": 0.54,
+              "signed_score": 0.0,
+              "status": "NO_SIGNAL",
+              "strength_rating": "WEAK",
+              "readiness": "NOT_READY",
+              "regime": "CHOPPY",
+              "passed_prefilter": null,
+              "explanation": "enhanced_supertrend: direction=NEUTRAL, confidence=0.54, strength=WEAK, readiness=NOT_READY",
+              "components": {
+                "confidence": 54.0,
+                "adx": 22.95521711696526,
+                "persistence": 4.0,
+                "supertrend_direction": -100.0,
+                "trend_magic_direction": -100.0
+              },
+              "warnings": [],
+              "metadata": {
+                "source": "enhanced_supertrend",
+                "trend": "\u9707\u8361",
+                "adx": 22.95521711696526,
+                "supertrend_direction": -1,
+                "trend_magic_direction": -1,
+                "bars_since_flip": 4
+              }
+            },
+            "mtes_v3_trend": {
+              "direction": "BULL",
+              "confidence": 0.833,
+              "signed_score": 47.5,
+              "status": "VALID",
+              "strength_rating": "WEAK",
+              "readiness": "NOT_READY",
+              "regime": "RANGE",
+              "passed_prefilter": true,
+              "explanation": "mtes_v3_trend: direction=BULL, confidence=0.83, strength=WEAK, readiness=NOT_READY",
+              "components": {
+                "final_score": 47.5,
+                "trend_confidence": 95.0,
+                "final_confidence": 83.3,
+                "adx": 22.9552171170183,
+                "divergence_penalty": -20.0
+              },
+              "warnings": [],
+              "metadata": {
+                "source": "mtes_v3",
+                "mtf_trend": {
+                  "direction": "BULL",
+                  "confidence": 0.95,
+                  "signals": {
+                    "ichimoku": {
+                      "direction": "BULL",
+                      "confidence": 0.8,
+                      "price_above_cloud": "True",
+                      "tenkan_above_kijun": "False",
+                      "cloud_bullish": "True",
+                      "chikou_above_price": "True",
+                      "weight": 0.5,
+                      "weighted_score": {
+                        "bull": 0.8,
+                        "bear": 0.0
+                      }
+                    },
+                    "ema": {
+                      "direction": "BULL",
+                      "confidence": 0.7000000000000001,
+                      "price_above_ema": "False",
+                      "ema_bullish": "True",
+                      "slope": "DOWN",
+                      "weight": 0.3,
+                      "weighted_score": {
+                        "bull": 0.7000000000000001,
+                        "bear": 0.0
+                      }
+                    },
+                    "smc": {
+                      "direction": "BULL",
+                      "confidence": 0.4,
+                      "bos_confirmed": true,
+                      "mss_confirmed": false,
+                      "last_swing_high": 30807.75,
+                      "last_swing_low": 28663.0,
+                      "weight": 0.2,
+                      "note": "SMC \u4ec5\u63d0\u4f9b\u4ef7\u4f4d\u53c2\u8003\uff0c\u4e0d\u4e3b\u5bfc\u65b9\u5411\u5224\u65ad"
+                    },
+                    "elder": {
+                      "direction": "BEAR",
+                      "rsi": 35.302090916225666,
+                      "layer2_pullback": false,
+                      "layer3_trigger": "READY"
+                    },
+                    "votes": {
+                      "BULL": 0.69,
+                      "BEAR": 0.0,
+                      "ICHIMOKU_WEIGHT": 0.5,
+                      "EMA_WEIGHT": 0.3,
+                      "SMC_WEIGHT": 0.2
+                    }
+                  }
+                },
+                "strength": {
+                  "rating": "WEAK",
+                  "adx_value": 22.9552171170183,
+                  "divergence": true,
+                  "regime": "RANGE"
+                },
+                "entry": {
+                  "signal": "WAIT",
+                  "entry_price": null,
+                  "stop_loss": null,
+                  "reason": null
+                },
+                "passed_prefilter": true
+              }
+            }
+          },
+          "metadata": {
+            "strategy": "scan_composite"
+          }
+        },
+        "error": null
+      }
+    ],
+    "risk_excluded": [
+      {
+        "symbol": "HG=F",
+        "name": "\u94dc",
+        "market": "US_FUTURES",
+        "bucket": "risk_excluded",
+        "bucket_reason": "readiness=EXHAUSTED",
+        "trading_signal": {
+          "direction": "NEUTRAL",
+          "status": "VALID",
+          "readiness": "EXHAUSTED",
+          "signal_score": 10.0,
+          "confidence": 0.5,
+          "components": {
+            "confidence": 24.0,
+            "adx": 12.588038912440487,
+            "persistence": 42.0,
+            "supertrend_direction": 100.0,
+            "trend_magic_direction": -100.0,
+            "final_score": 20.0,
+            "trend_confidence": 100.0,
+            "final_confidence": 76.0,
+            "divergence_penalty": -20.0
+          },
+          "reasons": [
+            "mtes_v3_trend: BULL"
+          ],
+          "warnings": [],
+          "source_results": {
+            "enhanced_supertrend": {
+              "direction": "NEUTRAL",
+              "confidence": 0.24,
+              "signed_score": 0.0,
+              "status": "NO_SIGNAL",
+              "strength_rating": "WEAK",
+              "readiness": "NOT_READY",
+              "regime": "CHOPPY",
+              "passed_prefilter": null,
+              "explanation": "enhanced_supertrend: direction=NEUTRAL, confidence=0.24, strength=WEAK, readiness=NOT_READY",
+              "components": {
+                "confidence": 24.0,
+                "adx": 12.588038912412784,
+                "persistence": 42.0,
+                "supertrend_direction": 100.0,
+                "trend_magic_direction": -100.0
+              },
+              "warnings": [],
+              "metadata": {
+                "source": "enhanced_supertrend",
+                "trend": "\u9707\u8361",
+                "adx": 12.588038912412784,
+                "supertrend_direction": 1,
+                "trend_magic_direction": -1,
+                "bars_since_flip": 42
+              }
+            },
+            "mtes_v3_trend": {
+              "direction": "BULL",
+              "confidence": 0.76,
+              "signed_score": 20.0,
+              "status": "VALID",
+              "strength_rating": "EXHAUSTED",
+              "readiness": "EXHAUSTED",
+              "regime": "RANGE",
+              "passed_prefilter": true,
+              "explanation": "mtes_v3_trend: direction=BULL, confidence=0.76, strength=EXHAUSTED, readiness=EXHAUSTED",
+              "components": {
+                "final_score": 20.0,
+                "trend_confidence": 100.0,
+                "final_confidence": 76.0,
+                "adx": 12.588038912440487,
+                "divergence_penalty": -20.0
+              },
+              "warnings": [],
+              "metadata": {
+                "source": "mtes_v3",
+                "mtf_trend": {
+                  "direction": "BULL",
+                  "confidence": 1.0,
+                  "signals": {
+                    "ichimoku": {
+                      "direction": "BULL",
+                      "confidence": 1.0,
+                      "price_above_cloud": "True",
+                      "tenkan_above_kijun": "True",
+                      "cloud_bullish": "True",
+                      "chikou_above_price": "True",
+                      "weight": 0.5,
+                      "weighted_score": {
+                        "bull": 1.0,
+                        "bear": 0.0
+                      }
+                    },
+                    "ema": {
+                      "direction": "BULL",
+                      "confidence": 0.55,
+                      "price_above_ema": "False",
+                      "ema_bullish": "True",
+                      "slope": "FLAT",
+                      "weight": 0.3,
+                      "weighted_score": {
+                        "bull": 0.55,
+                        "bear": 0.0
+                      }
+                    },
+                    "smc": {
+                      "direction": "NEUTRAL",
+                      "confidence": 0.15,
+                      "bos_confirmed": false,
+                      "mss_confirmed": false,
+                      "last_swing_high": 669.8,
+                      "last_swing_low": 614.75,
+                      "weight": 0.2,
+                      "note": "SMC \u4ec5\u63d0\u4f9b\u4ef7\u4f4d\u53c2\u8003\uff0c\u4e0d\u4e3b\u5bfc\u65b9\u5411\u5224\u65ad"
+                    },
+                    "elder": {
+                      "direction": "BEAR",
+                      "rsi": 42.56792600970942,
+                      "layer2_pullback": false,
+                      "layer3_trigger": "READY"
+                    },
+                    "votes": {
+                      "BULL": 0.705,
+                      "BEAR": 0.04,
+                      "ICHIMOKU_WEIGHT": 0.5,
+                      "EMA_WEIGHT": 0.3,
+                      "SMC_WEIGHT": 0.2
+                    }
+                  }
+                },
+                "strength": {
+                  "rating": "EXHAUSTED",
+                  "adx_value": 12.588038912440487,
+                  "divergence": true,
+                  "regime": "RANGE"
+                },
+                "entry": {
+                  "signal": "WAIT",
+                  "entry_price": null,
+                  "stop_loss": null,
+                  "reason": null
+                },
+                "passed_prefilter": true
+              }
+            }
+          },
+          "metadata": {
+            "strategy": "scan_composite"
+          }
+        },
+        "error": null
+      }
+    ],
+    "skipped": [],
+    "failed": []
+  },
+  "metadata": {
+    "strategy": "CompositeTrendStrategy",
+    "sources": [
+      "EnhancedSuperTrendStrategy",
+      "MTESv3TrendStrategy"
+    ],
+    "version": "1.0.0",
+    "thresholds": {
+      "bull_bear_threshold": 0.45,
+      "watch_confidence_floor": 0.25
+    }
+  }
+}

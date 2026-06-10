@@ -1,0 +1,14 @@
+{
+  "scan_date": "2026-06-10",
+  "watchlist_name": "us_futures_watchlist.csv",
+  "version": "1.0.0",
+  "artifacts": {
+    "data_health": "data_health.json",
+    "scan_results": "scan_results.json",
+    "report": "report.md"
+  },
+  "scan_info": {
+    "watchlist": "watchlist/us_futures_watchlist.csv"
+  },
+  "total_symbols": 8
+}

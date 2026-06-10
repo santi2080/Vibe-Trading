@@ -1,30 +1,31 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.3
-milestone_name: remote-refresh-scan-loop
-status: in_progress
-last_updated: "2026-06-10T14:50:00Z"
+milestone: v2.4
+milestone_name: next-milestone
+status: backlog
+last_updated: "2026-06-11T00:00:00Z"
 progress:
-  total_phases: 1
+  total_phases: 0
   completed_phases: 0
-  total_plans: 1
-  completed_plans: 1
-  percent: 100
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State
 
 ## Current Focus
 
-v2.3 remote-refresh-scan-loop: **IN PROGRESS** — Phase 17 Plan 01 complete.
+v2.3 remote-refresh-scan-loop: ✅ **SHIPPED 2026-06-11** — Phase 17 PR #6 merged.
 
-## Phase 17 Summary
+## v2.3 Summary
 
-- Phase 17 Plan 01: Remote Refresh Scan Loop ✅ COMPLETE
+- Phase 17: Remote Refresh Scan Loop ✅ SHIPPED 2026-06-11
 - Requirements RF-01 through RF-05: all implemented
 - `--refresh` flag added to scan command: auto-fetches stale/missing data before health gate
 - 33 focused tests (test_data_refresh.py)
 - Non-blocking: refresh failures do not stop the scan
+- PR #6 merged to main
 
 ## Phase 16 Summary (v2.2)
 

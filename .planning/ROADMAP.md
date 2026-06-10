@@ -5,7 +5,7 @@
 - ✅ **v2.0** — composite-strategy-signal-layer (shipped 2026-06-06)
 - ✅ **v2.1** — composite-strategy-backtest (shipped 2026-06-07; empirical evidence blocked)
 - ✅ **v2.2** — daily-scan-report-loop (shipped 2026-06-10)
-- 🌱 **v2.3** — remote-refresh-scan-loop (Phase 17 in progress)
+- ✅ **v2.3** — remote-refresh-scan-loop (shipped 2026-06-11)
 
 ## Phases
 
