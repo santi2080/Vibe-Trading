@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
@@ -22,6 +22,34 @@ class TestScanCommand:
 
     def _runner(self):
         return CliRunner()
+
+    def _mock_report(
+        self,
+        status: str,
+        blocking_failures: int = 0,
+        warnings: int = 0,
+        can_backtest: bool = True,
+    ):
+        """Build a mock WatchlistDataHealthReport."""
+        report = MagicMock()
+        report.gate_status = status
+        report.blocking_failures = blocking_failures
+        report.warnings = warnings
+        report.can_backtest = can_backtest
+        report.to_dict.return_value = {
+            "watchlist": "test.csv",
+            "checked_at": "2026-06-09T00:00:00",
+            "data_dir": "data",
+            "gate": {
+                "status": status,
+                "can_backtest": can_backtest,
+                "blocking_failures": blocking_failures,
+                "warnings": warnings,
+                "total_checks": 2,
+            },
+            "items": [],
+        }
+        return report
 
     def test_help(self):
         runner = self._runner()
@@ -90,15 +118,36 @@ class TestScanCommand:
         assert result.exit_code == 1
         assert "invalid" in result.output.lower()
 
-    def test_run_mode_local_data_first_stub_message(self, tmp_path: Path):
+    def test_run_mode_with_mock_gate_pass(self, tmp_path: Path):
+        """--run with mocked PASS gate exits 0 and writes data_health.json."""
         wl = tmp_path / "wl.csv"
         self._write_csv(wl, [
             {"symbol": "GC=F", "name": "Gold", "market": "us_futures", "exchange": "COMEX", "sector": "metals", "timeframes": "1D"},
         ])
         data_dir = tmp_path / "data"
         data_dir.mkdir()
+        output_dir = tmp_path / "output"
+
         runner = self._runner()
-        with patch("src.data.scan_validators._resolve_watchlist_path", return_value=wl):
-            result = runner.invoke(scan, ["--watchlist", str(wl), "--data-dir", str(data_dir), "--run"])
+        with patch("cli.commands.scan.check_watchlist_data") as mock_gate:
+            mock_gate.return_value = self._mock_report(
+                status="PASS", blocking_failures=0, warnings=0, can_backtest=True
+            )
+            with patch("src.data.scan_validators._resolve_watchlist_path", return_value=wl):
+                result = runner.invoke(scan, [
+                    "--watchlist", str(wl),
+                    "--data-dir", str(data_dir),
+                    "--output", str(output_dir),
+                    "--run",
+                ])
+
         assert result.exit_code == 0, f"output: {result.output}"
-        assert "local-data" in result.output.lower() or "no remote" in result.output.lower()
+        assert "PASS" in result.output or "passed" in result.output.lower() or "Daily Scan Run" in result.output
+        assert (output_dir / "data_health.json").exists()
+
+    def test_dry_run_option_shown_in_help(self):
+        """--dry-run option is listed in help output."""
+        runner = self._runner()
+        result = runner.invoke(scan, ["--help"])
+        assert result.exit_code == 0
+        assert "--dry-run" in result.output
