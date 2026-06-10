@@ -22,9 +22,10 @@ except ImportError:
         "Or: pip install pyarrow"
     ) from None
 
-from src.data.scan_plan import build_scan_plan, format_plan_table, format_plan_json
+from src.data.scan_plan import ScanPlan, build_scan_plan, format_plan_table, format_plan_json
 from src.data.scan_validators import validate_watchlist
 from src.data.watchlist_data_health import check_watchlist_data
+from src.data.scan_signal_buckets import run_signal_scan
 
 
 def _run_data_gate(
@@ -34,10 +35,12 @@ def _run_data_gate(
     format: str,
     scan_date: date,
     console: Console,
+    plan: ScanPlan,  # ScanPlan from scan_plan.build_scan_plan()
 ) -> None:
     """Run the data-health gate and handle PASS/WARN/FAIL outcomes.
 
     Writes data_health.json to output_dir and exits on FAIL.
+    On PASS/WARN: calls run_signal_scan() to execute the signal analysis.
     """
     try:
         scan_dt = datetime.combine(scan_date, datetime.min.time())
@@ -101,12 +104,24 @@ def _run_data_gate(
     console.print(Panel(
         Text.from_markup(
             f"[bold green]Data health check PASSED[/bold green] — "
-            f"{gate_dict['total_checks']} check(s).\n"
-            f"[dim]Full signal scan + reporting is implemented in Phases 14–15.[/dim]"
+            f"{gate_dict['total_checks']} check(s)."
         ),
         title="Daily Scan Run",
         border_style="green",
     ))
+
+    # Phase 5: Signal Scan (SIG-01, SIG-02)
+    try:
+        run_signal_scan(
+            plan,
+            output_dir,
+            scan_date=scan_date,
+            format=format,
+            console=console,
+        )
+    except Exception as exc:
+        console.print(f"\n[red]Signal scan error:[/red] {exc}")
+        raise SystemExit(1)
 
 
 console = Console()
@@ -289,6 +304,7 @@ def scan(
                 format=format,
                 scan_date=scan_date,
                 console=console,
+                plan=plan,
             )
 
 
