@@ -481,7 +481,8 @@ class TestSymbolTranslatorIntegration:
     def test_translate_symbol_for_yahoo_hk(self, router):
         """Test symbol translation for HK stock to Yahoo."""
         market = MarketType.HK_EQUITY
-        translated = router.translate_symbol("00700", market, DataSource.YFINANCE)
+        # Must use canonical form with .HK suffix
+        translated = router.translate_symbol("00700.HK", market, DataSource.YFINANCE)
         assert translated == "00700.HK"
 
     def test_translate_symbol_unsupported_source(self, router):
@@ -492,9 +493,15 @@ class TestSymbolTranslatorIntegration:
         assert translated == "GC=F"  # Returns original symbol
 
     def test_translate_symbol_cn_futures(self, router):
-        """Test symbol translation for CN futures."""
+        """Test symbol translation for CN futures.
+
+        CN futures to Tushare is explicitly unsupported (Phase 11).
+        Tushare has no CN futures endpoint; stock daily() would return garbage.
+        """
+        from agent.src.data.symbol_translator import SymbolTranslator, DataVendor
+        from agent.src.data.market import Market
         market = MarketType.CN_FUTURES
-        # Test Tushare format (should remain unchanged)
-        translated = router.translate_symbol("rb2405", market, DataSource.TUSHARE)
-        # Tushare format for CN futures is similar to standard
-        assert translated is not None
+        # Phase 11: CN_FUTURES -> TUSHARE is explicitly unsupported
+        result = SymbolTranslator.translate("rb2405", DataVendor.TUSHARE, Market.CN_FUTURES)
+        assert not result.supported
+        assert result.reason is not None

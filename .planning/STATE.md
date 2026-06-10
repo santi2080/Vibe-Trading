@@ -1,15 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
-milestone_name: composite-strategy-backtest
-status: archived_blocked
-last_updated: "2026-06-07T00:00:00.000Z"
-last_activity: 2026-06-07 -- v2.1 milestone archived (empirical evidence blocked closure accepted)
+milestone: v2.2
+milestone_name: daily-scan-report-loop
+status: shipped
+last_updated: "2026-06-10T06:30:00Z"
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 15
-  completed_plans: 15
+  total_phases: 6
+  completed_phases: 6
+  total_plans: 6
+  completed_plans: 6
   percent: 100
 ---
 
@@ -17,38 +16,41 @@ progress:
 
 ## Current Focus
 
-v2.1 已归档（empirical evidence blocked closure accepted by user on 2026-06-07）。
+v2.2 daily-scan-report-loop: **SHIPPED** (2026-06-10). All 6 phases complete.
 
-## Project Reference
+## Phase 16 Summary
 
-See: `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/milestones/v2.1-ROADMAP.md`, `.planning/milestones/v2.1-REQUIREMENTS.md`
+- Phase 16: Daily Scan Verification Closure ✅ COMPLETE
+- TST-01 requirement: all covered
+- 17 new tests (test_scan_verification.py)
+- All 64 scan pipeline tests pass (gate + signal + reporting + verification)
+
+## v2.2 Full Milestone Summary
+
+| Phase | Name | Status | Key Deliverable |
+|-------|------|--------|----------------|
+| 11 | Symbol Format Mapping | ✅ | Canonical symbol contract + translator |
+| 12 | Daily Scan Foundation | ✅ | CLI + watchlist validation + scan plan |
+| 13 | Data Health Gate | ✅ | FAIL/WARN/PASS semantics |
+| 14 | Composite Signal Scan | ✅ | 5-bucket classification (SIG-01, SIG-02) |
+| 15 | Artifacts & Report | ✅ | manifest.json + report.md (ART-01, RPT-01, RPT-02) |
+| 16 | Verification Closure | ✅ | 64 tests (TST-01) |
+
+**Requirements:** 16/16 fulfilled (SYM-01/02/03, STK-01, CLI-01/02, WLS-01/02, GATE-01/02, SIG-01/02, ART-01, RPT-01/02, TST-01)
 
 ## Next Steps
 
-v2.2 Daily Scan Report Loop planning — `/gsd:new-milestone`
+- Push feature/symbol-format-mapping-optimization branch and create PR
+- Review merged PR #4 (feature/phase-09-composite-backtest)
+- Consider v2.2 milestone closeout PR
 
-## Current Position
+## Deferred (per Scope Guardrails)
 
-- v2.1: ARCHIVED (empirical evidence blocked)
-- v2.2: candidate explored, ready for formal milestone definition
-- Phase 11: explored, awaiting /gsd:new-milestone
-
-## Accumulated Context
-
-### v2.1 Closure Decision
-
-User accepted blocked closure on 2026-06-07:
-- 8/12 requirements blocked (no verified 2024-2026 empirical metrics)
-- 4/12 requirements verified (BKST-01/02/03, RPT-03)
-- Infrastructure fully delivered and validated
-- Empirical metrics blocked by local data availability and run-root authorization
-
-### Key Artifacts from v2.1
-
-- `agent/backtest/engines/composite_engine.py` — CompositeBacktestSignalEngine + PositionManager
-- `agent/backtest/signals.py` — KeyNodeSignal, CompositeSignalOutput
-- `agent/backtest/composite_backtest_compare.py` — three-way comparison orchestrator
-- `agent/backtest/reporting/composite_report.py` — report generation + data quality checks
-- `agent/backtest/metrics.py` — per_source_stats, equity_gap_check, calc_metrics
-- `.planning/milestones/v2.1-ROADMAP.md` — milestone archive
-- `.planning/milestones/v2.1-REQUIREMENTS.md` — requirements archive
+- Remote refresh modes
+- Exchange-calendar/session-aware freshness
+- Daily delta against prior scans
+- Empirically validated ranking
+- Dashboard or web UI
+- Notifications or scheduling
+- Live/paper trading execution
+- Trading advice or buy/sell execution language

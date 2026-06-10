@@ -191,6 +191,21 @@ def _is_supported_chat_invocation(argv: Sequence[str]) -> bool:
     return False
 
 
+def _has_scan_arg(argv: Sequence[str]) -> bool:
+    """Return True if --scan flag is present in argv."""
+    return any(a == "--scan" or a == "scan" for a in argv)
+
+
+def _strip_scan_argv(argv: Sequence[str]) -> list[str]:
+    """Remove --scan / scan from argv and return the remaining args for Click."""
+    result = []
+    for a in argv:
+        if a == "--scan" or a == "scan":
+            continue
+        result.append(a)
+    return result
+
+
 def _maybe_run_onboarding() -> bool:
     """Run the first-launch wizard when ``.env`` is missing.
 
@@ -768,7 +783,8 @@ def main(argv: Optional[list[str]] = None) -> int:
       run onboarding wizard if needed, then drop into the interactive
       loop driven by ``cli/input.py``, ``cli/completer.py``,
       and ``cli/commands/*``.
-    * Non-interactive entry (``serve``, ``run -p ...``, ``mcp``,
+    * ``--scan`` subcommand: dispatch to Click-based scan command.
+    * All other non-interactive paths (``serve``, ``run``, ``mcp``,
       ``swarm``, piped stdin, etc.): pass through to ``cli._legacy.main``
       so every existing subcommand keeps working unchanged.
 
@@ -779,6 +795,14 @@ def main(argv: Optional[list[str]] = None) -> int:
         Process exit code.
     """
     raw_argv = list(sys.argv[1:] if argv is None else argv)
+
+    # --scan command: Click-based CLI, dispatch immediately.
+    if _has_scan_arg(raw_argv):
+        from click.testing import CliRunner
+        from cli.commands.scan import scan as _scan_cmd
+        runner = CliRunner()
+        return runner.invoke(_scan_cmd, _strip_scan_argv(raw_argv)).exit_code
+
     interactive = _is_interactive_invocation(raw_argv)
 
     if interactive:

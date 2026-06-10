@@ -4,7 +4,7 @@
 
 - ✅ **v2.0** — composite-strategy-signal-layer (shipped 2026-06-06)
 - ✅ **v2.1** — composite-strategy-backtest (shipped 2026-06-07; empirical evidence blocked)
-- 🌱 **v2.2 candidate** — daily-scan-report-loop (explored 2026-06-07)
+- ✅ **v2.2** — daily-scan-report-loop (shipped 2026-06-10)
 
 ## Phases
 
@@ -30,16 +30,109 @@
 - [x] Phase 10: Empirical Composite Backtest Evidence Closure (5/5 plans) — completed 2026-06-07
   - Data readiness checks, 1D/4H evidence; overall_status: blocked
 
-**Known gaps:** 8/12 requirements blocked (no verified 2024-2026 empirical metrics); 4/12 verified (BKST-01/02/03, RPT-03).  
+**Known gaps:** 8/12 requirements blocked (no verified 2024-2026 empirical metrics); 4/12 verified (BKST-01/02/03, RPT-03).
 **See:** `.planning/milestones/v2.1-ROADMAP.md`, `.planning/milestones/v2.1-REQUIREMENTS.md`
 
 </details>
 
-### 🌱 v2.2 candidate: Daily Scan Report Loop
+### 🌱 v2.2: Daily Scan Report Loop
 
-- [ ] Phase 11: Daily Scan Report Loop (0/0 plans) — not started
+- [x] Phase 11: Symbol Format Mapping Contract & Data Source Translation Optimization (1/1 plans) — completed 2026-06-08
+- [x] Phase 12: Daily Scan Foundation & Run Plan (1/1 plans) — completed 2026-06-09
+- [x] Phase 13: Data Health Gated Scan Control (1/1 plans) — completed 2026-06-10
+- [x] Phase 14: Composite Signal Scan Buckets (1/1 plans) — completed 2026-06-10
+- [x] Phase 15: Deterministic Artifacts & Markdown Report (1/1 plans) — completed 2026-06-10
+- [x] Phase 16: Daily Scan Verification Closure (1/1 plans) — completed 2026-06-10
 
-**Goal:** 一条命令基于 watchlist 生成每日扫描 Markdown 报告
+**Goal:** Productize the daily scan workflow with a reliable local-data-first pipeline that can support one-command watchlist scanning and Markdown reporting.
+
+## Phase Details
+
+### Phase 11: Symbol Format Mapping Contract & Data Source Translation Optimization
+
+**Goal:** User and codebase share one Canonical Symbol Format, and every data-source boundary maps that canonical symbol into the vendor-specific format without changing user-facing keys.
+**Depends on:** Phase 10 / v2.1 shipped foundations
+**Requirements:** SYM-01, SYM-02, SYM-03
+
+**Success Criteria:**
+1. Canonical Symbol Format is explicitly defined and tested for A-shares/ETFs, US equities, HK equities, US futures, CN futures, crypto, and forex.
+2. `SymbolTranslator` maps canonical symbols into Tushare, AKShare, yfinance, TqSdk, OKX, CCXT, and Databento formats where supported, with unsupported combinations staying explicit rather than silently mangled.
+3. Fetch/routing boundaries call vendors with vendor-format symbols but return canonical symbols to callers, preserving fallback and unresolved-symbol behavior.
+4. Loader-specific duplicate conversion logic is either delegated to the canonical translator or retained only as tested compatibility shims.
+5. Focused tests cover canonical-to-vendor contracts, routing/fallback preservation, and compatibility with the local-data-first daily scan plan.
+
+**Plans:** 1/1 plans complete
+
+### Phase 12: Daily Scan Foundation & Run Plan
+
+**Goal:** User can start a local-data-first daily scan and receive validated run intent before analysis begins.
+**Depends on:** Phase 11
+**Requirements:** STK-01, CLI-01, CLI-02, WLS-01, WLS-02
+
+**Success Criteria:**
+1. User can invoke one daily scan command with explicit watchlist, data directory, output directory, timestamp, and JSON or human output mode.
+2. User is told early when the watchlist path is missing or unsafe, required columns are absent, the list is empty, duplicate symbols exist, or market/timeframe values are unsupported.
+3. User can inspect a normalized scan plan that lists each symbol, market, required timeframes, cache paths, and intended output paths before strategy results are produced.
+4. The scan uses only local data inputs in v2.2; no remote provider fetch is triggered by the default daily scan command.
+5. Parquet read/write support is dependable because the project explicitly declares the required Parquet engine dependency.
+
+**Plans:** 1/1 plans complete
+
+### Phase 13: Data Health Gated Scan Control
+
+**Goal:** User can trust that data readiness blocks or caveats the scan before strategy work.
+**Depends on:** Phase 12
+**Requirements:** GATE-01, GATE-02
+
+**Success Criteria:**
+1. Every daily scan run executes the existing data-health gate before any CompositeTrendStrategy analysis.
+2. A data-health `FAIL` produces blocked artifacts and a blocked report with no strategy candidates.
+3. A data-health `WARN` run can continue, but the report and artifacts clearly expose the caveats.
+4. User can distinguish `PASS`, `WARN`, and `FAIL` scan outcomes without reading logs.
+
+**Plans:** 1/1 plans complete
+
+### Phase 14: Composite Signal Scan Buckets
+
+**Goal:** User can see every watchlist symbol classified through CompositeTrendStrategy / TradingSignal semantics.
+**Depends on:** Phase 13
+**Requirements:** SIG-01, SIG-02
+
+**Success Criteria:**
+1. Eligible symbols are scanned through `CompositeTrendStrategy` and serialized via `TradingSignal` semantics, not legacy analyzer semantics.
+2. Every input watchlist symbol appears in exactly one final classification: Actionable, Watch, Risk/Excluded, Skipped, or Failed.
+3. User can see why any symbol was skipped, failed, or excluded from actionable candidates.
+4. Actionable candidates are based on validated signal readiness semantics rather than unverified ranking or historical performance claims.
+
+**Plans:** 1/1 plans complete
+
+### Phase 15: Deterministic Artifacts & Markdown Report
+
+**Goal:** User gets stable machine-readable artifacts and a human-readable Markdown report without unverified claims.
+**Depends on:** Phase 14
+**Requirements:** ART-01, RPT-01, RPT-02
+
+**Success Criteria:**
+1. Each scan run writes `manifest.json`, `data_health.json`, `scan_results.json`, and `report.md` into a safe deterministic run directory.
+2. User can open `report.md` and see data health, candidates, watch symbols, risk/excluded symbols, skipped/failed symbols, caveats, and links to artifacts.
+3. Markdown report counts and sections are rendered from the JSON artifacts rather than separate ad-hoc report state.
+4. The report avoids unverified ranking, performance metrics, "best configuration" claims, and trading execution advice.
+
+**Plans:** 1/1 plans complete
+
+### Phase 16: Daily Scan Verification Closure
+
+**Goal:** User can verify the daily scan loop with tests covering gate, artifacts, report, safety, and CLI behavior.
+**Depends on:** Phase 15
+**Requirements:** TST-01
+
+**Success Criteria:**
+1. User can run focused tests showing data-health `FAIL` blocks strategy analysis and data-health `WARN` continues with visible caveats.
+2. User can run focused tests showing each symbol is assigned to one bucket or reason code.
+3. User can run focused tests showing artifact schemas and Markdown/JSON counts stay consistent.
+4. User can run focused tests showing unsafe paths are rejected and CLI/tool exit semantics are stable for success, warning, blocked, and failure cases.
+
+**Plans:** 1/1 plans complete
 
 ## Progress
 
@@ -48,7 +141,59 @@
 | 01-08 | v2.0 | 23/23 | Complete | 2026-06-06 |
 | 09 | v2.1 | 4/4 | Complete | 2026-06-06 |
 | 10 | v2.1 | 5/5 | Complete (blocked evidence) | 2026-06-07 |
-| 11 | v2.2 | — | Explored | — |
+| 11 | v2.2 | 1/1 | Complete | 2026-06-08 |
+| 12 | v2.2 | 1/1 | Complete | 2026-06-09 |
+| 13 | v2.2 | 1/1 | Complete | 2026-06-10 |
+| 14 | v2.2 | 1/1 | Complete | 2026-06-10 |
+| 15 | v2.2 | 1/1 | Complete | 2026-06-10 |
+| 16 | v2.2 | 1/1 | Complete | 2026-06-10 |
+
+## Coverage
+
+| Requirement | Phase |
+|-------------|-------|
+| SYM-01 | Phase 11 |
+| SYM-02 | Phase 11 |
+| SYM-03 | Phase 11 |
+| STK-01 | Phase 12 |
+| CLI-01 | Phase 12 |
+| CLI-02 | Phase 12 |
+| WLS-01 | Phase 12 |
+| WLS-02 | Phase 12 |
+| GATE-01 | Phase 13 |
+| GATE-02 | Phase 13 |
+| SIG-01 | Phase 14 |
+| SIG-02 | Phase 14 |
+| ART-01 | Phase 15 |
+| RPT-01 | Phase 15 |
+| RPT-02 | Phase 15 |
+| TST-01 | Phase 16 |
+
+**Coverage:** 16/16 v2.2 requirements mapped exactly once.
+
+## Scope Guardrails
+
+v2.2 remains local-data-first and data-pipeline-first.
+
+**Included:**
+- Canonical Symbol Format contract and tested data-source translation boundary
+- local-data-first one-command daily scan
+- watchlist validation and normalized run plan
+- mandatory data-health gate
+- `CompositeTrendStrategy` / `TradingSignal` scan semantics
+- bucket/reason-code assignment for every symbol
+- deterministic JSON artifacts and Markdown report
+- tests for symbol translation, gate behavior, bucket coverage, artifact/report consistency, path safety, and CLI semantics
+
+**Deferred:**
+- remote refresh modes
+- exchange-calendar/session-aware freshness
+- daily delta against prior scans
+- empirically validated ranking
+- dashboard or web UI
+- notifications or scheduling
+- live/paper trading execution
+- trading advice or buy/sell execution language
 
 ## Backlog
 
@@ -57,4 +202,4 @@
 
 ---
 
-*Last updated: 2026-06-07 after v2.1 milestone close (empirical evidence blocked closure)*
+*Last updated: 2026-06-09 for Phase 12 plan*

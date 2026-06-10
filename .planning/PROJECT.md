@@ -6,7 +6,16 @@
 
 **v2.1 shipped (2026-06-07):** Composite strategy backtest infrastructure delivered with empirical evidence blocked. Full milestone details at `.planning/milestones/v2.1-ROADMAP.md` and `.planning/milestones/v2.1-REQUIREMENTS.md`.
 
-**Current focus:** v2.2 planning — Daily Scan Report Loop
+**Current focus:** v2.2 — Daily Scan Report Loop
+
+## Current Milestone: v2.2 daily-scan-report-loop
+
+**Goal:** Productize the daily scan workflow with a reliable data pipeline that can support one-command watchlist scanning and Markdown reporting.
+
+**Target features:**
+- Watchlist-driven daily scan data pipeline
+- Data freshness, health, and fallback handling before report generation
+- Structured scan artifacts that can feed a future Markdown report loop
 
 ## What This Is
 
@@ -41,7 +50,7 @@ Vibe-Trading is a multi-agent trading analysis system that combines trend evalua
 
 ### Active
 
-- [ ] Daily Scan Report Loop (v2.2 candidate)
+- [ ] v2.2 Daily Scan Report Loop — local-data-first one-command scan, mandatory data-health gate, CompositeTrendStrategy/TradingSignal semantics, deterministic artifacts, and Markdown report.
 
 ### Out of Scope
 
@@ -74,4 +83,4 @@ Vibe-Trading is a multi-agent trading analysis system that combines trend evalua
 - No completed composite vs single strategy comparison report.
 
 ---
-*Last updated: 2026-06-07 after v2.1 milestone close*
+*Last updated: 2026-06-08 after v2.2 milestone initialization*
