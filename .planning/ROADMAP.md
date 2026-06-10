@@ -40,7 +40,7 @@
 - [x] Phase 11: Symbol Format Mapping Contract & Data Source Translation Optimization (1/1 plans) — completed 2026-06-08
 - [ ] Phase 12: Daily Scan Foundation & Run Plan (1/1 plans) — pending
 - [x] Phase 13: Data Health Gated Scan Control (0/0 plans) — not started (completed 2026-06-10)
-- [ ] Phase 14: Composite Signal Scan Buckets (0/0 plans) — not started
+- [ ] Phase 14: Composite Signal Scan Buckets (1/1 plans) — planned
 - [ ] Phase 15: Deterministic Artifacts & Markdown Report (0/0 plans) — not started
 - [ ] Phase 16: Daily Scan Verification Closure (0/0 plans) — not started
 
@@ -104,7 +104,8 @@
 3. User can see why any symbol was skipped, failed, or excluded from actionable candidates.
 4. Actionable candidates are based on validated signal readiness semantics rather than unverified ranking or historical performance claims.
 
-**Plans:** TBD
+**Plans:*
+- [ ] 14-01-PLAN.md — scan_signal_buckets module + scan.py wiring + focused tests
 
 ### Phase 15: Deterministic Artifacts & Markdown Report
 
@@ -118,7 +119,8 @@
 3. Markdown report counts and sections are rendered from the JSON artifacts rather than separate ad-hoc report state.
 4. The report avoids unverified ranking, performance metrics, "best configuration" claims, and trading execution advice.
 
-**Plans:** TBD
+**Plans:*
+- [ ] 14-01-PLAN.md — scan_signal_buckets module + scan.py wiring + focused tests
 
 ### Phase 16: Daily Scan Verification Closure
 
@@ -132,7 +134,8 @@
 3. User can run focused tests showing artifact schemas and Markdown/JSON counts stay consistent.
 4. User can run focused tests showing unsafe paths are rejected and CLI/tool exit semantics are stable for success, warning, blocked, and failure cases.
 
-**Plans:** TBD
+**Plans:*
+- [ ] 14-01-PLAN.md — scan_signal_buckets module + scan.py wiring + focused tests
 
 ## Progress
 
@@ -144,7 +147,7 @@
 | 11 | v2.2 | 1/1 | Complete | 2026-06-08 |
 | 12 | v2.2 | 1/1 | Planned | — |
 | 13 | v2.2 | 1/1 | Complete   | 2026-06-10 |
-| 14 | v2.2 | 0/0 | Not started | — |
+| 14 | v2.2 | 1/1 | Planned | — |
 | 15 | v2.2 | 0/0 | Not started | — |
 | 16 | v2.2 | 0/0 | Not started | — |
 
