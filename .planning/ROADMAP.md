@@ -229,7 +229,7 @@ v2.2 remains local-data-first and data-pipeline-first.
 
 ### 🌱 v2.4: Exchange Calendar Awareness
 
-- [ ] Phase 18: Exchange Session Definitions (1/1 plans) — planning
+- [x] Phase 18: Exchange Session Definitions (1/1 plans) — completed
 - [ ] Phase 19: Holiday Calendar Integration (1/1 plans) — planning
 - [ ] Phase 20: Session-Aware Freshness Detection (1/1 plans) — planning
 - [ ] Phase 21: Smart Refresh Strategy (1/1 plans) — planning
@@ -305,4 +305,4 @@ v2.2 remains local-data-first and data-pipeline-first.
 
 ---
 
-*Last updated: 2026-06-09 for Phase 12 plan*
+*Last updated: 2026-06-11 for Phase 18 execution*

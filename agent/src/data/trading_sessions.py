@@ -5,8 +5,106 @@
 """
 
 from dataclasses import dataclass
-from datetime import time
+from datetime import datetime, time, timezone
+from enum import Enum
 from typing import List, Optional
+from zoneinfo import ZoneInfo
+
+
+class MarketSessionStatus(Enum):
+    """Trading session status for a market at a given UTC time."""
+
+    PRE_MARKET = "pre_market"
+    REGULAR = "regular"
+    POST_MARKET = "post_market"
+    CLOSED = "closed"
+    CONTINUOUS = "continuous"
+
+
+MARKET_TZ: dict[str, str] = {
+    "cn_stock": "Asia/Shanghai",
+    "cn_stocks": "Asia/Shanghai",
+    "cn_futures": "Asia/Shanghai",
+    "us_stock": "America/New_York",
+    "us_stocks": "America/New_York",
+    "us_futures": "America/Chicago",
+    "hk_stock": "Asia/Hong_Kong",
+    "hk_stocks": "Asia/Hong_Kong",
+}
+
+
+def _ensure_utc(utc_dt: Optional[datetime]) -> datetime:
+    if utc_dt is None:
+        return datetime.now(timezone.utc)
+    if utc_dt.tzinfo is None:
+        return utc_dt.replace(tzinfo=timezone.utc)
+    return utc_dt.astimezone(timezone.utc)
+
+
+def get_session_status(
+    market_code: str, utc_dt: Optional[datetime] = None
+) -> MarketSessionStatus:
+    """Return session status for a market at the given UTC time."""
+    code = market_code.lower()
+    tz_name = MARKET_TZ.get(code)
+    if tz_name is None:
+        return MarketSessionStatus.CONTINUOUS
+
+    market_dt = _ensure_utc(utc_dt).astimezone(ZoneInfo(tz_name))
+    t = market_dt.time()
+
+    if code in ("cn_stock", "cn_stocks"):
+        if time(9, 30) <= t < time(11, 30) or time(13, 0) <= t < time(15, 0):
+            return MarketSessionStatus.REGULAR
+        if time(8, 30) <= t < time(9, 30):
+            return MarketSessionStatus.PRE_MARKET
+        if time(15, 0) <= t < time(16, 0):
+            return MarketSessionStatus.POST_MARKET
+        return MarketSessionStatus.CLOSED
+
+    if code == "cn_futures":
+        if (
+            time(9, 0) <= t < time(10, 15)
+            or time(10, 30) <= t < time(11, 30)
+            or time(13, 30) <= t < time(15, 0)
+            or time(21, 0) <= t < time(23, 0)
+        ):
+            return MarketSessionStatus.REGULAR
+        if time(8, 30) <= t < time(9, 0) or time(15, 0) <= t < time(21, 0):
+            return MarketSessionStatus.POST_MARKET
+        return MarketSessionStatus.CLOSED
+
+    if code in ("us_stock", "us_stocks"):
+        if time(9, 30) <= t < time(16, 0):
+            return MarketSessionStatus.REGULAR
+        if time(4, 0) <= t < time(9, 30):
+            return MarketSessionStatus.PRE_MARKET
+        if time(16, 0) <= t < time(20, 0):
+            return MarketSessionStatus.POST_MARKET
+        return MarketSessionStatus.CLOSED
+
+    if code == "us_futures":
+        if time(17, 0) <= t or t < time(16, 0):
+            return MarketSessionStatus.REGULAR
+        if time(16, 0) <= t < time(17, 0):
+            return MarketSessionStatus.POST_MARKET
+        return MarketSessionStatus.CLOSED
+
+    if code in ("hk_stock", "hk_stocks"):
+        if time(9, 30) <= t < time(12, 0) or time(13, 0) <= t < time(16, 0):
+            return MarketSessionStatus.REGULAR
+        if time(9, 0) <= t < time(9, 30):
+            return MarketSessionStatus.PRE_MARKET
+        if time(16, 0) <= t < time(17, 0):
+            return MarketSessionStatus.POST_MARKET
+        return MarketSessionStatus.CLOSED
+
+    return MarketSessionStatus.CLOSED
+
+
+def is_session_time(market_code: str, utc_dt: Optional[datetime] = None) -> bool:
+    """Check if market is in an active session."""
+    return get_session_status(market_code, utc_dt) != MarketSessionStatus.CLOSED
 
 
 @dataclass
