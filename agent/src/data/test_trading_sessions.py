@@ -30,6 +30,7 @@ def test_market_session_status_enum_values() -> None:
     assert MarketSessionStatus.REGULAR.value == "regular"
     assert MarketSessionStatus.POST_MARKET.value == "post_market"
     assert MarketSessionStatus.CLOSED.value == "closed"
+    assert MarketSessionStatus.HOLIDAY.value == "holiday"
     assert MarketSessionStatus.CONTINUOUS.value == "continuous"
 
 
@@ -46,6 +47,15 @@ def test_unknown_market_is_continuous() -> None:
 
     assert status == MarketSessionStatus.CONTINUOUS
     assert is_session_time("crypto", market_time(2026, 6, 11, 3, 0, "UTC")) is True
+
+
+def test_holiday_is_not_session_time() -> None:
+    """HOLIDAY status should return False from is_session_time."""
+    # CNY 2026 Feb 17 at 10:00 UTC = 18:00 CST (market closed for holiday)
+    cn_dt = datetime(2026, 2, 17, 10, 0, 0, tzinfo=timezone.utc)
+    status = get_session_status("cn_stock", cn_dt)
+    assert status == MarketSessionStatus.HOLIDAY
+    assert is_session_time("cn_stock", cn_dt) is False
 
 
 def test_us_stock_session_statuses() -> None:

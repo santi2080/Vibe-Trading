@@ -18,6 +18,7 @@ class MarketSessionStatus(Enum):
     REGULAR = "regular"
     POST_MARKET = "post_market"
     CLOSED = "closed"
+    HOLIDAY = "holiday"
     CONTINUOUS = "continuous"
 
 
@@ -51,7 +52,15 @@ def get_session_status(
         return MarketSessionStatus.CONTINUOUS
 
     market_dt = _ensure_utc(utc_dt).astimezone(ZoneInfo(tz_name))
+    market_date = market_dt.date()
     t = market_dt.time()
+
+    # Phase 19: Check if it's a market holiday (before session windows)
+    from .holiday_calendar import is_trading_day
+
+    trading = is_trading_day(code, market_date)
+    if trading is False:
+        return MarketSessionStatus.HOLIDAY
 
     if code in ("cn_stock", "cn_stocks"):
         if time(9, 30) <= t < time(11, 30) or time(13, 0) <= t < time(15, 0):
@@ -103,8 +112,16 @@ def get_session_status(
 
 
 def is_session_time(market_code: str, utc_dt: Optional[datetime] = None) -> bool:
-    """Check if market is in an active session."""
-    return get_session_status(market_code, utc_dt) != MarketSessionStatus.CLOSED
+    """Check if market is in an active session (pre-market, regular, or post-market).
+
+    Returns True for PRE_MARKET, REGULAR, POST_MARKET, or CONTINUOUS (24/7 markets).
+    Returns False for CLOSED or HOLIDAY.
+    """
+    status = get_session_status(market_code, utc_dt)
+    return status not in (
+        MarketSessionStatus.CLOSED,
+        MarketSessionStatus.HOLIDAY,
+    )
 
 
 @dataclass

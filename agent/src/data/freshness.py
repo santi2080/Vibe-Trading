@@ -63,17 +63,19 @@ class DataFreshnessChecker:
         if age < threshold:
             return True
 
-        if session_context and self._updated_today_while_closed(
-            last_update, now, session_context
-        ):
-            return True
-
         if session_context:
             from .trading_sessions import MarketSessionStatus, get_session_status
 
             status = get_session_status(session_context, now)
-            if status in (MarketSessionStatus.PRE_MARKET, MarketSessionStatus.POST_MARKET):
+            if status == MarketSessionStatus.HOLIDAY:
+                # Holiday: no special staleness suppression, but get_freshness_status returns 'holiday'
+                # Fall through to normal threshold check (data from 4 hours ago is fresh, 5 hours ago is stale)
+                pass
+            elif status in (MarketSessionStatus.PRE_MARKET, MarketSessionStatus.POST_MARKET):
                 return age < threshold * 1.5
+            elif status == MarketSessionStatus.CLOSED:
+                if self._updated_today_while_closed(last_update, now, session_context):
+                    return True
 
         return False
 
@@ -97,10 +99,15 @@ class DataFreshnessChecker:
         threshold = self.thresholds.get(timeframe, 24 * 3600)
         age = (now - last_update).total_seconds()
 
-        if session_context and self._updated_today_while_closed(
-            last_update, now, session_context
-        ):
-            return "session_closed"
+        if session_context:
+            from .trading_sessions import MarketSessionStatus, get_session_status
+
+            status = get_session_status(session_context, now)
+            if status == MarketSessionStatus.HOLIDAY:
+                return "holiday"
+            if status == MarketSessionStatus.CLOSED:
+                if self._updated_today_while_closed(last_update, now, session_context):
+                    return "session_closed"
 
         if age < threshold:
             return "fresh"
@@ -123,13 +130,12 @@ class DataFreshnessChecker:
     ) -> bool:
         from .trading_sessions import MARKET_TZ, MarketSessionStatus, get_session_status
 
-        if get_session_status(session_context, now) != MarketSessionStatus.CLOSED:
+        status = get_session_status(session_context, now)
+        if status != MarketSessionStatus.CLOSED:
             return False
-
         tz_name = MARKET_TZ.get(session_context.lower())
         if not tz_name:
             return False
-
         market_tz = ZoneInfo(tz_name)
         return last_update.astimezone(market_tz).date() >= now.astimezone(market_tz).date()
 

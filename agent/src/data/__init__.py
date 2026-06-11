@@ -34,6 +34,7 @@ from .base import BaseFetcher, FetchResult
 from .freshness import DataFreshnessChecker
 from .quality import DataQualityMonitor, QualityReport, QualityIssue
 from .watchlist import WatchlistReader
+from .holiday_calendar import is_trading_day, is_holiday, get_holiday_name
 
 __all__ = [
     # 市场
@@ -71,4 +72,8 @@ __all__ = [
     "QualityIssue",
     # Watchlist
     "WatchlistReader",
+    # Holiday calendar
+    "is_trading_day",
+    "is_holiday",
+    "get_holiday_name",
 ]
