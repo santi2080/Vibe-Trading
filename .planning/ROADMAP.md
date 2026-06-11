@@ -165,6 +165,7 @@
 | 15 | v2.2 | 1/1 | Complete | 2026-06-10 |
 | 16 | v2.2 | 1/1 | Complete | 2026-06-10 |
 | 17 | v2.3 | 1/1 | Complete | 2026-06-10 |
+| 19 | v2.4 | 1/1 | Complete | 2026-06-11 |
 
 ## Coverage
 
@@ -191,8 +192,10 @@
 | RF-03 | Phase 17 |
 | RF-04 | Phase 17 |
 | RF-05 | Phase 17 |
+| CAL-01 | Phase 18 |
+| CAL-02 | Phase 19 |
 
-**Coverage:** 16/16 v2.2 requirements mapped exactly once; 5/5 v2.3 requirements mapped exactly once.
+**Coverage:** 16/16 v2.2 requirements mapped exactly once; 5/5 v2.3 requirements mapped exactly once; 2/4 v2.4 requirements mapped.
 
 ## Scope Guardrails
 
@@ -230,7 +233,7 @@ v2.2 remains local-data-first and data-pipeline-first.
 ### 🌱 v2.4: Exchange Calendar Awareness
 
 - [x] Phase 18: Exchange Session Definitions (1/1 plans) — completed
-- [ ] Phase 19: Holiday Calendar Integration (1/1 plans) — planning
+- [x] Phase 19: Holiday Calendar Integration (1/1 plans) — completed
 - [ ] Phase 20: Session-Aware Freshness Detection (1/1 plans) — planning
 - [ ] Phase 21: Smart Refresh Strategy (1/1 plans) — planning
 
@@ -268,7 +271,8 @@ v2.2 remains local-data-first and data-pipeline-first.
 3. Holiday lookup function returns whether a date is a trading day.
 4. Holiday calendars are extensible for future additions.
 
-**Plans:** 0/1 plans pending
+**Plans:** 1/1 plans
+- [x] 19-01-PLAN.md - Holiday calendar integration with holidays library
 
 ### Phase 20: Session-Aware Freshness Detection
 
@@ -315,4 +319,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-06-11 for Phase 18 execution*
+*Last updated: 2026-06-11 for Phase 19 execution*
