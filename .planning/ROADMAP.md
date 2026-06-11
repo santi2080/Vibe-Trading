@@ -303,6 +303,16 @@ v2.2 remains local-data-first and data-pipeline-first.
 - Production deployment configuration
 - Performance optimization
 
+### Phase 22: holiday calendar integration
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 21
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 22 to break down)
+
 ---
 
 *Last updated: 2026-06-11 for Phase 18 execution*
