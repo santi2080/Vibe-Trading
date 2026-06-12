@@ -165,6 +165,8 @@
 | 15 | v2.2 | 1/1 | Complete | 2026-06-10 |
 | 16 | v2.2 | 1/1 | Complete | 2026-06-10 |
 | 17 | v2.3 | 1/1 | Complete | 2026-06-10 |
+| 19 | v2.4 | 1/1 | Complete | 2026-06-11 |
+| 20 | v2.4 | 1/1 | Complete | 2026-06-12 |
 
 ## Coverage
 
@@ -191,8 +193,10 @@
 | RF-03 | Phase 17 |
 | RF-04 | Phase 17 |
 | RF-05 | Phase 17 |
+| CAL-01 | Phase 18 |
+| CAL-02 | Phase 19 |
 
-**Coverage:** 16/16 v2.2 requirements mapped exactly once; 5/5 v2.3 requirements mapped exactly once.
+**Coverage:** 16/16 v2.2 requirements mapped exactly once; 5/5 v2.3 requirements mapped exactly once; 2/4 v2.4 requirements mapped.
 
 ## Scope Guardrails
 
@@ -229,8 +233,8 @@ v2.2 remains local-data-first and data-pipeline-first.
 
 ### 🌱 v2.4: Exchange Calendar Awareness
 
-- [ ] Phase 18: Exchange Session Definitions (1/1 plans) — planning
-- [ ] Phase 19: Holiday Calendar Integration (1/1 plans) — planning
+- [x] Phase 18: Exchange Session Definitions (1/1 plans) — completed
+- [x] Phase 19: Holiday Calendar Integration (1/1 plans) — completed
 - [ ] Phase 20: Session-Aware Freshness Detection (1/1 plans) — planning
 - [ ] Phase 21: Smart Refresh Strategy (1/1 plans) — planning
 
@@ -268,7 +272,8 @@ v2.2 remains local-data-first and data-pipeline-first.
 3. Holiday lookup function returns whether a date is a trading day.
 4. Holiday calendars are extensible for future additions.
 
-**Plans:** 0/1 plans pending
+**Plans:** 1/1 plans
+- [x] 19-01-PLAN.md - Holiday calendar integration with holidays library
 
 ### Phase 20: Session-Aware Freshness Detection
 
@@ -282,7 +287,8 @@ v2.2 remains local-data-first and data-pipeline-first.
 3. Non-trading hours data is not marked as stale.
 4. Session-aware freshness report available for scan results.
 
-**Plans:** 0/1 plans pending
+**Plans:** 1/1 plans complete
+- [x] 20-01-PLAN.md - Session-aware freshness detection
 
 ### Phase 21: Smart Refresh Strategy
 
@@ -303,6 +309,16 @@ v2.2 remains local-data-first and data-pipeline-first.
 - Production deployment configuration
 - Performance optimization
 
+### Phase 22: holiday calendar integration
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 21
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 22 to break down)
+
 ---
 
-*Last updated: 2026-06-09 for Phase 12 plan*
+*Last updated: 2026-06-11 for Phase 19 execution*

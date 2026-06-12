@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -60,6 +60,10 @@ _MARKET_DIRS: dict[str, str] = {
     "hk_stocks": "hk_stocks",
     "a_share": "a_shares",
     "a_shares": "a_shares",
+    # Phase 20: add missing mappings
+    "cn_stock": "cn_stocks",
+    "cn_stocks": "cn_stocks",
+    "hk_futures": "hk_futures",
 }
 
 
@@ -171,11 +175,78 @@ class RefreshReport:
 
 
 # ---------------------------------------------------------------------------
+# Session-aware helpers
+# ---------------------------------------------------------------------------
+
+def _updated_on_date(
+    market: str,
+    timeframe: str,
+    market_date: date,
+    data_dir: Path | None = None,
+) -> bool:
+    """Return True if the parquet for market/timeframe was last-updated on market_date.
+
+    Checks the latest timestamp in the parquet index against the market-local date,
+    accounting for market timezone.
+
+    Returns False if the parquet doesn't exist or can't be read.
+
+    Args:
+        market: Market code (e.g., 'cn_stock', 'us_stock')
+        timeframe: Normalized timeframe string ('1d', '1h', '4h')
+        market_date: Market-local date to check
+        data_dir: Data directory path (default from watchlist_data_health.DEFAULT_DATA_DIR)
+    """
+    from zoneinfo import ZoneInfo
+
+    if data_dir is None:
+        # Default to ./data relative to project root
+        import os
+        project_root = Path(__file__).resolve().parents[3]
+        data_dir = project_root / "data"
+
+    # Resolve the cache directory for this market/timeframe
+    # _resolve_cache_file(data_dir, market, "*", timeframe) uses market literally
+    # but actual directories use resolved market names (e.g., "cn_stocks" not "cn_stock")
+    norm_market = market.strip().lower()
+    market_dir_name = _resolve_market_dir(norm_market)
+    timeframe_dir = data_dir / market_dir_name
+    timeframe_file_glob = f"{normalize_timeframe(timeframe)}.parquet"
+
+    # Find any parquet in the market directory matching the timeframe
+    matches = list(timeframe_dir.glob(f"*/{timeframe_file_glob}"))
+    if not matches:
+        return False
+    cache_path = matches[0]
+
+    try:
+        df, _ = read_local_parquet(cache_path)
+        if df is None or df.empty:
+            return False
+        latest_ts = pd.Timestamp(df.index.max())
+        # Convert to market-local date
+        norm_market = market.strip().lower()
+        from .trading_sessions import MARKET_TZ
+        tz_name = MARKET_TZ.get(norm_market)
+        if tz_name:
+            latest_date = latest_ts.tz_convert(tz_name).date()
+        else:
+            latest_date = latest_ts.date()
+        return latest_date == market_date
+    except Exception:
+        return False
+
+
+# ---------------------------------------------------------------------------
 # Core refresh logic
 # ---------------------------------------------------------------------------
 
-def stale_after_for(market: str, timeframe: str) -> timedelta:
-    """Return the staleness threshold for a market/timeframe combination."""
+def _stale_after_for_base(market: str, timeframe: str) -> timedelta:
+    """Return the base staleness threshold for a market/timeframe combination.
+
+    This is the raw threshold without session-aware adjustment.
+    Used internally and by callers that need the base value.
+    """
     norm_market = market.strip().lower()
     norm_tf = normalize_timeframe(timeframe)
     # Market-specific override (keys use "us_futures", "cn_futures" etc.)
@@ -184,6 +255,72 @@ def stale_after_for(market: str, timeframe: str) -> timedelta:
         return override
     # Generic threshold
     return _STALE_AFTER.get(norm_tf, timedelta(days=7))
+
+
+def stale_after_for(
+    market: str,
+    timeframe: str,
+    utc_now: datetime | None = None,
+) -> timedelta:
+    """Return session-aware staleness threshold for a market/timeframe.
+
+    Adjusts the base threshold based on the current market session status:
+    - HOLIDAY: 2x base threshold (market closed for holiday)
+    - CLOSED with no update today: 1.5x base threshold (after hours, no new data expected)
+    - CLOSED with update today: base threshold (data is fresh)
+    - PRE_MARKET / REGULAR / POST_MARKET / CONTINUOUS: base threshold
+
+    CAL-03: Session-aware freshness detection.
+    """
+    from zoneinfo import ZoneInfo
+
+    utc_now = utc_now or datetime.now(timezone.utc)
+    base = _stale_after_for_base(market, timeframe)
+
+    norm_market = market.strip().lower()
+
+    # Try to get session status (returns CONTINUOUS for unknown markets)
+    try:
+        from .trading_sessions import get_session_status, MARKET_TZ
+        session_status = get_session_status(norm_market, utc_now)
+    except Exception:
+        session_status = None
+
+    # Continuous markets (US futures, unknown): no session adjustment
+    if session_status is None or session_status.value == "continuous":
+        return base
+
+    # Import here to avoid circular imports at module load time
+    try:
+        from .trading_sessions import MarketSessionStatus
+    except Exception:
+        MarketSessionStatus = None
+
+    if MarketSessionStatus is None:
+        return base
+
+    if session_status == MarketSessionStatus.HOLIDAY:
+        return base * 2
+    elif session_status in (MarketSessionStatus.CLOSED, MarketSessionStatus.POST_MARKET):
+        # CLOSED and POST_MARKET: no new data expected until next session.
+        # Check if data was updated today in market timezone.
+        # If updated today → base threshold (data from today's session is fresh).
+        # If NOT updated today → 1.5x threshold (market closed, no opportunity to update).
+        # Note: POST_MARKET is treated as closed for staleness — after-hours data
+        # arrivals are optional and not guaranteed. This covers both A-share
+        # (no after-hours) and US equity (after-hours data is sparse).
+        tz_name = MARKET_TZ.get(norm_market)
+        if tz_name:
+            market_tz = ZoneInfo(tz_name)
+            market_now = utc_now.astimezone(market_tz)
+            market_date = market_now.date()
+            if _updated_on_date(norm_market, timeframe, market_date):
+                return base  # updated today, base threshold applies
+            return base * 1.5  # closed/post-market, not updated today — lenient
+        return base * 1.5
+    else:
+        # PRE_MARKET, REGULAR, CONTINUOUS — base threshold
+        return base
 
 
 def _data_age_hours(cache_path: Path) -> float | None:
