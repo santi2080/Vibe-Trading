@@ -224,6 +224,9 @@ def _updated_on_date(
         if df is None or df.empty:
             return False
         latest_ts = pd.Timestamp(df.index.max())
+        # Normalize to UTC (parquet may contain tz-naive timestamps in pandas 3.x)
+        if latest_ts.tzinfo is None:
+            latest_ts = latest_ts.tz_localize("UTC")
         # Convert to market-local date
         norm_market = market.strip().lower()
         from .trading_sessions import MARKET_TZ
@@ -231,7 +234,7 @@ def _updated_on_date(
         if tz_name:
             latest_date = latest_ts.tz_convert(tz_name).date()
         else:
-            latest_date = latest_ts.date()
+            latest_date = latest_ts.tz_localize(None).date()
         return latest_date == market_date
     except Exception:
         return False
