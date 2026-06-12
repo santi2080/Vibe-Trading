@@ -5,6 +5,34 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.9] — 2026-06-13
+
+### Added — v2.4 Exchange Calendar Awareness
+
+- **Exchange session definitions** (`agent/src/data/exchange_calendar.py`):
+  - A-share session (09:30-11:30, 13:00-15:00, Asia/Shanghai)
+  - US equity session (09:30-16:00, America/New_York)
+  - US futures session (23:00-17:00, America/Chicago)
+  - China futures session (09:00-10:15, 10:30-11:30, 13:30-15:00)
+  - Timezone conversion support for all markets
+
+- **Holiday calendar integration**:
+  - A-share holidays (CNY, National Day, Labor Day)
+  - US market holidays (Thanksgiving, Christmas, etc.)
+  - `is_trading_day()` function for holiday-aware checks
+
+- **Session-aware freshness detection**:
+  - `stale_after_for()` returns session-aware staleness
+  - `FreshnessReport` with session-aware status
+  - `get_session_aware_report()` for scan results
+  - Avoids unnecessary refreshes outside trading hours
+
+- **Risk management enhancements** (`agent/src/analysis/risk_manager.py`):
+  - Stop loss calculation (`calculate_stop_loss`)
+  - Take profit calculation (`calculate_take_profit`)
+  - Comprehensive risk parameters (`calculate_risk_params`)
+  - RiskConfig with SL/TP method configuration
+
 ### UI
 - Redesigned the interactive CLI startup and run-state visuals with a large
   figlet-style banner plus a Claude Code-style activity rail using `●`, `│`,
