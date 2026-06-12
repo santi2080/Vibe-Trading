@@ -1,12 +1,133 @@
 """交易时段配置
 
-从 trading-assistant 移植
-支持多个市场的交易时间定义
+支持多个市场的交易时间定义和时区感知的新鲜度检测。
+Phase 18: MarketSessionStatus enum, get_session_status(), is_session_time()
+Phase 19: Holiday calendar integration
 """
 
 from dataclasses import dataclass
-from datetime import time
+from datetime import datetime, time, timezone
+from enum import Enum
 from typing import List, Optional
+from zoneinfo import ZoneInfo
+
+
+class MarketSessionStatus(Enum):
+    """Trading session status for a market at a given UTC time."""
+
+    PRE_MARKET = "pre_market"
+    REGULAR = "regular"
+    POST_MARKET = "post_market"
+    CLOSED = "closed"
+    HOLIDAY = "holiday"
+    CONTINUOUS = "continuous"
+
+
+MARKET_TZ: dict[str, str] = {
+    "cn_stock": "Asia/Shanghai",
+    "cn_stocks": "Asia/Shanghai",
+    "cn_futures": "Asia/Shanghai",
+    "us_stock": "America/New_York",
+    "us_stocks": "America/New_York",
+    "us_futures": "America/Chicago",
+    "hk_stock": "Asia/Hong_Kong",
+    "hk_stocks": "Asia/Hong_Kong",
+}
+
+
+def _ensure_utc(utc_dt: Optional[datetime]) -> datetime:
+    if utc_dt is None:
+        return datetime.now(timezone.utc)
+    if utc_dt.tzinfo is None:
+        return utc_dt.replace(tzinfo=timezone.utc)
+    return utc_dt.astimezone(timezone.utc)
+
+
+def get_session_status(
+    market_code: str, utc_dt: Optional[datetime] = None
+) -> MarketSessionStatus:
+    """Return session status for a market at the given UTC time.
+
+    Phase 19: Checks holiday calendar before session windows.
+    """
+    code = market_code.lower()
+    tz_name = MARKET_TZ.get(code)
+    if tz_name is None:
+        return MarketSessionStatus.CONTINUOUS
+
+    market_dt = _ensure_utc(utc_dt).astimezone(ZoneInfo(tz_name))
+    market_date = market_dt.date()
+    t = market_dt.time()
+
+    # Phase 19: Check if it's a market holiday (before session windows)
+    try:
+        from .holiday_calendar import is_trading_day
+        trading = is_trading_day(code, market_date)
+        if trading is False:
+            return MarketSessionStatus.HOLIDAY
+    except Exception:
+        pass  # If holiday_calendar not available, skip
+
+    if code in ("cn_stock", "cn_stocks"):
+        if time(9, 30) <= t < time(11, 30) or time(13, 0) <= t < time(15, 0):
+            return MarketSessionStatus.REGULAR
+        if time(8, 30) <= t < time(9, 30):
+            return MarketSessionStatus.PRE_MARKET
+        if time(15, 0) <= t < time(16, 0):
+            return MarketSessionStatus.POST_MARKET
+        return MarketSessionStatus.CLOSED
+
+    if code == "cn_futures":
+        if (
+            time(9, 0) <= t < time(10, 15)
+            or time(10, 30) <= t < time(11, 30)
+            or time(13, 30) <= t < time(15, 0)
+            or time(21, 0) <= t < time(23, 0)
+        ):
+            return MarketSessionStatus.REGULAR
+        if time(8, 30) <= t < time(9, 0) or time(15, 0) <= t < time(21, 0):
+            return MarketSessionStatus.POST_MARKET
+        return MarketSessionStatus.CLOSED
+
+    if code in ("us_stock", "us_stocks"):
+        if time(9, 30) <= t < time(16, 0):
+            return MarketSessionStatus.REGULAR
+        if time(4, 0) <= t < time(9, 30):
+            return MarketSessionStatus.PRE_MARKET
+        if time(16, 0) <= t < time(20, 0):
+            return MarketSessionStatus.POST_MARKET
+        return MarketSessionStatus.CLOSED
+
+    if code == "us_futures":
+        if time(17, 0) <= t or t < time(16, 0):
+            return MarketSessionStatus.REGULAR
+        if time(16, 0) <= t < time(17, 0):
+            return MarketSessionStatus.POST_MARKET
+        return MarketSessionStatus.CLOSED
+
+    if code in ("hk_stock", "hk_stocks"):
+        if time(9, 30) <= t < time(12, 0) or time(13, 0) <= t < time(16, 0):
+            return MarketSessionStatus.REGULAR
+        if time(9, 0) <= t < time(9, 30):
+            return MarketSessionStatus.PRE_MARKET
+        if time(16, 0) <= t < time(17, 0):
+            return MarketSessionStatus.POST_MARKET
+        return MarketSessionStatus.CLOSED
+
+    return MarketSessionStatus.CLOSED
+
+
+def is_session_time(market_code: str, utc_dt: Optional[datetime] = None) -> bool:
+    """Check if market is in an active session (pre-market, regular, or post-market).
+
+    Returns True for PRE_MARKET, REGULAR, POST_MARKET, or CONTINUOUS (24/7 markets).
+    Returns False for CLOSED or HOLIDAY.
+    """
+    status = get_session_status(market_code, utc_dt)
+    return status not in (
+        MarketSessionStatus.CLOSED,
+        MarketSessionStatus.HOLIDAY,
+    )
 
 
 @dataclass

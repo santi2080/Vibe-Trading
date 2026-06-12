@@ -235,7 +235,7 @@ v2.2 remains local-data-first and data-pipeline-first.
 
 - [x] Phase 18: Exchange Session Definitions (1/1 plans) — completed
 - [x] Phase 19: Holiday Calendar Integration (1/1 plans) — completed
-- [ ] Phase 20: Session-Aware Freshness Detection (1/1 plans) — planning
+- [x] Phase 20: Session-Aware Freshness Detection (1/1 plans) — completed
 - [ ] Phase 21: Smart Refresh Strategy (1/1 plans) — planning
 
 **Goal:** Make data freshness detection aware of exchange trading sessions, avoiding unnecessary refreshes outside trading hours.
@@ -289,6 +289,8 @@ v2.2 remains local-data-first and data-pipeline-first.
 
 **Plans:** 1/1 plans complete
 - [x] 20-01-PLAN.md - Session-aware freshness detection
+
+**Status:** ✅ COMPLETE (2026-06-12) — session-aware stale_after_for(), _updated_on_date(), FreshnessReport, get_session_aware_report()
 
 ### Phase 21: Smart Refresh Strategy
 

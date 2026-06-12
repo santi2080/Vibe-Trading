@@ -56,13 +56,21 @@ class TestStaleAfterForSessionAdjustment:
         utc_late = datetime(2026, 6, 12, 23, 0, tzinfo=timezone.utc)
         assert stale_after_for("us_futures", "1d", utc_now=utc_late) == timedelta(days=2)
 
-    def test_ushare_postmarket_no_today_data_extends_threshold(self):
-        """US equity after close with no today's data → 1.5x threshold."""
-        from src.data.data_refresh import stale_after_for
+    def test_ushare_postmarket_no_today_data_extends_threshold(self, tmp_path, monkeypatch):
+        """US equity POST_MARKET with no today's data → 1.5x threshold."""
+        from src.data.data_refresh import stale_after_for, _updated_on_date
 
-        # US equity POST_MARKET (16:00-20:00 EST) → no update today expected → 1.5x
+        # Patch _updated_on_date to use empty tmp_path so it returns False
+        original = _updated_on_date
+
+        def patched(market, timeframe, market_date, data_dir=None):
+            return original(market, timeframe, market_date, data_dir=tmp_path)
+
+        monkeypatch.setattr("src.data.data_refresh._updated_on_date", patched)
+
         utc_post = datetime(2026, 6, 12, 21, 0, tzinfo=timezone.utc)  # 16:00 EST
         threshold = stale_after_for("us_stock", "1d", utc_now=utc_post)
+        # With no parquet data today + POST_MARKET → 1.5x base
         assert threshold == timedelta(days=3), f"Expected 3 days (1.5x), got {threshold}"
 
     def test_ushare_regular_hours_base_threshold(self):
@@ -81,13 +89,21 @@ class TestStaleAfterForSessionAdjustment:
         threshold = stale_after_for("us_stock", "1d", utc_now=utc_hol)
         assert threshold == timedelta(days=4), f"Expected 4 days (2x holiday), got {threshold}"
 
-    def test_ashare_postmarket_no_today_data_extends_threshold(self):
-        """A-share after close with no today's data → 1.5x threshold."""
-        from src.data.data_refresh import stale_after_for
+    def test_ashare_postmarket_no_today_data_extends_threshold(self, tmp_path, monkeypatch):
+        """A-share POST_MARKET with no today's data → 1.5x threshold."""
+        from src.data.data_refresh import stale_after_for, _updated_on_date
 
-        # A-share after market close (POST_MARKET 15:00-16:00 Shanghai)
+        original = _updated_on_date
+
+        def patched(market, timeframe, market_date, data_dir=None):
+            return original(market, timeframe, market_date, data_dir=tmp_path)
+
+        monkeypatch.setattr("src.data.data_refresh._updated_on_date", patched)
+
+        # A-share POST_MARKET (15:00-16:00 CST)
         utc_closed = datetime(2026, 6, 12, 7, 0, tzinfo=timezone.utc)  # 15:00 CST
         threshold = stale_after_for("cn_stock", "1d", utc_now=utc_closed)
+        # With no parquet data today + POST_MARKET → 1.5x base
         assert threshold == timedelta(days=3), f"Expected 3 days (1.5x), got {threshold}"
 
     def test_ashare_regular_hours_base_threshold(self):
@@ -268,16 +284,16 @@ class TestGetSessionAwareReport:
         assert report.session_status == "holiday"
         assert "holiday" in report.freshness_reason.lower()
 
-    def test_continuous_ignores_session(self):
-        """US futures (continuous) → status based on raw threshold, not session."""
-        utc_any = datetime(2026, 6, 12, 3, 0, tzinfo=timezone.utc)
+    def test_us_futures_regular_session_at_utc_midnight(self):
+        """US futures at 03:00 UTC (22:00 CT previous day) → regular session."""
+        utc_any = datetime(2026, 6, 12, 3, 0, tzinfo=timezone.utc)  # 22:00 CT
         # Very fresh data
         last = datetime(2026, 6, 12, 2, 0, tzinfo=timezone.utc)
         report = get_session_aware_report(last, Timeframe.H4, "us_futures", utc_any)
         assert report.status == "fresh"
-        assert report.session_status == "continuous"
-        # Continuous has no session adjustment
-        assert report.threshold_hours == 4.0
+        # US futures: 03:00 UTC = 22:00 CT (previous day) → regular session
+        assert report.session_status == "regular"
+        assert report.threshold_hours == 24.0  # H4 threshold is 24 hours
 
     def test_premarket_fresh(self):
         """US equity pre-market with fresh data → status=fresh."""
@@ -287,6 +303,7 @@ class TestGetSessionAwareReport:
         report = get_session_aware_report(last, Timeframe.H4, "us_stock", utc_pre)
         assert report.status == "fresh"
         assert report.session_status == "pre_market"
+        assert report.threshold_hours == 24.0  # H4 threshold
 
     def test_report_has_all_fields(self):
         """get_session_aware_report returns a report with all required fields."""
@@ -314,7 +331,7 @@ class TestGetSessionAwareReport:
         report = get_session_aware_report(last, Timeframe.H4, "unknown_market", utc_any)
         # Unknown → treated as continuous → threshold unchanged
         assert report.session_status == "continuous"
-        assert report.threshold_hours == 4.0
+        assert report.threshold_hours == 24.0  # H4 threshold
 
 
 # ---------------------------------------------------------------------------
@@ -324,15 +341,24 @@ class TestGetSessionAwareReport:
 class TestStaleAfterForWithTodayData:
     """When parquet was updated today, stale_after_for returns base threshold."""
 
-    def test_ashare_closed_with_today_data_base_threshold(self, tmp_path):
-        """A-share closed + parquet updated today → base threshold (not 1.5x)."""
-        from src.data.data_refresh import stale_after_for
+    def test_ashare_closed_with_today_data_base_threshold(self, tmp_path, monkeypatch):
+        """A-share closed + parquet updated today during session → base threshold (not 1.5x)."""
+        from src.data.data_refresh import stale_after_for, _updated_on_date
 
-        # Create a parquet updated today
+        # Create a parquet updated today WITHIN market hours (10:00 CST = 02:00 UTC)
         market_dir = tmp_path / "cn_stocks" / "600519.SH"
         market_dir.mkdir(parents=True)
-        df = _make_ohlcv_df([datetime(2026, 6, 12, 10, 0, tzinfo=timezone.utc)])
+        # 10:00 CST = 02:00 UTC (within 09:30-15:00 CST regular session)
+        df = _make_ohlcv_df([datetime(2026, 6, 12, 2, 0, tzinfo=timezone.utc)])
         df.to_parquet(market_dir / "1d.parquet", index=True)
+
+        # Patch _updated_on_date to use tmp_path so it finds our test parquet
+        original = _updated_on_date
+
+        def patched(market, timeframe, market_date, data_dir=None):
+            return original(market, timeframe, market_date, data_dir=tmp_path)
+
+        monkeypatch.setattr("src.data.data_refresh._updated_on_date", patched)
 
         # Market closed at 15:00 CST, parquet updated at 10:00 CST today
         utc_closed = datetime(2026, 6, 12, 7, 0, tzinfo=timezone.utc)  # 15:00 CST
@@ -341,14 +367,22 @@ class TestStaleAfterForWithTodayData:
         # With today's data → base threshold (not 1.5x)
         assert threshold == timedelta(days=2), f"Expected base 2 days, got {threshold}"
 
-    def test_ushare_closed_with_today_data_base_threshold(self, tmp_path):
-        """US equity closed + parquet updated today → base threshold."""
-        from src.data.data_refresh import stale_after_for
+    def test_ushare_closed_with_today_data_base_threshold(self, tmp_path, monkeypatch):
+        """US equity POST_MARKET + parquet updated today → base threshold."""
+        from src.data.data_refresh import stale_after_for, _updated_on_date
 
         market_dir = tmp_path / "us_stocks" / "AAPL"
         market_dir.mkdir(parents=True)
         df = _make_ohlcv_df([datetime(2026, 6, 12, 18, 0, tzinfo=timezone.utc)])  # 14:00 EST
         df.to_parquet(market_dir / "1d.parquet", index=True)
+
+        # Patch _updated_on_date to use tmp_path
+        original = _updated_on_date
+
+        def patched(market, timeframe, market_date, data_dir=None):
+            return original(market, timeframe, market_date, data_dir=tmp_path)
+
+        monkeypatch.setattr("src.data.data_refresh._updated_on_date", patched)
 
         # Market closed at 16:00 EST, parquet updated at 14:00 EST today
         utc_closed = datetime(2026, 6, 12, 21, 0, tzinfo=timezone.utc)  # 16:00 EST
