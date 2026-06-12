@@ -6,7 +6,7 @@
 - ✅ **v2.1** — composite-strategy-backtest (shipped 2026-06-07; empirical evidence blocked)
 - ✅ **v2.2** — daily-scan-report-loop (shipped 2026-06-10)
 - ✅ **v2.3** — remote-refresh-scan-loop (shipped 2026-06-11)
-- 🌱 **v2.4** — exchange-calendar-awareness (planning)
+- 🌱 **v2.4** — exchange-calendar-awareness (in progress)
 
 ## Phases
 
@@ -167,6 +167,7 @@
 | 17 | v2.3 | 1/1 | Complete | 2026-06-10 |
 | 19 | v2.4 | 1/1 | Complete | 2026-06-11 |
 | 20 | v2.4 | 1/1 | Complete | 2026-06-12 |
+| 21 | v2.4 | 1/1 | Complete | 2026-06-12 |
 
 ## Coverage
 
@@ -195,6 +196,8 @@
 | RF-05 | Phase 17 |
 | CAL-01 | Phase 18 |
 | CAL-02 | Phase 19 |
+| CAL-03 | Phase 20 |
+| CAL-04 | Phase 21 |
 
 **Coverage:** 16/16 v2.2 requirements mapped exactly once; 5/5 v2.3 requirements mapped exactly once; 2/4 v2.4 requirements mapped.
 
@@ -236,7 +239,7 @@ v2.2 remains local-data-first and data-pipeline-first.
 - [x] Phase 18: Exchange Session Definitions (1/1 plans) — completed
 - [x] Phase 19: Holiday Calendar Integration (1/1 plans) — completed
 - [x] Phase 20: Session-Aware Freshness Detection (1/1 plans) — completed
-- [ ] Phase 21: Smart Refresh Strategy (1/1 plans) — planning
+- [x] Phase 21: Risk Management Enhancement (1/1 plans) — completed
 
 **Goal:** Make data freshness detection aware of exchange trading sessions, avoiding unnecessary refreshes outside trading hours.
 
@@ -292,19 +295,21 @@ v2.2 remains local-data-first and data-pipeline-first.
 
 **Status:** ✅ COMPLETE (2026-06-12) — session-aware stale_after_for(), _updated_on_date(), FreshnessReport, get_session_aware_report()
 
-### Phase 21: Smart Refresh Strategy
+### Phase 21: Risk Management Enhancement
 
-**Goal:** Refresh decisions respect trading sessions to avoid unnecessary API calls.
-**Depends on:** Phase 20
-**Requirements:** CAL-04
+**Goal:** Enhance backtesting risk calculations with stop loss / take profit support.
+**Depends on:** Phase 20 / v2.4 shipped
+**Requirements:** CAL-04 (risk config integration)
 
 **Success Criteria:**
-1. Refresh triggered only when session warrants update.
-2. Intraday session triggers mandatory refresh.
-3. Post-session refresh is optional/conditional.
-4. Non-trading hours skip refresh with logged reason.
+1. RiskConfig supports stop loss method ("atr", "fixed_pct") and take profit method ("rr", "fixed", "atr_mult").
+2. `calculate_stop_loss()` returns StopLossResult with stop_price, method, risk_amount, risk_pct.
+3. `calculate_take_profit()` returns TakeProfitResult with tp_price, method, reward_amount, reward_risk_ratio.
+4. `calculate_risk_params()` returns comprehensive RiskParams combining SL, TP, position size.
+5. All new functions have unit tests with >80% coverage.
 
-**Plans:** 0/1 plans pending
+**Plans:** 1/1 plans complete
+- [x] 21-01-PLAN.md - Stop loss / take profit calculation enhancements
 
 ## Backlog
 
