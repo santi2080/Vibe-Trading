@@ -166,9 +166,11 @@
 | 15 | v2.2 | 1/1 | Complete | 2026-06-10 |
 | 16 | v2.2 | 1/1 | Complete | 2026-06-10 |
 | 17 | v2.3 | 1/1 | Complete | 2026-06-10 |
+| 18 | v2.4 | 1/1 | Complete | 2026-06-11 |
 | 19 | v2.4 | 1/1 | Complete | 2026-06-11 |
 | 20 | v2.4 | 1/1 | Complete | 2026-06-12 |
 | 21 | v2.4 | 1/1 | Complete | 2026-06-12 |
+| 22 | v2.5 | 1/1 | Complete | 2026-06-13 |
 
 ## Coverage
 
@@ -235,98 +237,35 @@ v2.2 remains local-data-first and data-pipeline-first.
 - live/paper trading execution
 - trading advice or buy/sell execution language
 
-### 🌱 v2.4: Exchange Calendar Awareness
+### 🌱 v2.5: Dashboard Web UI
 
-- [x] Phase 18: Exchange Session Definitions (1/1 plans) — completed
-- [x] Phase 19: Holiday Calendar Integration (1/1 plans) — completed
-- [x] Phase 20: Session-Aware Freshness Detection (1/1 plans) — completed
-- [x] Phase 21: Risk Management Enhancement (1/1 plans) — completed
+- [x] Phase 22: Dashboard Web UI (1/1 plans) — completed
 
-**Goal:** Make data freshness detection aware of exchange trading sessions, avoiding unnecessary refreshes outside trading hours.
+**Goal:** Add Dashboard page to display scan results and signal statistics.
 
-**Requirements:** CAL-01, CAL-02, CAL-03, CAL-04
+**Requirements:** DASH-01, DASH-02, DASH-03
+
+**Plans:** 1/1 plans complete
 
 ## Phase Details
 
-### Phase 18: Exchange Session Definitions
+### Phase 22: Dashboard Web UI
 
-**Goal:** Define trading session rules for each market type.
-**Depends on:** Phase 17 / v2.3 shipped
-**Requirements:** CAL-01
-
-**Success Criteria:**
-1. A-share session (09:30-11:30, 13:00-15:00, Asia/Shanghai) defined and tested.
-2. US equity session (09:30-16:00, America/New_York) defined and tested.
-3. US futures session (23:00-17:00 CME, America/Chicago) defined and tested.
-4. China futures session (09:00-10:15, 10:30-11:30, 13:30-15:00) defined and tested.
-5. Timezone conversion support for all markets.
-
-**Plans:** 1/1 plans
-- [x] 18-01-PLAN.md - Timezone-aware sessions, MarketSessionStatus enum, session-aware freshness
-
-### Phase 19: Holiday Calendar Integration
-
-**Goal:** Integrate holiday calendars for each market to detect non-trading days.
-**Depends on:** Phase 18
-**Requirements:** CAL-02
+**Goal:** Add Dashboard page to display scan results and signal statistics.
+**Depends on:** v2.4 shipped
+**Requirements:** DASH-01, DASH-02, DASH-03
 
 **Success Criteria:**
-1. A-share holiday calendar (CNY, National Day, Labor Day) implemented.
-2. US market holiday calendar (Thanksgiving, Christmas, etc.) implemented.
-3. Holiday lookup function returns whether a date is a trading day.
-4. Holiday calendars are extensible for future additions.
-
-**Plans:** 1/1 plans
-- [x] 19-01-PLAN.md - Holiday calendar integration with holidays library
-
-### Phase 20: Session-Aware Freshness Detection
-
-**Goal:** Replace simple staleness checks with session-aware freshness detection.
-**Depends on:** Phase 19
-**Requirements:** CAL-03
-
-**Success Criteria:**
-1. Freshness check returns session-aware status (fresh/stale/session-closed).
-2. Pre-market/regular-hours/after-hours status distinction works.
-3. Non-trading hours data is not marked as stale.
-4. Session-aware freshness report available for scan results.
+1. Dashboard page at `/dashboard` with scan summary, health status, signal chart, scan history.
+2. Signal distribution pie chart using ECharts.
+3. Responsive layout with loading and empty states.
 
 **Plans:** 1/1 plans complete
-- [x] 20-01-PLAN.md - Session-aware freshness detection
+- [x] SPIKE.md - Frontend stack assessment
+- [x] PLAN.md - Implementation plan
 
-**Status:** ✅ COMPLETE (2026-06-12) — session-aware stale_after_for(), _updated_on_date(), FreshnessReport, get_session_aware_report()
-
-### Phase 21: Risk Management Enhancement
-
-**Goal:** Enhance backtesting risk calculations with stop loss / take profit support.
-**Depends on:** Phase 20 / v2.4 shipped
-**Requirements:** CAL-04 (risk config integration)
-
-**Success Criteria:**
-1. RiskConfig supports stop loss method ("atr", "fixed_pct") and take profit method ("rr", "fixed", "atr_mult").
-2. `calculate_stop_loss()` returns StopLossResult with stop_price, method, risk_amount, risk_pct.
-3. `calculate_take_profit()` returns TakeProfitResult with tp_price, method, reward_amount, reward_risk_ratio.
-4. `calculate_risk_params()` returns comprehensive RiskParams combining SL, TP, position size.
-5. All new functions have unit tests with >80% coverage.
-
-**Plans:** 1/1 plans complete
-- [x] 21-01-PLAN.md - Stop loss / take profit calculation enhancements
-
-## Backlog
-
-- Production deployment configuration
-- Performance optimization
-
-### Phase 22: holiday calendar integration
-
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 21
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd-plan-phase 22 to break down)
+**Status:** ✅ COMPLETE (2026-06-13) — Dashboard page with ScanSummary, HealthStatus, SignalChart, ScanHistory components
 
 ---
 
-*Last updated: 2026-06-11 for Phase 19 execution*
+*Last updated: 2026-06-13 for Phase 22 execution*
