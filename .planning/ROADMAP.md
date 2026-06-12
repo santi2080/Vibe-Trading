@@ -6,7 +6,8 @@
 - ✅ **v2.1** — composite-strategy-backtest (shipped 2026-06-07; empirical evidence blocked)
 - ✅ **v2.2** — daily-scan-report-loop (shipped 2026-06-10)
 - ✅ **v2.3** — remote-refresh-scan-loop (shipped 2026-06-11)
-- 🌱 **v2.4** — exchange-calendar-awareness (in progress)
+- ✅ **v2.4** — exchange-calendar-awareness (shipped 2026-06-13)
+- 🌱 **v2.5** — dashboard-web-ui (in progress)
 
 ## Phases
 
