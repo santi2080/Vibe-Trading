@@ -7,7 +7,8 @@
 - ✅ **v2.2** — daily-scan-report-loop (shipped 2026-06-10)
 - ✅ **v2.3** — remote-refresh-scan-loop (shipped 2026-06-11)
 - ✅ **v2.4** — exchange-calendar-awareness (shipped 2026-06-13)
-- 🌱 **v2.5** — dashboard-web-ui (in progress)
+- ✅ **v2.5** — dashboard-web-ui (shipped 2026-06-13)
+- ✅ **v2.6** — performance-optimization (shipped 2026-06-13)
 
 ## Phases
 
@@ -171,6 +172,7 @@
 | 20 | v2.4 | 1/1 | Complete | 2026-06-12 |
 | 21 | v2.4 | 1/1 | Complete | 2026-06-12 |
 | 22 | v2.5 | 1/1 | Complete | 2026-06-13 |
+| 23 | v2.6 | 1/1 | Complete | 2026-06-13 |
 
 ## Coverage
 

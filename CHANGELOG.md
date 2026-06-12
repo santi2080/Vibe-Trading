@@ -5,6 +5,45 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.11] — 2026-06-13
+
+### Added — v2.6 Performance Optimization
+
+- **Parallel symbol processing** (`agent/src/analysis/watchlist_analyzer.py`):
+  - `analyze_all_parallel()` method using ThreadPoolExecutor
+  - Configurable max_workers (default 4)
+  - Progress logging during parallel execution
+
+- **Indicator caching** (`agent/src/analysis/indicator_cache.py`):
+  - `IndicatorCache` class with LRU eviction
+  - MD5 hash key based on (symbol, timeframe, indicator_type, params)
+  - TTL-based expiration (default 1 hour)
+  - Cache statistics tracking (hits, misses, hit rate)
+  - Convenience functions: cache_sma, cache_ema, cache_rsi, cache_atr
+
+- **Performance benchmarks** (`agent/tests/test_performance.py`):
+  - 13 new tests for cache and parallel processing
+
+## [0.1.10] — 2026-06-13
+
+### Added — v2.5 Dashboard Web UI
+
+- **Dashboard page** (`frontend/src/pages/Dashboard.tsx`):
+  - Scan summary with actionable/watch/risk counts
+  - Data health status (PASS/WARN/FAIL)
+  - Signal distribution pie chart (ECharts)
+  - Scan history list
+
+- **New components**:
+  - `ScanSummary` - signal count cards
+  - `HealthStatus` - data health display
+  - `SignalChart` - ECharts pie chart
+  - `ScanHistory` - historical scan list
+
+- **Dashboard API** (`frontend/src/lib/dashboardApi.ts`):
+  - Data fetching service with mock support
+  - ScanSummary, ScanHistoryItem, DataHealthInfo types
+
 ## [0.1.9] — 2026-06-13
 
 ### Added — v2.4 Exchange Calendar Awareness
