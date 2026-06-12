@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -14,6 +15,9 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+
+# 默认并行工作线程数
+DEFAULT_MAX_WORKERS = 4
 
 
 @dataclass
@@ -625,4 +629,99 @@ class WatchlistAnalyzer:
                     print(f"✅ {result.trend} | {result.signal_direction}@{result.signal_price:.2f}")
 
         logger.info(f"分析完成: {len(results)} 个品种")
+        return results
+
+    def analyze_all_parallel(
+        self,
+        watchlist_path: Optional[str] = None,
+        market_filter: Optional[str] = None,
+        max_workers: int = DEFAULT_MAX_WORKERS,
+        verbose: bool = True,
+    ) -> List[AnalysisResult]:
+        """并行批量分析所有品种
+
+        使用 ThreadPoolExecutor 并行分析符号，提升性能。
+
+        Args:
+            watchlist_path: watchlist 路径（覆盖默认路径）
+            market_filter: 市场过滤（如 "US_FUTURES"）
+            max_workers: 最大并行工作线程数（默认 4）
+            verbose: 是否打印进度
+
+        Returns:
+            AnalysisResult 列表
+        """
+        if watchlist_path:
+            self.watchlist_path = watchlist_path
+
+        from src.data.watchlist import WatchlistReader
+
+        reader = WatchlistReader(self.watchlist_path)
+        raw_items = reader.load_raw()
+
+        # 准备分析任务
+        tasks = []
+        for item in raw_items:
+            symbol = item["symbol"]
+            market = item["market"]
+            primary_tf, secondary_tf = reader.get_timeframes(symbol)
+
+            # 市场过滤
+            if market_filter and market.upper() != market_filter.upper():
+                continue
+
+            # 跳过表头
+            if symbol.lower() in ("symbol", "code", "name"):
+                continue
+
+            atr = item.get("atr", 0.0) if item.get("atr", 0.0) > 0 else None
+            tasks.append({
+                "symbol": symbol,
+                "market": market,
+                "primary_tf": primary_tf,
+                "secondary_tf": secondary_tf,
+                "atr_override": atr,
+            })
+
+        if verbose:
+            logger.info(f"开始并行分析 {len(tasks)} 个品种 (workers={max_workers})...")
+
+        results = []
+        completed = 0
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # 提交所有任务
+            futures = {
+                executor.submit(
+                    self.analyze_single,
+                    task["symbol"],
+                    task["market"],
+                    task["primary_tf"],
+                    task["secondary_tf"],
+                    task["atr_override"],
+                ): task
+                for task in tasks
+            }
+
+            # 收集结果
+            for future in as_completed(futures):
+                task = futures[future]
+                try:
+                    result = future.result()
+                    results.append(result)
+
+                    completed += 1
+                    if verbose and completed % max(1, len(tasks) // 10) == 0:
+                        logger.info(f"进度: {completed}/{len(tasks)} ({100*completed//len(tasks)}%)")
+
+                except Exception as e:
+                    logger.error(f"分析 {task['symbol']} 失败: {e}")
+                    results.append(AnalysisResult(
+                        symbol=task["symbol"],
+                        name=task["symbol"],
+                        market=task["market"],
+                        error=str(e),
+                    ))
+
+        logger.info(f"并行分析完成: {len(results)} 个品种")
         return results
