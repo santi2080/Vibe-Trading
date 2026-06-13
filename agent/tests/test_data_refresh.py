@@ -436,8 +436,10 @@ class TestStaleAfterFor:
         assert stale_after_for("us_futures", "1d") == timedelta(days=2)
 
     def test_1h_threshold(self):
-        # Generic 1h threshold (no market-specific override)
-        assert stale_after_for("hk_stock", "1h") == timedelta(hours=6)
+        # HK market is currently CLOSED, so session-aware logic applies 1.5x.
+        # base=6h → 6h × 1.5 = 9h when market is closed.
+        # When market is open (9:30-12:00 or 13:00-16:00 HKT), returns 6h.
+        assert stale_after_for("hk_stock", "1h") == timedelta(hours=9)
 
     def test_us_futures_1h_has_24h_override(self):
         """us_futures/1h has a 24h override per the MARKET_TIMEFRAME_STALE_AFTER table."""

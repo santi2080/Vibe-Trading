@@ -359,7 +359,6 @@ def scan(
                     )
                     refresh_json_path = output_dir / "data_refresh.json"
                     with open(refresh_json_path, "w") as fh:
-                        import json
                         json.dump(refresh_report.to_dict(), fh, indent=2, default=str)
                     console.print(
                         f"[dim]Refresh report saved to {refresh_json_path}[/dim]"
