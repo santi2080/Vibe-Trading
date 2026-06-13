@@ -6,9 +6,7 @@
 - ✅ **v2.1** — composite-strategy-backtest (shipped 2026-06-07; empirical evidence blocked)
 - ✅ **v2.2** — daily-scan-report-loop (shipped 2026-06-10)
 - ✅ **v2.3** — remote-refresh-scan-loop (shipped 2026-06-11)
-- ✅ **v2.4** — exchange-calendar-awareness (shipped 2026-06-13)
-- ✅ **v2.5** — dashboard-web-ui (shipped 2026-06-13)
-- ✅ **v2.6** — performance-optimization (shipped 2026-06-13)
+- 🌱 **v2.4** — exchange-calendar-awareness (planning)
 
 ## Phases
 
@@ -167,12 +165,7 @@
 | 15 | v2.2 | 1/1 | Complete | 2026-06-10 |
 | 16 | v2.2 | 1/1 | Complete | 2026-06-10 |
 | 17 | v2.3 | 1/1 | Complete | 2026-06-10 |
-| 18 | v2.4 | 1/1 | Complete | 2026-06-11 |
 | 19 | v2.4 | 1/1 | Complete | 2026-06-11 |
-| 20 | v2.4 | 1/1 | Complete | 2026-06-12 |
-| 21 | v2.4 | 1/1 | Complete | 2026-06-12 |
-| 22 | v2.5 | 1/1 | Complete | 2026-06-13 |
-| 23 | v2.6 | 1/1 | Complete | 2026-06-13 |
 
 ## Coverage
 
@@ -201,8 +194,6 @@
 | RF-05 | Phase 17 |
 | CAL-01 | Phase 18 |
 | CAL-02 | Phase 19 |
-| CAL-03 | Phase 20 |
-| CAL-04 | Phase 21 |
 
 **Coverage:** 16/16 v2.2 requirements mapped exactly once; 5/5 v2.3 requirements mapped exactly once; 2/4 v2.4 requirements mapped.
 
@@ -239,35 +230,93 @@ v2.2 remains local-data-first and data-pipeline-first.
 - live/paper trading execution
 - trading advice or buy/sell execution language
 
-### 🌱 v2.5: Dashboard Web UI
+### 🌱 v2.4: Exchange Calendar Awareness
 
-- [x] Phase 22: Dashboard Web UI (1/1 plans) — completed
+- [x] Phase 18: Exchange Session Definitions (1/1 plans) — completed
+- [x] Phase 19: Holiday Calendar Integration (1/1 plans) — completed
+- [ ] Phase 20: Session-Aware Freshness Detection (1/1 plans) — planning
+- [ ] Phase 21: Smart Refresh Strategy (1/1 plans) — planning
 
-**Goal:** Add Dashboard page to display scan results and signal statistics.
+**Goal:** Make data freshness detection aware of exchange trading sessions, avoiding unnecessary refreshes outside trading hours.
 
-**Requirements:** DASH-01, DASH-02, DASH-03
-
-**Plans:** 1/1 plans complete
+**Requirements:** CAL-01, CAL-02, CAL-03, CAL-04
 
 ## Phase Details
 
-### Phase 22: Dashboard Web UI
+### Phase 18: Exchange Session Definitions
 
-**Goal:** Add Dashboard page to display scan results and signal statistics.
-**Depends on:** v2.4 shipped
-**Requirements:** DASH-01, DASH-02, DASH-03
+**Goal:** Define trading session rules for each market type.
+**Depends on:** Phase 17 / v2.3 shipped
+**Requirements:** CAL-01
 
 **Success Criteria:**
-1. Dashboard page at `/dashboard` with scan summary, health status, signal chart, scan history.
-2. Signal distribution pie chart using ECharts.
-3. Responsive layout with loading and empty states.
+1. A-share session (09:30-11:30, 13:00-15:00, Asia/Shanghai) defined and tested.
+2. US equity session (09:30-16:00, America/New_York) defined and tested.
+3. US futures session (23:00-17:00 CME, America/Chicago) defined and tested.
+4. China futures session (09:00-10:15, 10:30-11:30, 13:30-15:00) defined and tested.
+5. Timezone conversion support for all markets.
 
-**Plans:** 1/1 plans complete
-- [x] SPIKE.md - Frontend stack assessment
-- [x] PLAN.md - Implementation plan
+**Plans:** 1/1 plans
+- [x] 18-01-PLAN.md - Timezone-aware sessions, MarketSessionStatus enum, session-aware freshness
 
-**Status:** ✅ COMPLETE (2026-06-13) — Dashboard page with ScanSummary, HealthStatus, SignalChart, ScanHistory components
+### Phase 19: Holiday Calendar Integration
+
+**Goal:** Integrate holiday calendars for each market to detect non-trading days.
+**Depends on:** Phase 18
+**Requirements:** CAL-02
+
+**Success Criteria:**
+1. A-share holiday calendar (CNY, National Day, Labor Day) implemented.
+2. US market holiday calendar (Thanksgiving, Christmas, etc.) implemented.
+3. Holiday lookup function returns whether a date is a trading day.
+4. Holiday calendars are extensible for future additions.
+
+**Plans:** 1/1 plans
+- [x] 19-01-PLAN.md - Holiday calendar integration with holidays library
+
+### Phase 20: Session-Aware Freshness Detection
+
+**Goal:** Replace simple staleness checks with session-aware freshness detection.
+**Depends on:** Phase 19
+**Requirements:** CAL-03
+
+**Success Criteria:**
+1. Freshness check returns session-aware status (fresh/stale/session-closed).
+2. Pre-market/regular-hours/after-hours status distinction works.
+3. Non-trading hours data is not marked as stale.
+4. Session-aware freshness report available for scan results.
+
+**Plans:** 0/1 plans pending
+
+### Phase 21: Smart Refresh Strategy
+
+**Goal:** Refresh decisions respect trading sessions to avoid unnecessary API calls.
+**Depends on:** Phase 20
+**Requirements:** CAL-04
+
+**Success Criteria:**
+1. Refresh triggered only when session warrants update.
+2. Intraday session triggers mandatory refresh.
+3. Post-session refresh is optional/conditional.
+4. Non-trading hours skip refresh with logged reason.
+
+**Plans:** 0/1 plans pending
+
+## Backlog
+
+- Production deployment configuration
+- Performance optimization
+
+### Phase 22: holiday calendar integration
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 21
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 22 to break down)
 
 ---
 
-*Last updated: 2026-06-13 for Phase 22 execution*
+*Last updated: 2026-06-11 for Phase 19 execution*

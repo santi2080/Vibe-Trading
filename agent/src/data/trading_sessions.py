@@ -1,8 +1,7 @@
 """交易时段配置
 
-支持多个市场的交易时间定义和时区感知的新鲜度检测。
-Phase 18: MarketSessionStatus enum, get_session_status(), is_session_time()
-Phase 19: Holiday calendar integration
+从 trading-assistant 移植
+支持多个市场的交易时间定义
 """
 
 from dataclasses import dataclass
@@ -46,10 +45,7 @@ def _ensure_utc(utc_dt: Optional[datetime]) -> datetime:
 def get_session_status(
     market_code: str, utc_dt: Optional[datetime] = None
 ) -> MarketSessionStatus:
-    """Return session status for a market at the given UTC time.
-
-    Phase 19: Checks holiday calendar before session windows.
-    """
+    """Return session status for a market at the given UTC time."""
     code = market_code.lower()
     tz_name = MARKET_TZ.get(code)
     if tz_name is None:
@@ -60,13 +56,11 @@ def get_session_status(
     t = market_dt.time()
 
     # Phase 19: Check if it's a market holiday (before session windows)
-    try:
-        from .holiday_calendar import is_trading_day
-        trading = is_trading_day(code, market_date)
-        if trading is False:
-            return MarketSessionStatus.HOLIDAY
-    except Exception:
-        pass  # If holiday_calendar not available, skip
+    from .holiday_calendar import is_trading_day
+
+    trading = is_trading_day(code, market_date)
+    if trading is False:
+        return MarketSessionStatus.HOLIDAY
 
     if code in ("cn_stock", "cn_stocks"):
         if time(9, 30) <= t < time(11, 30) or time(13, 0) <= t < time(15, 0):

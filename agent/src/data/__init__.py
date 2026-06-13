@@ -20,6 +20,10 @@ from .trading_sessions import (
     TradingSession,
     TradingSessions,
     get_trading_sessions,
+    MarketSessionStatus,
+    get_session_status,
+    is_session_time,
+    MARKET_TZ,
     CN_FUTURES_SESSIONS,
     CN_STOCK_SESSIONS,
     US_FUTURES_SESSIONS,
@@ -30,6 +34,7 @@ from .base import BaseFetcher, FetchResult
 from .freshness import DataFreshnessChecker
 from .quality import DataQualityMonitor, QualityReport, QualityIssue
 from .watchlist import WatchlistReader
+from .holiday_calendar import is_trading_day, is_holiday, get_holiday_name
 
 __all__ = [
     # 市场
@@ -53,6 +58,10 @@ __all__ = [
     "US_FUTURES_SESSIONS",
     "US_STOCK_SESSIONS",
     "HK_STOCK_SESSIONS",
+    "MarketSessionStatus",
+    "get_session_status",
+    "is_session_time",
+    "MARKET_TZ",
     # 基类
     "BaseFetcher",
     "FetchResult",
@@ -63,4 +72,8 @@ __all__ = [
     "QualityIssue",
     # Watchlist
     "WatchlistReader",
+    # Holiday calendar
+    "is_trading_day",
+    "is_holiday",
+    "get_holiday_name",
 ]
