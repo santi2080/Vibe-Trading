@@ -77,11 +77,12 @@ def validate_watchlist(
             )],
         )
 
-    # 2. Required columns
+    # 2. Required columns (skip comment lines starting with #)
     try:
         with open(resolved, newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            raw_columns = frozenset(reader.fieldnames or [])
+            lines = [line for line in f if not line.strip().startswith("#")]
+        reader = csv.DictReader(lines)
+        raw_columns = frozenset(reader.fieldnames or [])
     except Exception as exc:
         return ValidationResult(
             valid=False,
@@ -102,11 +103,12 @@ def validate_watchlist(
             )],
         )
 
-    # 3. Row-level validation
+    # 3. Row-level validation (skip comment lines)
     try:
         with open(resolved, newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            rows = list(reader)
+            lines = [line for line in f if not line.strip().startswith("#")]
+        reader = csv.DictReader(lines)
+        rows = list(reader)
     except Exception as exc:
         return ValidationResult(
             valid=False,

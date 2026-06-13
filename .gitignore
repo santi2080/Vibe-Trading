@@ -92,3 +92,4 @@ memory/session_compact_*.md
 
 # Reports (generated, not source)
 reports/
+output/

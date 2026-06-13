@@ -7,7 +7,7 @@ V1 intentionally uses fixed staleness windows instead of exchange calendars.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -212,7 +212,7 @@ def check_watchlist_data(
     now: datetime | None = None,
 ) -> WatchlistDataHealthReport:
     """Check local parquet data for every symbol/timeframe in a watchlist."""
-    checked_at = now or datetime.now()
+    checked_at = now or datetime.now(timezone.utc)
     data_path = Path(data_dir)
     watchlist = Path(watchlist_path)
     reader = WatchlistReader(str(watchlist))
@@ -367,9 +367,20 @@ def build_loaded_result(
     now: datetime,
 ) -> TimeframeDataHealth:
     df = df.sort_index()
-    start_ts = pd.Timestamp(df.index.min()).to_pydatetime()
-    end_ts = pd.Timestamp(df.index.max()).to_pydatetime()
-    age_hours = max((now - end_ts).total_seconds() / 3600, 0.0)
+    # Normalize timestamps: parquet index may be tz-aware or tz-naive
+    end_ts = pd.Timestamp(df.index.max())
+    if end_ts.tzinfo is not None:
+        end_ts = end_ts.tz_convert("UTC").tz_localize(None)
+    start_ts = pd.Timestamp(df.index.min())
+    if start_ts.tzinfo is not None:
+        start_ts = start_ts.tz_convert("UTC").tz_localize(None)
+    # Normalize now to UTC naive for comparison
+    now_for_calc = now
+    if hasattr(now_for_calc, "tzinfo") and now_for_calc.tzinfo is not None:
+        now_utc = now_for_calc.astimezone(timezone.utc).replace(tzinfo=None)
+    else:
+        now_utc = now_for_calc
+    age_hours = max((now_utc - end_ts.to_pydatetime()).total_seconds() / 3600, 0.0)
     max_gap_hours = calculate_max_gap_hours(df.index)
     status_issues = health_issues(df, market, timeframe, age_hours, max_gap_hours)
     status = status_for(status_issues, required)
@@ -459,17 +470,17 @@ def validate_ohlcv(df: pd.DataFrame) -> list[str]:
         return ["missing_required_columns"]
 
     issues: list[str] = []
-    if df[list(REQUIRED_COLUMNS)].isna().any().any():
+    if df[list(REQUIRED_COLUMNS)].isna().any(axis=None):
         issues.append("missing_values")
 
     price_columns = ["open", "high", "low", "close"]
-    if (df[price_columns] <= 0).any().any():
+    if (df[price_columns] <= 0).any(axis=None):
         issues.append("invalid_ohlc")
-    if ((df["high"] < df["low"]) | (df["high"] < df["open"]) | (df["high"] < df["close"])).any():
+    if ((df["high"] < df["low"]) | (df["high"] < df["open"]) | (df["high"] < df["close"])).any(axis=None):
         issues.append("invalid_ohlc")
-    if ((df["low"] > df["open"]) | (df["low"] > df["close"])).any():
+    if ((df["low"] > df["open"]) | (df["low"] > df["close"])).any(axis=None):
         issues.append("invalid_ohlc")
-    if (df["volume"] < 0).any():
+    if (df["volume"] < 0).any(axis=None):
         issues.append("invalid_volume")
 
     return unique(issues)
