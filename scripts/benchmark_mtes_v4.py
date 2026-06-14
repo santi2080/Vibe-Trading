@@ -56,21 +56,31 @@ class BaselineTrendStrategy:
         # EMA200 斜率 (5日变化率)
         result["ema_slope"] = (result["ema"] - result["ema"].shift(self.slope_days)) / result["ema"].shift(self.slope_days)
 
-        # ADX(14)
-        result["adx"] = self._adx(df, self.adx_period)
+        # ADX(14) + DI+/DI-
+        result["adx"], result["plus_di"], result["minus_di"] = self._adx(df, self.adx_period)
 
-        # 信号
-        conditions = [
-            (result["ema_slope"] > self.slope_threshold) & (result["adx"] > self.adx_threshold),
-            (result["ema_slope"] < -self.slope_threshold) & (result["adx"] > self.adx_threshold),
-        ]
-        choices = [1, -1]
-        result["signal"] = np.select(conditions, choices, default=0)
+        # 信号: 价格>EMA200 AND EMA斜率向上 AND +DI>-DI AND ADX>25 → BULL
+        #       价格<EMA200 AND EMA斜率向下 AND -DI>+DI AND ADX>25 → BEAR
+        bull = (
+            (result["close"] > result["ema"])
+            & (result["ema_slope"] > self.slope_threshold)
+            & (result["plus_di"] > result["minus_di"])
+            & (result["adx"] > self.adx_threshold)
+        )
+        bear = (
+            (result["close"] < result["ema"])
+            & (result["ema_slope"] < -self.slope_threshold)
+            & (result["minus_di"] > result["plus_di"])
+            & (result["adx"] > self.adx_threshold)
+        )
+
+        result["signal"] = np.select([bull, bear], [1, -1], default=0)
 
         return result
 
     @staticmethod
-    def _adx(df: pd.DataFrame, period: int = 14) -> pd.Series:
+    def _adx(df: pd.DataFrame, period: int = 14) -> tuple[pd.Series, pd.Series, pd.Series]:
+        """计算 ADX, +DI, -DI 序列."""
         high = df["high"].values
         low = df["low"].values
         close = df["close"].values
@@ -116,7 +126,11 @@ class BaselineTrendStrategy:
             for i in range(period * 2 + 1, n):
                 adx[i] = (1 - alpha) * adx[i - 1] + alpha * dx[i]
 
-        return pd.Series(adx, index=df.index)
+        return (
+            pd.Series(adx, index=df.index),
+            pd.Series(plus_di, index=df.index),
+            pd.Series(minus_di, index=df.index),
+        )
 
 
 # ── 2. MTES v4 包装 ─────────────────────────────────────────────
