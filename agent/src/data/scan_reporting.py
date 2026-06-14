@@ -200,6 +200,7 @@ class MarkdownReportRenderer:
                 item["symbol"],
                 item.get("name", ""),
                 item.get("market", ""),
+                item.get("action_bias", "—"),
                 f"{ts.get('signal_score', 0):.1f}",
                 f"{ts.get('confidence', 0):.2f}",
                 item.get("bucket_reason", ""),
@@ -208,7 +209,7 @@ class MarkdownReportRenderer:
         return self._render_bucket_table(
             "actionable",
             "Actionable Candidates",
-            ["Symbol", "Name", "Market", "Score", "Confidence", "Reason"],
+            ["Symbol", "Name", "Market", "Bias", "Score", "Confidence", "Reason"],
             row,
         )
 
@@ -218,13 +219,14 @@ class MarkdownReportRenderer:
                 item["symbol"],
                 item.get("name", ""),
                 item.get("market", ""),
+                item.get("action_bias", "—"),
                 item.get("bucket_reason", ""),
             ]
 
         return self._render_bucket_table(
             "watch",
             "Watch List",
-            ["Symbol", "Name", "Market", "Reason"],
+            ["Symbol", "Name", "Market", "Bias", "Reason"],
             row,
         )
 

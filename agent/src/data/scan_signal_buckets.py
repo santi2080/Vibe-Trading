@@ -124,17 +124,20 @@ class SymbolSignalResult:
     bucket_reason: str
     trading_signal: dict[str, Any] | None = None
     error: str | None = None
+    action_bias: str | None = None  # MTES v4 action_bias from source_results
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        result = {
             "symbol": self.symbol,
             "name": self.name,
             "market": self.market,
             "bucket": self.bucket,
             "bucket_reason": self.bucket_reason,
             "trading_signal": self.trading_signal,
+            "action_bias": self.action_bias,
             "error": self.error,
         }
+        return result
 
 
 # --- Report dataclass -------------------------------------------------------
@@ -178,6 +181,7 @@ def format_signal_table(report: ScanSignalReport, console: Console) -> None:
     table.add_column("Symbol", style="cyan", no_wrap=True)
     table.add_column("Name", style="white")
     table.add_column("Market", style="magenta")
+    table.add_column("Bias", style="blue")  # MTES v4 action_bias
     table.add_column("Bucket", style="bold")
     table.add_column("Reason", style="dim")
     table.add_column("Score", justify="right")
@@ -194,6 +198,7 @@ def format_signal_table(report: ScanSignalReport, console: Console) -> None:
     def _add_row(item: dict[str, Any]) -> None:
         bucket = item["bucket"]
         color = BUCKET_COLORS.get(bucket, "white")
+        ab = item.get("action_bias") or "—"
         ts = item.get("trading_signal") or {}
         score = f"{ts.get('signal_score', 0):.1f}" if ts else "—"
         conf = f"{ts.get('confidence', 0):.2f}" if ts else "—"
@@ -201,6 +206,7 @@ def format_signal_table(report: ScanSignalReport, console: Console) -> None:
             item["symbol"],
             item["name"],
             item["market"],
+            ab,
             f"[{color}]{bucket}[/{color}]",
             item["bucket_reason"],
             score,
@@ -343,10 +349,14 @@ def _build_composite_strategy() -> "CompositeTrendStrategy":
     import-time lightweight.
     """
     from ..strategies.composite.trend_composite import CompositeTrendStrategy, CompositeTrendConfig
-    from ..strategies.trend import EnhancedSuperTrendStrategy, MTESv3TrendStrategy
+    from ..strategies.trend import EnhancedSuperTrendStrategy, MTESv3TrendStrategy, MTESv4TrendStrategy
 
     return CompositeTrendStrategy(
-        sources=[EnhancedSuperTrendStrategy(), MTESv3TrendStrategy()],
+        sources=[
+            EnhancedSuperTrendStrategy(),
+            MTESv3TrendStrategy(),
+            MTESv4TrendStrategy(),
+        ],
         strategy_config=CompositeTrendConfig(name="scan_composite"),
     )
 
@@ -420,7 +430,15 @@ def _scan_single_symbol(
             error=f"{type(exc).__name__}: {exc}",
         )
 
-    # 3. Classify
+    # 3. Extract MTES v4 action_bias from source_results
+    action_bias = None
+    mtes_v4_result = signal.source_results.get("mtes_v4_trend")
+    if mtes_v4_result and isinstance(mtes_v4_result, dict):
+        mtes_v4_meta = mtes_v4_result.get("metadata")
+        if isinstance(mtes_v4_meta, dict):
+            action_bias = mtes_v4_meta.get("action_bias")
+
+    # 4. Classify
     bucket, bucket_reason = classify_trading_signal(signal)
 
     return SymbolSignalResult(
@@ -430,5 +448,6 @@ def _scan_single_symbol(
         bucket=bucket,
         bucket_reason=bucket_reason,
         trading_signal=signal.to_dict(),
+        action_bias=action_bias,
         error=None,
     )
