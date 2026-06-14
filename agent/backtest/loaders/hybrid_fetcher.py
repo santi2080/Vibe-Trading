@@ -205,8 +205,19 @@ class SymbolRouter:
         logger.warning("Unknown symbol pattern: %s, defaulting to A_SHARE", symbol)
         return MarketType.A_SHARE
 
-    def get_source_priority(self, market: MarketType) -> List[DataSource]:
-        """Get preferred data sources for a market."""
+    def get_source_priority(self, market: MarketType, interval: str | None = None) -> List[DataSource]:
+        """Get preferred data sources for a market.
+
+        For CN futures, routing is timeframe-aware:
+        - 1D -> prefer AKShare (daily endpoint is more current and native)
+        - 1H / 4H -> prefer TqSdk (intraday-capable)
+        """
+        norm_interval = (interval or "").strip().upper()
+        if market == MarketType.CN_FUTURES:
+            if norm_interval == "1D":
+                return [DataSource.AKSHARE, DataSource.TQSDK, DataSource.TUSHARE]
+            if norm_interval in {"1H", "4H"}:
+                return [DataSource.TQSDK, DataSource.AKSHARE, DataSource.TUSHARE]
         return self.SOURCE_PRIORITY.get(market, [DataSource.AKSHARE])
 
     def check_available_sources(self) -> Dict[DataSource, bool]:

@@ -93,6 +93,23 @@ _SYMBOL_MAP = {
 _TQSdk_TO_PROJECT = {v: k for k, v in _SYMBOL_MAP.items()}
 
 
+def _load_dotenv_if_needed() -> None:
+    """Load project .env only when no TqSdk/Tq auth env vars are present."""
+    if any(
+        os.environ.get(name)
+        for name in ("TQSDK_ACCOUNT", "TQSDK_PASSWORD", "TQ_ACCOUNT", "TQ_PASSWORD")
+    ):
+        return
+
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+
+    project_root = Path(__file__).resolve().parents[3]
+    load_dotenv(project_root / ".env", override=False)
+
+
 def _to_tqsdk_symbol(code: str) -> str:
     """Convert project symbol to TqSdk format."""
     return SymbolTranslator.to_vendor_format(code.strip(), DataVendor.TQSDK, Market.CN_FUTURES)
@@ -162,6 +179,7 @@ class TqSdkConnectionPool:
 
     def _create_connection(self):
         """Create a new TqSdk connection."""
+        _load_dotenv_if_needed()
         with _suppress_output():
             from tqsdk import TqApi, TqAuth
 
@@ -261,6 +279,7 @@ def _normalize_frame(df: pd.DataFrame) -> pd.DataFrame:
     result = result.dropna(subset=["open", "high", "low", "close"])
 
     return result.sort_index()
+
 
 
 @register
