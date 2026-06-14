@@ -5,6 +5,27 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — v2.7 MTES v4 Lean Direction Enhancement
+
+- **BOS/CHoCH structure events** (`agent/src/analysis/mtes_v4/market_structure.py`):
+  - `MarketStructureSignal` gains `bos` and `choch` fields (BULL/BEAR/NONE)
+  - New `_detect_bos_choch()` method: compares recent swing highs/lows for
+    Break of Structure (BOS) or Change of Character (CHoCH) detection
+  - `LeanTrendResult.structure_event`: `"BOS"` = trend continuation,
+    `"CHoCH"` = early reversal warning, `"NONE"` = no structural event
+
+- **Unified action_bias output** (`agent/src/analysis/mtes_v4/base.py`):
+  - `LeanTrendResult.action_bias` combines direction + strength + structure_event
+    into five actionable labels: `STRONG_LONG`, `CAUTIOUS_LONG`, `CAUTIOUS_SHORT`,
+    `STRONG_SHORT`, `WAIT`
+  - Rules: NEUTRAL/EXHAUSTED/CHoCH → WAIT; BULL+STRONG+BOS → STRONG_LONG;
+    BEAR+STRONG+BOS → STRONG_SHORT; direction with any strength → CAUTIOUS
+
+- **Timeframe-aware CN futures routing** (`agent/backtest/loaders/hybrid_fetcher.py`):
+  - `SymbolRouter.get_source_priority()` accepts optional `interval` parameter
+  - 1D → AKShare first, 1H/4H → TqSdk first
+  - `TqSdkLoader` auto-loads `.env` for authentication
+
 ## [0.1.11] — 2026-06-13
 
 ### Added — v2.6 Performance Optimization

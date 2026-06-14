@@ -6,7 +6,9 @@
 - ✅ **v2.1** — composite-strategy-backtest (shipped 2026-06-07; empirical evidence blocked)
 - ✅ **v2.2** — daily-scan-report-loop (shipped 2026-06-10)
 - ✅ **v2.3** — remote-refresh-scan-loop (shipped 2026-06-11)
-- 🌱 **v2.4** — exchange-calendar-awareness (planning)
+- ✅ **v2.5** — dashboard-web-ui (shipped 2026-06-13)
+- ✅ **v2.6** — performance-optimization (shipped 2026-06-13)
+- ✅ **v2.7** — mtes-v4-lean-enhancement (shipped 2026-06-14)
 
 ## Phases
 
@@ -230,7 +232,7 @@ v2.2 remains local-data-first and data-pipeline-first.
 - live/paper trading execution
 - trading advice or buy/sell execution language
 
-### 🌱 v2.4: Exchange Calendar Awareness
+### v2.4: Exchange Calendar Awareness
 
 - [x] Phase 18: Exchange Session Definitions (1/1 plans) — completed
 - [x] Phase 19: Holiday Calendar Integration (1/1 plans) — completed
@@ -240,6 +242,16 @@ v2.2 remains local-data-first and data-pipeline-first.
 **Goal:** Make data freshness detection aware of exchange trading sessions, avoiding unnecessary refreshes outside trading hours.
 
 **Requirements:** CAL-01, CAL-02, CAL-03, CAL-04
+
+### ✅ v2.7: MTES v4 Lean Direction Enhancement
+
+**Goal:** Enhance MTES v4 with market structure context (BOS/CHoCH) and unified actionable bias summary.
+
+**Ship date:** 2026-06-14
+
+- [x] BOS/CHoCH structure events added to `MarketStructureSignal` and `LeanTrendResult`
+- [x] Unified `action_bias` output (STRONG_LONG / CAUTIOUS_LONG / CAUTIOUS_SHORT / STRONG_SHORT / WAIT)
+- [x] CN futures timeframe-aware routing (interval-based source priority)
 
 ## Phase Details
 
