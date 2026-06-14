@@ -82,9 +82,54 @@ class LeanTrendResult:
     # "CHoCH" = Change of Character (trend structure broken, early reversal warning)
     structure_event: Literal["BOS", "CHoCH", "NONE"] = "NONE"
 
+    # Unified action bias
+    # WAIT           → no valid signal (neutral/exhausted/CHoCH)
+    # STRONG_LONG    → BULL + STRONG + BOS (confident, confirmed)
+    # CAUTIOUS_LONG  → BULL + any strength (moderate confidence)
+    # STRONG_SHORT    → BEAR + STRONG + BOS (confident, confirmed)
+    # CAUTIOUS_SHORT → BEAR + any strength (moderate confidence)
+    action_bias: Literal["STRONG_LONG", "CAUTIOUS_LONG", "CAUTIOUS_SHORT", "STRONG_SHORT", "WAIT"] = "WAIT"
+
     # Metadata
     bars_analyzed: int = 0
     explanation: str = ""
+
+    @staticmethod
+    def compute_action_bias(
+        direction: "TrendDirection",
+        strength: "TrendStrength",
+        structure_event: str,
+    ) -> Literal["STRONG_LONG", "CAUTIOUS_LONG", "CAUTIOUS_SHORT", "STRONG_SHORT", "WAIT"]:
+        """Compute action_bias from direction, strength, and structure_event.
+
+        Priority:
+        1. NEUTRAL or EXHAUSTED or CHoCH → WAIT
+        2. BULL + STRONG + BOS → STRONG_LONG
+        3. BEAR + STRONG + BOS → STRONG_SHORT
+        4. BULL + any strength → CAUTIOUS_LONG
+        5. BEAR + any strength → CAUTIOUS_SHORT
+        """
+        # Guard conditions: no valid signal
+        if direction == TrendDirection.NEUTRAL:
+            return "WAIT"
+        if strength == TrendStrength.EXHAUSTED:
+            return "WAIT"
+        if structure_event == "CHoCH":
+            return "WAIT"
+
+        # Strong + confirmed (BOS)
+        if direction == TrendDirection.BULL and strength == TrendStrength.STRONG and structure_event == "BOS":
+            return "STRONG_LONG"
+        if direction == TrendDirection.BEAR and strength == TrendStrength.STRONG and structure_event == "BOS":
+            return "STRONG_SHORT"
+
+        # Moderate confidence (any strength, BOS or NONE)
+        if direction == TrendDirection.BULL:
+            return "CAUTIOUS_LONG"
+        if direction == TrendDirection.BEAR:
+            return "CAUTIOUS_SHORT"
+
+        return "WAIT"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -102,6 +147,7 @@ class LeanTrendResult:
             "bars_analyzed": self.bars_analyzed,
             "explanation": self.explanation,
             "structure_event": self.structure_event,
+            "action_bias": self.action_bias,
         }
 
         # Include market structure as auxiliary info

@@ -137,6 +137,11 @@ class LeanMTES:
             elif mkt_structure.bos != "NONE":
                 structure_event = "BOS"
 
+        # Compute unified action_bias
+        action_bias = LeanTrendResult.compute_action_bias(
+            direction, strength, structure_event
+        )
+
         return LeanTrendResult(
             direction=direction,
             confidence=confidence,
@@ -152,6 +157,7 @@ class LeanMTES:
             ema_signal=ema,
             market_structure=mkt_structure,
             structure_event=structure_event,
+            action_bias=action_bias,
             bars_analyzed=bars,
             explanation=explanation,
         )
@@ -574,6 +580,11 @@ class LeanMTES:
             elif mkt_structure.bos != "NONE":
                 structure_event = "BOS"
 
+        # Compute unified action_bias
+        action_bias = LeanTrendResult.compute_action_bias(
+            TrendDirection.NEUTRAL, TrendStrength.EXHAUSTED, structure_event
+        )
+
         return LeanTrendResult(
             direction=TrendDirection.NEUTRAL,
             confidence=0.3,
@@ -589,6 +600,7 @@ class LeanMTES:
             ema_signal=None,
             market_structure=mkt_structure,
             structure_event=structure_event,
+            action_bias=action_bias,
             bars_analyzed=bars,
             explanation=f"Range-bound market: {reason}",
         )
