@@ -194,3 +194,4 @@ a6d278d feat(03-04): add SuperTrend enhancement validation plan
 - [2026-05-31 Phase 03 完成](session_compact_20260531_122000.md)
 - [会话压缩 2026-06-13 20:47:16](session_compact_20260613_204716.md) — 3 watchlist 数据刷新完成（US Futures/ETF/China Futures），修复了 3 个 test 和 5 个 data bug，剩余 1 个 MTES 分析测试（Series boolean）未完成。
 - [会话压缩 2026-06-14 13:17:26](session_compact_20260614_131726.md) — MTES v4 增强完成：BOS/CHoCH 结构事件 + action_bias 统一汇总。CN futures 路由修正。3 次提交已推送。
+- [基准对比 2026-06-14](benchmark_mtes_v4_20260614.md) — MTES v4 基准测试通过：45品种×5市场 vs EMA200斜率+ADX基线，平均一致率 76.7%，冲突率 0.1%。**MTES v4 正式确认为默认趋势判断策略。**
