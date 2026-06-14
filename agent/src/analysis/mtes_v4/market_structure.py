@@ -59,6 +59,8 @@ class MarketStructureSignal:
     last_swing_high: float | None
     last_swing_low: float | None
     trading_range: TradingRange | None = None  # Trading range analysis
+    bos: Literal["BULL", "BEAR", "NONE"] = "NONE"  # Break of Structure
+    choch: Literal["BULL", "BEAR", "NONE"] = "NONE"  # Change of Character
 
     def to_dict(self) -> dict:
         return {
@@ -68,6 +70,8 @@ class MarketStructureSignal:
             "last_swing_high": self.last_swing_high,
             "last_swing_low": self.last_swing_low,
             "trading_range": self.trading_range.to_dict() if self.trading_range else None,
+            "bos": self.bos,
+            "choch": self.choch,
         }
 
 
@@ -129,6 +133,9 @@ class MarketStructure:
         # Calculate trading range
         trading_range = self._calculate_trading_range(df, swings)
 
+        # Detect BOS and CHoCH
+        bos, choch = self._detect_bos_choch(swings, trend, df)
+
         return MarketStructureSignal(
             trend=trend,
             structure=structure,
@@ -137,6 +144,8 @@ class MarketStructure:
             last_swing_high=self._get_last_high(swings),
             last_swing_low=self._get_last_low(swings),
             trading_range=trading_range,
+            bos=bos,
+            choch=choch,
         )
 
     def _detect_swings(self, df: pd.DataFrame) -> list[SwingPoint]:
@@ -299,3 +308,65 @@ class MarketStructure:
             breakout_up=breakout_high,
             breakout_down=breakout_low,
         )
+
+    def _detect_bos_choch(
+        self,
+        swings: list[SwingPoint],
+        trend: Literal["BULL", "BEAR", "NEUTRAL"],
+        df: pd.DataFrame,
+    ) -> tuple[Literal["BULL", "BEAR", "NONE"], Literal["BULL", "BEAR", "NONE"]]:
+        """Detect BOS (Break of Structure) and CHoCH (Change of Character).
+
+        BOS: Price breaks above prior swing high (bull) or below prior swing low (bear)
+             in the direction of the trend — confirms trend continuation.
+        CHoCH: Price breaks below prior swing low (bull) or above prior swing high (bear)
+               against the trend direction — warns of potential reversal.
+
+        Args:
+            swings: Detected swing points
+            trend: Current trend direction
+            df: OHLCV DataFrame (used for price close check)
+
+        Returns:
+            Tuple of (bos, choch) each as "BULL", "BEAR", or "NONE"
+        """
+        if len(swings) < 4:
+            return "NONE", "NONE"
+
+        highs = [s for s in swings if s.swing_type in ("HH", "LH")]
+        lows = [s for s in swings if s.swing_type in ("HL", "LL")]
+
+        # Need at least 2 of each for structure comparison
+        if len(highs) < 2 or len(lows) < 2:
+            return "NONE", "NONE"
+
+        # Use last two swings of each type
+        recent_highs = highs[-2:]
+        recent_lows = lows[-2:]
+
+        # For BOS/CHoCH, compare most recent swings against previous ones
+        bos = "NONE"
+        choch = "NONE"
+
+        if trend == "BULL":
+            # BOS in uptrend: newest swing HIGH is higher than previous
+            # (confirms continuation)
+            if recent_highs[-1].price > recent_highs[-2].price:
+                bos = "BULL"
+
+            # CHoCH in uptrend: newest swing LOW is lower than previous
+            # (potential reversal warning)
+            if recent_lows[-1].price < recent_lows[-2].price:
+                choch = "BEAR"  # Structure broken — was bullish, now low broken
+
+        elif trend == "BEAR":
+            # BOS in downtrend: newest swing LOW is lower than previous
+            if recent_lows[-1].price < recent_lows[-2].price:
+                bos = "BEAR"
+
+            # CHoCH in downtrend: newest swing HIGH is higher than previous
+            # (potential reversal warning)
+            if recent_highs[-1].price > recent_highs[-2].price:
+                choch = "BULL"  # Structure broken — was bearish, now high broken
+
+        return bos, choch

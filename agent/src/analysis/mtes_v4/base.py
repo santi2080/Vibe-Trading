@@ -77,6 +77,11 @@ class LeanTrendResult:
     # Auxiliary: Market Structure (non-weighted)
     market_structure: MarketStructureSignal | None = None
 
+    # Auxiliary: Structure health summary (BOS/CHoCH)
+    # "BOS" = Break of Structure (trend continuation confirmed)
+    # "CHoCH" = Change of Character (trend structure broken, early reversal warning)
+    structure_event: Literal["BOS", "CHoCH", "NONE"] = "NONE"
+
     # Metadata
     bars_analyzed: int = 0
     explanation: str = ""
@@ -96,6 +101,7 @@ class LeanTrendResult:
             "ema_score": round(self.ema_score, 1),
             "bars_analyzed": self.bars_analyzed,
             "explanation": self.explanation,
+            "structure_event": self.structure_event,
         }
 
         # Include market structure as auxiliary info

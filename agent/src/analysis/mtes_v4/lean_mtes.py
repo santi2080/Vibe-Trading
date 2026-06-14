@@ -22,7 +22,7 @@ from .base import (
     IchimokuSignal,
     EMASignal,
 )
-from .market_structure import MarketStructure, MarketStructureSignal
+from .market_structure import MarketStructure, MarketStructureSignal, SwingPoint
 
 
 # Default periods
@@ -126,8 +126,16 @@ class LeanMTES:
             direction, confidence, adx_val, ichimoku, ema
         )
 
-        # Auxiliary: Market Structure (non-weighted)
+        # Auxiliary: Market Structure (non-weighted) + BOS/CHoCH
         mkt_structure = self.market_structure.analyze(df)
+
+        # Map BOS/CHoCH to structure_event
+        structure_event = "NONE"
+        if mkt_structure:
+            if mkt_structure.choch != "NONE":
+                structure_event = "CHoCH"
+            elif mkt_structure.bos != "NONE":
+                structure_event = "BOS"
 
         return LeanTrendResult(
             direction=direction,
@@ -143,6 +151,7 @@ class LeanMTES:
             ichimoku_signal=ichimoku,
             ema_signal=ema,
             market_structure=mkt_structure,
+            structure_event=structure_event,
             bars_analyzed=bars,
             explanation=explanation,
         )
@@ -555,8 +564,15 @@ class LeanMTES:
         reason: str = "",
     ) -> LeanTrendResult:
         """Create neutral result for non-trending market."""
-        # Auxiliary: Market Structure (non-weighted)
+        # Auxiliary: Market Structure (non-weighted) + BOS/CHoCH
         mkt_structure = self.market_structure.analyze(df) if df is not None else None
+
+        structure_event = "NONE"
+        if mkt_structure:
+            if mkt_structure.choch != "NONE":
+                structure_event = "CHoCH"
+            elif mkt_structure.bos != "NONE":
+                structure_event = "BOS"
 
         return LeanTrendResult(
             direction=TrendDirection.NEUTRAL,
@@ -572,6 +588,7 @@ class LeanMTES:
             ichimoku_signal=None,
             ema_signal=None,
             market_structure=mkt_structure,
+            structure_event=structure_event,
             bars_analyzed=bars,
             explanation=f"Range-bound market: {reason}",
         )
