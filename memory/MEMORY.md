@@ -98,11 +98,9 @@ generate_standard_report(strategies, symbol='GC=F')
 ## Git 提交
 
 ```
-9154de6 docs(planning): sync milestone/phase state to completed
-851ea01 docs(phase-01): complete phase execution
-6a7a137 docs(01): add phase verification report
-825f22a docs(01-04): add execution summary
-0cc330f docs(01-04): finalize MTES validation plan artifact
+3c625f8 feat(mtes-v4): add unified action_bias output field
+80dab1b feat(mtes-v4): add BOS/CHoCH structure events as auxiliary signal
+270f5a9 feat: timeframe-aware CN futures routing via HybridFetcher
 ```
 
 ## Phase 03 实施状态 (2026-05-31)
@@ -174,8 +172,25 @@ bbe95d4 feat(03-05): add SuperTrend enhancement experiment runner
 a6d278d feat(03-04): add SuperTrend enhancement validation plan
 ```
 
+## MTES v4 框架（2026-06-14 更新）
+
+```
+方向(Direction) ← Ichimoku(60%) + EMA(40%) 加权投票
+强度(Strength)  ← ADX: STRONG/READY/WEAK/EXHAUSTED
+结构(Structure) ← HH_HL/LH_LL/mixed + BOS/CHoCH 事件
+汇总(Summary)   ← action_bias: STRONG_LONG/CAUTIOUS_LONG/CAUTIOUS_SHORT/STRONG_SHORT/WAIT
+```
+
+**规则：**
+- CHoCH → WAIT（结构破坏，不做）
+- NEUTRAL 或 EXHAUSTED → WAIT
+- BULL + STRONG + BOS → STRONG_LONG
+- BEAR + STRONG + BOS → STRONG_SHORT
+- 其余 BULL/BEAR → CAUTIOUS
+
 ## 会话记录
 
 - [2026-05-30 趋势指标准确性分析](session_compact_20260530_144429.md)
 - [2026-05-31 Phase 03 完成](session_compact_20260531_122000.md)
 - [会话压缩 2026-06-13 20:47:16](session_compact_20260613_204716.md) — 3 watchlist 数据刷新完成（US Futures/ETF/China Futures），修复了 3 个 test 和 5 个 data bug，剩余 1 个 MTES 分析测试（Series boolean）未完成。
+- [会话压缩 2026-06-14 13:17:26](session_compact_20260614_131726.md) — MTES v4 增强完成：BOS/CHoCH 结构事件 + action_bias 统一汇总。CN futures 路由修正。3 次提交已推送。
