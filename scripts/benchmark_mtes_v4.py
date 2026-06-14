@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-MTES v4 vs 经典趋势策略 vs 基线策略 三方对比脚本
+MTES v4 vs 经典趋势策略 vs 基线策略 对比脚本（自动发现全品种）
 
 基线(不变): price>EMA200 + EMA斜率↑ + DI+>DI- + ADX>25
 对比对象: MTES v4, EMA(50/200)黄金交叉, MACD(12/26/9), SuperTrend(10,3)
 
-每个对象分别与基线比较方向一致率、冲突率、信号稳定性。
+自动扫描本地 parquet 数据，按市场分类输出对比结果。
 """
 
 import sys
@@ -17,19 +17,67 @@ sys.path.insert(0, str(PROJECT_ROOT / "agent"))
 import argparse
 import pandas as pd
 import numpy as np
+from collections import defaultdict
 
 
-# ── 1. 基线策略 (固定) ───────────────────────────────────────────
+# ── 1. 数据自动发现 ─────────────────────────────────────────────
+
+MARKET_CFG = [
+    # (标签, 路径, 时间周期, 起止日期, warmup, 最小bar)
+    ("US_Futures", "us_futures", "1d", "2024-01-01", "2026-06-14", 100, 220),
+    ("CN_ETF", "cn_etf", "1d", "2020-01-01", "2026-06-14", 220, 500),
+    ("US_Stocks", "us_stocks", "1w", "2020-01-01", "2026-06-14", 50, 150),
+    ("US_ETF", "etf", "1w", "2020-01-01", "2026-06-14", 50, 80),
+    ("HK_Stocks", "hk_stocks", "1d", "2024-01-01", "2026-06-14", 100, 200),
+    ("CN_Futures", "cn_futures", "1d", "2025-01-01", "2026-06-14", 100, 200),
+]
+
+
+def _flatten_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """将 MultiIndex 列展平为一级列名.  SPY/1w.parquet 有 ('close', 'SPY') 这类列."""
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = [c[0].lower() if isinstance(c, tuple) else str(c).lower() for c in df.columns]
+    else:
+        df.columns = df.columns.str.lower()
+    return df
+
+
+def discover_symbols(market_dir: str, tf: str, min_bars: int, start: str, end: str):
+    """扫描 parquet 数据目录，发现符合条件的品种."""
+    data_dir = PROJECT_ROOT / "data" / market_dir
+    if not data_dir.exists():
+        return []
+
+    symbols = []
+    for child in sorted(data_dir.iterdir()):
+        if not child.is_dir():
+            continue
+        path = child / f"{tf}.parquet"
+        if not path.exists():
+            continue
+        try:
+            df = pd.read_parquet(path)
+            df = _flatten_columns(df)
+            if "timestamp" in df.columns:
+                df = df.set_index("timestamp")
+            df = df.sort_index()
+            mask = (df.index >= start) & (df.index <= end)
+            df = df[mask]
+            if len(df) >= min_bars and {"open", "high", "low", "close"}.issubset(set(df.columns)):
+                symbols.append((child.name, len(df)))
+        except Exception:
+            continue
+
+    return sorted(symbols, key=lambda x: -x[1])
+
+
+# ── 2. 基线策略 ─────────────────────────────────────────────────
 
 
 class BaselineStrategy:
     """price > EMA200 + EMA斜率↑ + DI+ > DI- + ADX > 25"""
 
-    def __init__(self):
-        pass
-
     def analyze_signal(self, df: pd.DataFrame) -> pd.Series:
-        df = df.copy()
         close = df["close"]
         high = df["high"]
         low = df["low"]
@@ -37,11 +85,9 @@ class BaselineStrategy:
         if n < 220:
             return pd.Series(np.nan, index=df.index)
 
-        # EMA200
         ema = close.ewm(span=200, adjust=False).mean()
         ema_slope = (ema - ema.shift(5)) / ema.shift(5)
 
-        # ADX + DI
         tr1 = high - low
         tr2 = (high - close.shift()).abs()
         tr3 = (low - close.shift()).abs()
@@ -72,13 +118,11 @@ class BaselineStrategy:
         return signal
 
 
-# ── 2. 对比对象 ───────────────────────────────────────────────────
+# ── 3. 对比对象 ───────────────────────────────────────────────────
 
 
 def analyze_mtes_v4(df: pd.DataFrame) -> pd.Series:
-    """LeanMTES action_bias → signal."""
     from src.analysis.mtes_v4 import LeanMTES
-
     mtes = LeanMTES()
     signal = pd.Series(0, index=df.index)
     warmup = 90
@@ -96,11 +140,9 @@ def analyze_mtes_v4(df: pd.DataFrame) -> pd.Series:
 
 
 def analyze_ema_cross(df: pd.DataFrame) -> pd.Series:
-    """EMA(50/200) 黄金交叉."""
     close = df["close"]
     fast = close.ewm(span=50, adjust=False).mean()
     slow = close.ewm(span=200, adjust=False).mean()
-
     diff = fast - slow
     prev = diff.shift(1)
     signal = pd.Series(0, index=df.index)
@@ -111,14 +153,12 @@ def analyze_ema_cross(df: pd.DataFrame) -> pd.Series:
 
 
 def analyze_macd(df: pd.DataFrame) -> pd.Series:
-    """MACD(12/26/9) 零轴穿越."""
     close = df["close"]
     ema12 = close.ewm(span=12, adjust=False).mean()
     ema26 = close.ewm(span=26, adjust=False).mean()
     macd = ema12 - ema26
-    signal_line = macd.ewm(span=9, adjust=False).mean()
-    hist = macd - signal_line
-
+    sig = macd.ewm(span=9, adjust=False).mean()
+    hist = macd - sig
     prev = hist.shift(1)
     signal = pd.Series(0, index=df.index)
     signal[(prev <= 0) & (hist > 0)] = 1
@@ -128,12 +168,10 @@ def analyze_macd(df: pd.DataFrame) -> pd.Series:
 
 
 def analyze_supertrend(df: pd.DataFrame, period: int = 10, multiplier: float = 3.0) -> pd.Series:
-    """SuperTrend(10,3)."""
     high = df["high"].values
     low = df["low"].values
     close = df["close"].values
     n = len(df)
-
     tr1 = high[1:] - low[1:]
     tr2 = np.abs(high[1:] - close[:-1])
     tr3 = np.abs(low[1:] - close[:-1])
@@ -145,7 +183,6 @@ def analyze_supertrend(df: pd.DataFrame, period: int = 10, multiplier: float = 3
     hl_avg = (high + low) / 2
     basic_ub = hl_avg + multiplier * atr
     basic_lb = hl_avg - multiplier * atr
-
     final_ub = np.copy(basic_ub)
     final_lb = np.copy(basic_lb)
     direction = np.ones(n)
@@ -155,7 +192,6 @@ def analyze_supertrend(df: pd.DataFrame, period: int = 10, multiplier: float = 3
             final_ub[i] = basic_ub[i]
         if basic_lb[i] > final_lb[i - 1] or close[i - 1] < final_lb[i - 1]:
             final_lb[i] = basic_lb[i]
-
         if direction[i - 1] == -1 and close[i] > final_lb[i]:
             direction[i] = 1
         elif direction[i - 1] == 1 and close[i] < final_ub[i]:
@@ -168,7 +204,7 @@ def analyze_supertrend(df: pd.DataFrame, period: int = 10, multiplier: float = 3
     return signal
 
 
-# ── 3. 对比计算 ────────────────────────────────────────────────────
+# ── 4. 对比计算 ──────────────────────────────────────────────────
 
 
 STRATEGIES = {
@@ -189,15 +225,8 @@ def compute_alignment(bl: pd.Series, target: pd.Series, warmup: int) -> dict:
         return {}
 
     same = (bl == tg).sum()
-    agreement = same / n
     conflict = ((bl == 1) & (tg == -1)) | ((bl == -1) & (tg == 1))
-    conflict_rate = conflict.sum() / n
 
-    # 切换次数
-    bl_switch = (bl.diff() != 0).sum()
-    tg_switch = (tg.diff() != 0).sum()
-
-    # 平均连续一致天数
     runs = (bl == tg).astype(int)
     run_lengths = []
     cur = 0
@@ -210,7 +239,6 @@ def compute_alignment(bl: pd.Series, target: pd.Series, warmup: int) -> dict:
                 cur = 0
     if cur > 0:
         run_lengths.append(cur)
-    avg_consec = np.mean(run_lengths) if run_lengths else 0.0
 
     return {
         "n": n,
@@ -220,115 +248,148 @@ def compute_alignment(bl: pd.Series, target: pd.Series, warmup: int) -> dict:
         "tg_bull": (tg == 1).sum() / n,
         "tg_bear": (tg == -1).sum() / n,
         "tg_neutral": (tg == 0).sum() / n,
-        "agreement": agreement,
-        "conflict": conflict_rate,
-        "bl_turnover": bl_switch / n,
-        "tg_turnover": tg_switch / n,
-        "avg_consecutive": avg_consec,
+        "agreement": same / n,
+        "conflict": conflict.sum() / n,
+        "bl_turnover": (bl.diff() != 0).sum() / n,
+        "tg_turnover": (tg.diff() != 0).sum() / n,
+        "avg_consecutive": np.mean(run_lengths) if run_lengths else 0.0,
     }
 
 
-# ── 4. 输出 ────────────────────────────────────────────────────────
+# ── 5. 输出 ──────────────────────────────────────────────────────
 
 
-def print_all(all_results: dict[str, dict[str, dict]], start: str, end: str, n_bars: int):
-    """按品种输出，每种策略一行."""
-    for symbol, strategies in all_results.items():
-        bar = "─" * 115
-        print(f"\n{bar}")
-        print(f"  {symbol}  ({start} ~ {end}, {n_bars} bars)")
-        print(bar)
-        print(f"{'策略':<12} | {'一致率':>7} | {'冲突率':>7} | {'多(基)':>7} | {'多(对)':>7} | {'空(基)':>7} | {'空(对)':>7} | {'连续一致':>6} | {'换手基':>6} | {'换手对':>6}")
-        print(bar)
+def print_section(title: str, results: dict, n_bars: int, total_symbols: int):
+    if not results:
+        return
+    bar = "=" * 115
+    print(f"\n{bar}")
+    print(f"  {title}  ({total_symbols} 品种, ~{n_bars} bars/品种)")
+    print(f"{bar}")
+    print(f"{'策略':<12} | {'一致率':>7} | {'冲突率':>7} | {'多(基)':>8} | {'多(对)':>8} | {'空(基)':>8} | {'空(对)':>8} | {'连续一致':>6} | {'换手基':>7} | {'换手对':>7}")
+    print(bar)
 
-        for strategy_name, m in strategies.items():
-            print(f"│ {strategy_name:<10} │ {m['agreement']*100:>5.1f}% │ {m['conflict']*100:>5.1f}% │ {m['bl_bull']*100:>5.1f}% │ {m['tg_bull']*100:>5.1f}% │ {m['bl_bear']*100:>5.1f}% │ {m['tg_bear']*100:>5.1f}% │ {m['avg_consecutive']:>5.1f}d │ {m['bl_turnover']*100:>5.2f}% │ {m['tg_turnover']*100:>5.2f}% │")
-
-    # 全品种汇总
-    print(f"\n\n{'=' * 115}")
-    print(f"  US Futures 全品种汇总 — 各策略 vs 基线")
-    print(f"{'=' * 115}")
-    print(f"{'策略':<12} | {'一致率':>7} | {'冲突率':>7} | {'多(基)':>7} | {'多(对)':>7} | {'空(基)':>7} | {'空(对)':>7} | {'连续一致':>6} | {'换手基':>6} | {'换手对':>6}")
-    print(f"{'=' * 115}")
-
-    # 按策略汇总
-    strategy_avgs = {}
-    for symbol, strategies in all_results.items():
-        for name, m in strategies.items():
-            if name not in strategy_avgs:
-                strategy_avgs[name] = []
-            strategy_avgs[name].append(m)
+    averages = defaultdict(list)
+    for symbol, data in results.items():
+        for name, m in data.items():
+            averages[name].append(m)
 
     for name in list(STRATEGIES.keys()):
-        vals = strategy_avgs.get(name, [])
+        vals = averages.get(name, [])
         if not vals:
             continue
-        avg = lambda k: np.mean([v[k] for v in vals])
-        print(f"│ {name:<10} │ {avg('agreement')*100:>5.1f}% │ {avg('conflict')*100:>5.1f}% │ {avg('bl_bull')*100:>5.1f}% │ {avg('tg_bull')*100:>5.1f}% │ {avg('bl_bear')*100:>5.1f}% │ {avg('tg_bear')*100:>5.1f}% │ {avg('avg_consecutive'):>5.1f}d │ {avg('bl_turnover')*100:>5.2f}% │ {avg('tg_turnover')*100:>5.2f}% │")
+        ag = np.mean([v["agreement"] for v in vals])
+        cf = np.mean([v["conflict"] for v in vals])
+        bb = np.mean([v["bl_bull"] for v in vals])
+        tb = np.mean([v["tg_bull"] for v in vals])
+        bd = np.mean([v["bl_bear"] for v in vals])
+        td = np.mean([v["tg_bear"] for v in vals])
+        ac = np.mean([v["avg_consecutive"] for v in vals])
+        bt = np.mean([v["bl_turnover"] for v in vals])
+        tt = np.mean([v["tg_turnover"] for v in vals])
+        print(f"│ {name:<10} │ {ag*100:>5.1f}% │ {cf*100:>5.1f}% │ {bb*100:>6.1f}% │ {tb*100:>6.1f}% │ {bd*100:>6.1f}% │ {td*100:>6.1f}% │ {ac:>5.1f}d │ {bt*100:>5.2f}% │ {tt*100:>5.2f}% │")
 
-    print(f"{'=' * 115}")
-    print(f"  （基线：price>EMA200 + EMA斜率>0.001 + DI+>DI- + ADX>25）")
+    print(bar)
+
+    # 最佳策略标记
+    best_ag = max(averages.keys(), key=lambda n: np.mean([v["agreement"] for v in averages[n]]))
+    best_switch = min(averages.keys(), key=lambda n: np.mean([v["tg_turnover"] for v in averages[n]]))
+    print(f"  一致率最佳: {best_ag}  |  信号最稳定: {best_switch}")
+    print(f"  基线: price>EMA200 + EMA斜率>0.001 + DI+>DI- + ADX>25")
 
 
-# ── 5. 主函数 ────────────────────────────────────────────────────
-
-
-def main():
-    parser = argparse.ArgumentParser(description="趋势策略 vs 基线对比")
-    parser.add_argument("--symbols", nargs="+", default=[
-        "GC=F", "SI=F", "HG=F", "CL=F", "ZC=F", "ZS=F", "ES=F", "NQ=F"
-    ])
-    parser.add_argument("--start", default="2024-01-01")
-    parser.add_argument("--end", default="2026-06-14")
-    parser.add_argument("--warmup", type=int, default=100)
-    args = parser.parse_args()
+def print_market_report(
+    label: str, market_dir: str, tf: str, start: str, end: str, warmup: int, min_bars: int
+):
+    """发现品种、运行分析、输出一个市场的报告."""
+    symbols = discover_symbols(market_dir, tf, min_bars, start, end)
+    if not symbols:
+        print(f"\n  ⚠ {label}: 无满足最低 bar 数的品种")
+        return
 
     baseline = BaselineStrategy()
     all_results = {}
-    n_bars = 0
+    max_n_bars = 0
 
-    print(f"\n  加载并分析 {len(args.symbols)} 个品种 × {len(STRATEGIES)} 种策略...\n")
+    print(f"\n  发现 {len(symbols)} 个 {tf} 品种，开始分析...", end="", flush=True)
 
-    for symbol in args.symbols:
-        path = PROJECT_ROOT / "data" / "us_futures" / symbol / "1d.parquet"
-        if not path.exists():
-            print(f"  ⚠  {symbol}: 数据文件不存在")
-            continue
-
+    for sym_name, n_total in symbols:
+        path = PROJECT_ROOT / "data" / market_dir / sym_name / f"{tf}.parquet"
         df = pd.read_parquet(path)
-        df.columns = df.columns.str.lower()
+        df = _flatten_columns(df)
         if "timestamp" in df.columns:
             df = df.set_index("timestamp")
         df = df.sort_index()
-        mask = (df.index >= args.start) & (df.index <= args.end)
+        mask = (df.index >= start) & (df.index <= end)
         df = df[mask].copy()
-        if len(df) < args.warmup + 50:
-            print(f"  ⚠  {symbol}: 数据不足 ({len(df)} bars)")
-            continue
 
-        n_bars = len(df) - args.warmup
-
-        # 基线
         bl = baseline.analyze_signal(df)
-
-        # 各策略
         strategies = {}
         for name, func in STRATEGIES.items():
             try:
                 tg = func(df)
-                m = compute_alignment(bl, tg, warmup=args.warmup)
+                m = compute_alignment(bl, tg, warmup=warmup)
                 if m:
                     strategies[name] = m
-            except Exception as e:
-                print(f"  ⚠  {symbol}/{name}: {e}")
+            except Exception:
+                continue
 
         if strategies:
-            all_results[symbol] = strategies
+            all_results[sym_name] = strategies
+            if len(df) > max_n_bars:
+                max_n_bars = len(df)
+
+    print(f" 完成 ({len(all_results)}/{len(symbols)} 有效)")
 
     if all_results:
-        print_all(all_results, args.start, args.end, n_bars)
+        n_bars = max_n_bars - warmup
+        print_section(label, all_results, n_bars, len(all_results))
     else:
-        print("  无有效结果。")
+        print(f"  ⚠ {label}: 所有品种分析失败")
+
+
+# ── 6. 主函数 ───────────────────────────────────────────────────
+
+
+def main():
+    parser = argparse.ArgumentParser(description="趋势策略 vs 基线对比（自动发现全品种）")
+    parser.add_argument("--markets", default="all", choices=["all", "futures", "etf", "stocks", "hk"])
+    parser.add_argument("--list", action="store_true", help="仅列出可用数据")
+    args = parser.parse_args()
+
+    if args.list:
+        print(f"\n  {'市场':<20} {'品种数':>8} {'周期':>6}")
+        print(f"  {'=' * 40}")
+        for label, market_dir, tf, start, end, warmup, min_bars in MARKET_CFG:
+            syms = discover_symbols(market_dir, tf, min_bars, start, end)
+            print(f"  {label:<20} {len(syms):>8} {tf:>6}")
+            for name, nb in syms[:3]:
+                print(f"    {name:<25} {nb} bars")
+            if len(syms) > 3:
+                print(f"    ... 还有 {len(syms) - 3} 个")
+        return
+
+    print(f"  ========================================")
+    print(f"  全市场趋势策略基准对比")
+    print(f"  基线: price>EMA200 + EMA斜率↑ + DI+>DI- + ADX>25")
+    print(f"  对比: MTES v4 / EMA Cross / MACD / SuperTrend")
+    print(f"  ========================================")
+
+    for label, market_dir, tf, start, end, warmup, min_bars in MARKET_CFG:
+        if args.markets == "futures" and market_dir not in ("us_futures", "cn_futures"):
+            continue
+        if args.markets == "etf" and market_dir not in ("cn_etf", "etf"):
+            continue
+        if args.markets == "stocks" and market_dir != "us_stocks":
+            continue
+        if args.markets == "hk" and market_dir != "hk_stocks":
+            continue
+
+        print(f"\n  ───── {label} ─────")
+        try:
+            print_market_report(label, market_dir, tf, start, end, warmup, min_bars)
+        except Exception as e:
+            print(f"  ❌ {label}: {e}")
 
 
 if __name__ == "__main__":
