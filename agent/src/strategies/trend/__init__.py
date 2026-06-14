@@ -20,9 +20,9 @@ __all__ = [
     "TrendStatus",
     "TrendStrategyBase",
     "TrendStrategyConfig",
-    "EnhancedSuperTrendStrategy",
     "MTESv2TrendStrategy",
     "MTESv3TrendStrategy",
+    "MTESv4TrendStrategy",
 ]
 
 
@@ -40,4 +40,8 @@ def __getattr__(name: str):
         from .mtes_v3 import MTESv3TrendStrategy
 
         return MTESv3TrendStrategy
+    if name == "MTESv4TrendStrategy":
+        from .mtes_v4 import MTESv4TrendStrategy
+
+        return MTESv4TrendStrategy
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

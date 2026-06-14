@@ -25,6 +25,8 @@ from src.strategies.trend.enhanced_supertrend import (
     EnhancedSuperTrendStrategyConfig,
 )
 from src.strategies.trend.mtes_v3 import MTESv3TrendStrategy
+from src.analysis.mtes_v4 import LeanMTESConfig
+from src.strategies.trend.mtes_v4 import MTESv4TrendStrategy
 
 
 def _load_adjacent_config() -> dict:
@@ -54,6 +56,18 @@ def _build_mtes_config(config: dict) -> MTESv3Config:
     )
 
 
+def _build_mtesv4_config(config: dict) -> LeanMTESConfig:
+    """Map user-facing YAML keys onto LeanMTESConfig."""
+    raw = _nested_config(config, "mtesv4_config")
+    return LeanMTESConfig(
+        adx_threshold=float(raw.get("adx_threshold", 20.0)),
+        adx_strong=float(raw.get("adx_strong", 30.0)),
+        adx_ready=float(raw.get("adx_ready", 25.0)),
+        ichimoku_weight=float(raw.get("ichimoku_weight", 0.6)),
+        ema_weight=float(raw.get("ema_weight", 0.4)),
+    )
+
+
 def _build_supertrend_config(config: dict) -> EnhancedSuperTrendStrategyConfig:
     """Build EnhancedSuperTrendStrategyConfig from nested config."""
     raw = _nested_config(config, "supertrend_config")
@@ -73,6 +87,14 @@ def make_engine(config: dict):
     variant = str(config.get("strategy_variant", "composite")).lower()
 
     sources = []
+    if variant in ("composite", "mtesv4", "mtesv4_only"):
+        sources.append(
+            MTESv4TrendStrategy(
+                mtes_config=_build_mtesv4_config(config),
+                strategy_config=TrendStrategyConfig(),
+            )
+        )
+
     if variant in ("composite", "mtes", "mtes_only", "mtesv3", "mtesv3_only"):
         sources.append(
             MTESv3TrendStrategy(
